@@ -206,3 +206,4 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 google_sheet_credentials.json
+.vscode/.DS_Store
