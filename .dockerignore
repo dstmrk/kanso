@@ -1,0 +1,27 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Config / Secrets (these will be mounted, not copied)
+.env
+config/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+README.md
