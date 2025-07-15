@@ -12,14 +12,14 @@ def create_net_worth_chart_options(net_worth_data: Dict[str, Any]) -> Dict[str, 
     return {
         "title": {"text": "Net Worth Over Time"},
         "tooltip": {"trigger": "axis"},
-        "grid": {"left": "10%", "right": "5%", "bottom": "10%"}, # Adjust grid for better label display
+        # "grid": {"left": "10%", "right": "5%", "bottom": "10%"}, # Adjust grid for better label display
         "xAxis": {
             "type": "category",
             "data": net_worth_data.get('dates', []), # Use .get for safety
         },
         "yAxis": {
             "type": "value",
-            "axisLabel": {"formatter": '€{value}'} # Format the y-axis labels
+            "axisLabel": {"formatter": '€ {value}'} # Format the y-axis labels
         },
         "series": [{
             "name": "Net Worth",

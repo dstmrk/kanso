@@ -6,7 +6,7 @@ from pathlib import Path
 
 from app.services.google_sheets import GoogleSheetService
 from app.logic import finance_calculator
-from app.ui import charts
+from app.ui import dashboard_page
 
 load_dotenv()
 APP_ROOT = Path(__file__).parent
@@ -23,6 +23,12 @@ app.add_static_files('/themes', static_files_path)
 async def on_startup():
     try:
         print("--- Loading Google Sheet data ---")
+        if CREDENTIALS_PATH is None:
+            raise ValueError("CREDENTIALS_PATH environment variable not set.")
+        if WORKBOOK_ID is None:
+            raise ValueError("GOOGLE_SHEET_NAME environment variable not set.")
+        if DATA_SHEET_NAME is None:
+            raise ValueError("DATA_SHEET_NAME environment variable not set.")
         sheet_service = GoogleSheetService(APP_ROOT / CREDENTIALS_PATH, WORKBOOK_ID)
         net_worth_raw_df = sheet_service.get_worksheet_as_dataframe(DATA_SHEET_NAME)
         processed_net_worth = finance_calculator.get_monthly_net_worth(net_worth_raw_df)
@@ -34,7 +40,7 @@ async def on_startup():
 
 app.on_startup(on_startup)
 
-@ui.page('/')
+@ui.page('/', title='My Personal Finance Dashboard', favicon='💰')
 def main_page():
     if 'startup_error' in app.storage.general:
         error_message = app.storage.general['startup_error']
@@ -45,11 +51,6 @@ def main_page():
     if not net_worth_data or not net_worth_data['dates']:
         ui.label("No Net Worth data could be loaded or processed.").classes("text-orange-500")
         return
-    
-    ui.label("Personal Finance Dashboard").classes("text-h4 font-bold text-center my-4")
-    with ui.row().classes("w-full justify-center"):
-        with ui.card().classes("w-full md:w-5/6"):
-            net_worth_options = charts.create_net_worth_chart_options(net_worth_data)
-            ui.echart(net_worth_options, theme=THEME_URL).classes('h-96')
+    dashboard_page.create_page(net_worth_data, THEME_URL)
 
 ui.run(port=PORT)

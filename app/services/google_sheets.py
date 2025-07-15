@@ -2,9 +2,10 @@
 import gspread
 import pandas as pd
 from pathlib import Path
+from typing import Union
 
 class GoogleSheetService:
-    def __init__(self, credentials_path: str, workbook_id: str):
+    def __init__(self, credentials_path: Union[str, Path], workbook_id: str):
         self.creds_path = Path(credentials_path)
         self.workbook_id = workbook_id
         if not self.creds_path.exists():
