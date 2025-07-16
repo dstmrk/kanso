@@ -30,7 +30,8 @@ def create_net_worth_chart_options(net_worth_data: Dict[str, Any]) -> Dict[str, 
             "name": "Net Worth",
             "type": "line",
             "smooth": True,
-            "data": net_worth_data.get('values', []), # Use .get for safety
+            "data": net_worth_data.get('values', []),
+            "areaStyle": {}
         }]#,
         # "dataZoom": [ # Add a slider for zooming and scrolling
         #    {"type": "slider", "start": 0, "end": 100},
