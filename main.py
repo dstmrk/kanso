@@ -38,6 +38,12 @@ async def on_startup():
         print(f"!!! FATAL STARTUP ERROR: {e} !!!")
         app.storage.general['startup_error'] = str(e)
 
+def get_user_agent(http_agent: str) -> str:
+    user_agent = "desktop"
+    if "mobile" in http_agent.lower():
+        user_agent = "mobile"
+    return user_agent
+
 app.on_startup(on_startup)
 
 @ui.page('/', title='My Personal Finance Dashboard', favicon='💰')
@@ -51,6 +57,7 @@ def main_page():
     if not net_worth_data or not net_worth_data['dates']:
         ui.label("No Net Worth data could be loaded or processed.").classes("text-orange-500")
         return
-    dashboard_page.create_page(net_worth_data, THEME_URL)
+    app.storage.client["user_agent"] = get_user_agent(ui.context.client.request.headers['user-agent'])
+    dashboard_page.create_page(net_worth_data, THEME_URL, app.storage.client["user_agent"])
 
 ui.run(port=PORT)
