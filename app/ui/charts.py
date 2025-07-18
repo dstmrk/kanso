@@ -9,7 +9,10 @@ def create_net_worth_chart_options(net_worth_data: Dict[str, Any], user_agent: s
         net_worth_data: A dictionary with 'dates' and 'values' keys.
     """
     return {
-        "tooltip": {"trigger": "axis"},
+        "tooltip": {
+            "trigger": "axis",
+            ":valueFormatter": 'function(value) { return "€ " + value.toFixed(2).toLocaleString("it-IT") }'
+            },
         "grid": {"left": '15%', "right": '5%', "top": '10%', "bottom": '20%'},
         "xAxis": {
             "type": "category",
@@ -54,18 +57,26 @@ def create_asset_vs_liabilities_chart(chart_data: Dict[str, Any], user_agent: st
             })
         data.append(category)
     return {
-        "tooltip": {"trigger": "axis"},
+        "tooltip": {
+            "trigger": 'item',
+            ":valueFormatter": 'function(value) { return "€ " + value.toFixed(2).toLocaleString("it-IT") }'
+        },
         "grid": {"left": '15%', "right": '5%', "top": '10%', "bottom": '20%'},
+        "color": ["#FFFFFF","#2b821d", "#c12e34"],
         "series": {
             "type": "sunburst",
             "data": data,
-            "radius": [60, '90%'],
+            "radius": [50, '80%'],
             "itemStyle": {
-                "borderRadius": 7,
-                "borderWidth": 2
+                "borderRadius": 5,
+                "borderWidth": 1
             },
             "label": {
-                "show": "true"
+                "show": "true",
+                "rotate": '0',
+                "minAngle": 5,
+                "color": "#ffffff",
+                "fontSize": 8 if user_agent == "mobile" else 12
             }
         }
     }
