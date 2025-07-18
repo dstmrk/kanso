@@ -37,37 +37,62 @@ def get_monthly_net_worth(df: pd.DataFrame) -> Dict[str, List]:
         - 'dates': A list of formatted date strings (e.g., '2023-12').
         - 'values': A list of net worth floats.
     """
-    # Check for required columns to avoid errors
     required_columns = ["Date", "Net Worth"]
     if not all(col in df.columns for col in required_columns):
         print(f"Error: DataFrame is missing one of the required columns: {required_columns}")
-        return {'dates': [], 'values': []} # Return empty structure
-
-    # Create a copy to avoid modifying the original DataFrame (good practice)
+        return {'dates': [], 'values': []}
     df_copy = df.copy()
-
-    # --- Data Cleaning and Processing ---
-    # 1. Apply the parsing function to the 'Net Worth' column
-    df_copy['net_worth_clean'] = df_copy['Net Worth'].apply(parse_monetary_value)
-    
-    # 2. Convert 'Date' column to datetime objects for proper sorting
-    #    'errors='coerce'' will turn unparseable dates into NaT (Not a Time)
     df_copy['date_dt'] = pd.to_datetime(df_copy['Date'], errors='coerce')
-    
-    # 3. Drop rows where the date could not be parsed
+    df_copy['net_worth_clean'] = df_copy['Net Worth'].apply(parse_monetary_value)
     df_copy.dropna(subset=['date_dt'], inplace=True)
-
-    # 4. Sort the DataFrame by date to ensure the chart is chronological
     df_sorted = df_copy.sort_values(by='date_dt')
-
-    # --- Formatting for ECharts ---
-    # 5. Format the dates into 'YYYY-MM' strings for the x-axis labels
     dates_for_chart = df_sorted['date_dt'].dt.strftime('%Y-%m').tolist()
-    
-    # 6. Get the clean numeric values for the y-axis
     values_for_chart = df_sorted['net_worth_clean'].tolist()
-
     return {
         'dates': dates_for_chart,
         'values': values_for_chart
+    }
+    
+def get_assets_liabilities(df: pd.DataFrame) -> Dict[str, List]:
+    """
+    Processes a DataFrame to extract monthly net worth data for ECharts.
+    
+    Args:
+        df: DataFrame from Google Sheets with 'Date' and 'Net Worth' columns.
+
+    Returns:
+        A dictionary formatted for ECharts with two keys:
+        - 'dates': A list of formatted date strings (e.g., '2023-12').
+        - 'values': A list of net worth floats.
+    """
+    # Check for required columns to avoid errors
+    required_columns = ["Date", "Cash", "Pension Fund", "Stocks", "Real Estate", "Crypto", "Other", "Mortgage", "Loans"]
+    if not all(col in df.columns for col in required_columns):
+        print(f"Error: DataFrame is missing one of the required columns: {required_columns}")
+        return {'Assets': {}, 'Liabilities': {}}
+    df_copy = df.copy()
+    df_copy['date_dt'] = pd.to_datetime(df_copy['Date'], errors='coerce')
+    df_sorted = df_copy.sort_values(by='date_dt')
+    latest_row = df_sorted.iloc[-1]
+    latest_cash = parse_monetary_value(latest_row["Cash"])
+    latest_pension_fund = parse_monetary_value(latest_row["Pension Fund"])
+    latest_stocks = parse_monetary_value(latest_row["Stocks"])
+    latest_real_estate = parse_monetary_value(latest_row["Real Estate"])
+    latest_crypto = parse_monetary_value(latest_row["Crypto"])
+    latest_other = parse_monetary_value(latest_row["Other"])
+    latest_mortgage = parse_monetary_value(latest_row["Mortgage"])
+    latest_loans = parse_monetary_value(latest_row["Loans"])
+    return {
+        "Assets": {
+            "Cash": latest_cash,
+            "Pension Fund": latest_pension_fund,
+            "Stocks": latest_stocks,
+            "Real Estate": latest_real_estate,
+            "Crypto": latest_crypto,
+            "Other": latest_other
+        },
+        "Liabilities": {
+            "Mortgage": latest_mortgage,
+            "Loans": latest_loans
+        }
     }
