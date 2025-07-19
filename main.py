@@ -22,20 +22,24 @@ app.add_static_files('/themes', static_files_path)
 
 async def on_startup():
     try:
-        print("--- Loading Google Sheet data ---")
         if CREDENTIALS_PATH is None:
             raise ValueError("CREDENTIALS_PATH environment variable not set.")
         if WORKBOOK_ID is None:
             raise ValueError("GOOGLE_SHEET_NAME environment variable not set.")
         if DATA_SHEET_NAME is None:
             raise ValueError("DATA_SHEET_NAME environment variable not set.")
+        print("--- Loading Google Sheet data ---")
         sheet_service = GoogleSheetService(APP_ROOT / CREDENTIALS_PATH, WORKBOOK_ID)
         data_sheet = sheet_service.get_worksheet_as_dataframe(DATA_SHEET_NAME)
-        processed_net_worth = finance_calculator.get_monthly_net_worth(data_sheet)
-        app.storage.general['net_worth_data'] = processed_net_worth
-        processed_assets_vs_liabilities = finance_calculator.get_assets_liabilities(data_sheet)
-        app.storage.general['assets_vs_liabilities_data'] = processed_assets_vs_liabilities
         print("--- Data loaded successfully ---")
+        print("--- Extracting Data ---")
+        app.storage.general['current_net_worth'] = finance_calculator.get_current_net_worth(data_sheet)
+        app.storage.general['mom_variation'] = finance_calculator.get_month_over_month_net_worth_variation(data_sheet)
+        app.storage.general['avg_saving_ratio'] = finance_calculator.get_average_saving_ratio_last_12_months(data_sheet)
+        app.storage.general['fi_progress'] = finance_calculator.get_fi_progress(data_sheet)
+        app.storage.general['net_worth_data'] = finance_calculator.get_monthly_net_worth(data_sheet)
+        app.storage.general['assets_vs_liabilities_data'] = finance_calculator.get_assets_liabilities(data_sheet)
+        print("--- Data extracted successfully ---")
     except Exception as e:
         print(f"!!! FATAL STARTUP ERROR: {e} !!!")
         app.storage.general['startup_error'] = str(e)
@@ -56,6 +60,26 @@ def main_page():
         del app.storage.general['startup_error']
         return
     
+    net_worth =  app.storage.general['current_net_worth']
+    if not net_worth:
+        ui.label("No Net Worth data could be loaded or processed.").classes("text-orange-500")
+        return
+    
+    mom_variation = app.storage.general['mom_variation']
+    if not mom_variation:
+        ui.label("No Month Over Month Variation could be loaded or processed.").classes("text-orange-500")
+        return
+    
+    avg_saving_ratio = app.storage.general['avg_saving_ratio']
+    if not avg_saving_ratio:
+        ui.label("No Average Saving Ratio could be loaded or processed.").classes("text-orange-500")
+        return
+
+    fi_progress = app.storage.general['fi_progress']
+    if not fi_progress:
+        ui.label("No Financial Independence Progress could be loaded or processed.").classes("text-orange-500")
+        return
+    
     net_worth_data = app.storage.general.get('net_worth_data')
     if not net_worth_data or not net_worth_data['dates']:
         ui.label("No Net Worth data could be loaded or processed.").classes("text-orange-500")
@@ -65,6 +89,6 @@ def main_page():
         ui.label("No Assets Vs Liabilities data could be loaded or processed.").classes("text-orange-500")
         return
     app.storage.client["user_agent"] = get_user_agent(ui.context.client.request.headers['user-agent'])
-    dashboard_page.create_page(net_worth_data, asset_vs_liabilities_data, THEME_URL, app.storage.client["user_agent"])
+    dashboard_page.create_page(net_worth_data, asset_vs_liabilities_data, net_worth, mom_variation, avg_saving_ratio, fi_progress, THEME_URL, app.storage.client["user_agent"])
 
 ui.run(port=PORT)

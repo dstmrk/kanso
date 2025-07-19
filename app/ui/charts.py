@@ -1,4 +1,3 @@
-# app/ui/charts.py
 from typing import Dict, Any
 
 def create_net_worth_chart_options(net_worth_data: Dict[str, Any], user_agent: str) -> Dict[str, Any]:
