@@ -1,4 +1,3 @@
-# main.py
 import os
 from nicegui import ui, app
 from dotenv import load_dotenv
@@ -13,6 +12,7 @@ APP_ROOT = Path(__file__).parent
 CREDENTIALS_PATH = os.getenv("GOOGLE_SHEET_CREDENTIAL_PATH")
 WORKBOOK_ID = os.getenv("WORKBOOK_ID")
 DATA_SHEET_NAME = os.getenv("DATA_SHEET_NAME")
+EXPENSES_SHEET_NAME = os.getenv("EXPENSES_SHEET_NAME")
 THEME_URL = os.getenv("ECHARTS_THEME_URL")
 PORT = os.getenv("APP_PORT") or 6789
 PORT = int(PORT)
@@ -28,6 +28,10 @@ async def on_startup():
             raise ValueError("GOOGLE_SHEET_NAME environment variable not set.")
         if DATA_SHEET_NAME is None:
             raise ValueError("DATA_SHEET_NAME environment variable not set.")
+        if EXPENSES_SHEET_NAME is None:
+            raise ValueError("EXPENSES_SHEET_NAME environment variable not set.")
+        if THEME_URL is None:
+            raise ValueError("THEME_URL environment variable not set.")
         print("--- Loading Google Sheet data ---")
         sheet_service = GoogleSheetService(APP_ROOT / CREDENTIALS_PATH, WORKBOOK_ID)
         data_sheet = sheet_service.get_worksheet_as_dataframe(DATA_SHEET_NAME)
@@ -39,7 +43,12 @@ async def on_startup():
         app.storage.general['fi_progress'] = finance_calculator.get_fi_progress(data_sheet)
         app.storage.general['net_worth_data'] = finance_calculator.get_monthly_net_worth(data_sheet)
         app.storage.general['assets_vs_liabilities_data'] = finance_calculator.get_assets_liabilities(data_sheet)
+        app.storage.general['theme_url'] = THEME_URL
         print("--- Data extracted successfully ---")
+        print("--- Loading Google Sheet expenses ---")
+        expenses_sheet = sheet_service.get_worksheet_as_dataframe(EXPENSES_SHEET_NAME)
+        print("--- Expenses loaded successfully ---")
+        app.storage.general['cash_flow_data'] = finance_calculator.get_cash_flow_last_12_month(data_sheet, expenses_sheet)
     except Exception as e:
         print(f"!!! FATAL STARTUP ERROR: {e} !!!")
         app.storage.general['startup_error'] = str(e)
@@ -88,7 +97,22 @@ def main_page():
     if not asset_vs_liabilities_data:
         ui.label("No Assets Vs Liabilities data could be loaded or processed.").classes("text-orange-500")
         return
-    app.storage.client["user_agent"] = get_user_agent(ui.context.client.request.headers['user-agent'])
-    dashboard_page.create_page(net_worth_data, asset_vs_liabilities_data, net_worth, mom_variation, avg_saving_ratio, fi_progress, THEME_URL, app.storage.client["user_agent"])
+    
+    cash_flow_data = app.storage.general.get('cash_flow_data')
+    if not cash_flow_data:
+        ui.label("No Cash Flow data could be loaded or processed.").classes("text-orange-500")
+        return
+    
+    client_request = ui.context.client.request
+    if not client_request:
+        ui.label("No Request found.").classes("text-orange-500")
+        return
+    
+    theme_url = app.storage.general.get('theme_url')
+    if not theme_url:
+        theme_url = ""
+        
+    app.storage.client["user_agent"] = get_user_agent(client_request.headers['user-agent'])
+    dashboard_page.create_page(net_worth_data, asset_vs_liabilities_data, cash_flow_data, net_worth, mom_variation, avg_saving_ratio, fi_progress, theme_url, app.storage.client["user_agent"])
 
 ui.run(port=PORT)
