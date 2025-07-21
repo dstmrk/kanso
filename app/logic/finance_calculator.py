@@ -5,14 +5,11 @@ from typing import Dict, Any, List
 
 def parse_monetary_value(value: Any) -> float:
     if not isinstance(value, str):
-        # If it's already a number (int, float) or None, return it as a float
         return float(value) if value is not None else 0.0
     try:
-        # Chain of replacements to handle the European format
         cleaned_value = value.replace("€", "").replace(" ", "").replace(".", "").replace(",", ".")
         return float(cleaned_value)
     except (ValueError, TypeError):
-        # If conversion fails for any reason, return a safe default
         return 0.0
     
 def get_current_net_worth(df: pd.DataFrame) -> float:
@@ -157,3 +154,26 @@ def get_average_expenses_by_category_last_12_months (ef:pd.DataFrame) -> Dict[st
         expenses_by_category = ef_last_12_months.groupby('Category')['amount_mon'].sum().reset_index()
         expenses = expenses_by_category.set_index('Category')['amount_mon'].to_dict()
     return expenses
+
+def get_incomes_vs_expenses(df:pd.DataFrame) -> Dict[str, List]:
+    income_vs_expenses_data = {'dates': [], 'incomes': [], 'expenses':[]}
+    required_columns = ["Date", "Income", "Expenses"]
+    if not all(col in df.columns for col in required_columns):
+        print(f"Error: DataFrame is missing one of the required columns: {required_columns}")
+    else:
+        df_copy = df.copy()
+        df_copy['date_dt'] = pd.to_datetime(df_copy['Date'], errors='coerce')
+        df_copy['income_clean'] = df_copy['Income'].apply(parse_monetary_value)
+        df_copy['expenses_clean'] = df_copy['Expenses'].apply(parse_monetary_value)
+        df_copy.dropna(subset=['date_dt'], inplace=True)
+        df_sorted = df_copy.sort_values(by='date_dt')
+        dates = df_sorted['date_dt'].dt.strftime('%Y-%m').iloc[-12:].tolist()
+        incomes = df_sorted['income_clean'].iloc[-12:].tolist()
+        expenses = df_sorted['expenses_clean'].iloc[-12:].tolist()
+        expenses = [-x for x in expenses]
+        income_vs_expenses_data = {
+            'dates': dates,
+            'incomes': incomes,
+            'expenses': expenses
+            }
+    return income_vs_expenses_data

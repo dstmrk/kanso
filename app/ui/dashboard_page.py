@@ -1,9 +1,9 @@
 
-from typing import Dict, Any
+from typing import Dict, List, Any
 from nicegui import ui, app
 from app.ui import charts
 
-def create_page(net_worth_data: Dict[str, Any], asset_vs_liabilities_data: Dict[str, Dict[str, float]], cash_flow_data: Dict[str, float], avg_expenses: Dict[str, float], net_worth: float, mom_variation: float, avg_saving_ratio: float, fi_progress: float, theme: str, user_agent: str):
+def create_page(net_worth_data: Dict[str, Any], asset_vs_liabilities_data: Dict[str, Dict[str, float]], income_vs_expenses_data: Dict[str,List], cash_flow_data: Dict[str, float], avg_expenses: Dict[str, float], net_worth: float, mom_variation: float, avg_saving_ratio: float, fi_progress: float, theme: str, user_agent: str):
     ui.add_head_html('<style>body {background-color: #293441; }</style>')
     ui.colors(primary='#E0E0E0', secondary='#293441', accent='#88B04B')
     
@@ -12,7 +12,7 @@ def create_page(net_worth_data: Dict[str, Any], asset_vs_liabilities_data: Dict[
 
         # --- Row 1: KPI cards ---
         with ui.row().classes('w-full flex justify-between gap-4 px-4 text-primary'):
-            net_worth_value = '€ {:.2f}'.format(net_worth)
+            net_worth_value = '€ {:.0f}'.format(net_worth)
             mom_variation_value = '{:.2%}'.format(mom_variation)
             avg_saving_ratio_value = '{:.2%}'.format(avg_saving_ratio)
             fi_progress_value = '{:.2%}'.format(fi_progress)
@@ -75,9 +75,7 @@ def create_page(net_worth_data: Dict[str, Any], asset_vs_liabilities_data: Dict[
                     ui.markdown(f'### Avg Expenses').classes('text-center')
                     expenses_options = charts.create_avg_expenses_options(avg_expenses, user_agent)
                     ui.echart(options=expenses_options, theme=theme).classes('flex-grow')
-            
-            for title in ['Income vs Expenses']:
-                # Apply the same fix to all chart cards.
-                with ui.card().classes('w-full md:w-[32%] flex flex-col relative overflow-hidden items-center justify-center bg-secondary'):
-                    ui.markdown(f'### {title}').classes('text-center')
-                    ui.echart(options={}, theme=theme).classes('flex-grow')
+            with ui.card().classes('w-full md:w-[32%] flex flex-col relative overflow-hidden items-center justify-center bg-secondary'):
+                    ui.markdown(f'### Income vs Expenses').classes('text-center')
+                    income_vs_expenses_options = charts.create_income_vs_expenses_options(income_vs_expenses_data, user_agent)
+                    ui.echart(options=income_vs_expenses_options, theme=theme).classes('flex-grow')

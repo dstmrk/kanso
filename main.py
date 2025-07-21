@@ -43,6 +43,7 @@ async def on_startup():
         app.storage.general['fi_progress'] = finance_calculator.get_fi_progress(data_sheet)
         app.storage.general['net_worth_data'] = finance_calculator.get_monthly_net_worth(data_sheet)
         app.storage.general['assets_vs_liabilities_data'] = finance_calculator.get_assets_liabilities(data_sheet)
+        app.storage.general['incomes_vs_expenses_data'] = finance_calculator.get_incomes_vs_expenses(data_sheet)
         app.storage.general['theme_url'] = THEME_URL
         print("--- Data extracted successfully ---")
         print("--- Loading Google Sheet expenses ---")
@@ -94,6 +95,7 @@ def main_page():
     if not net_worth_data or not net_worth_data['dates']:
         ui.label("No Net Worth data could be loaded or processed.").classes("text-orange-500")
         return
+    
     asset_vs_liabilities_data = app.storage.general.get('assets_vs_liabilities_data')
     if not asset_vs_liabilities_data:
         ui.label("No Assets Vs Liabilities data could be loaded or processed.").classes("text-orange-500")
@@ -109,6 +111,11 @@ def main_page():
         ui.label("No Expenses data could be loaded or processed.").classes("text-orange-500")
         return
     
+    incomes_vs_expenses =  app.storage.general.get('incomes_vs_expenses_data')
+    if not incomes_vs_expenses:
+        ui.label("No Income or Expenses data could be loaded or processed.").classes("text-orange-500")
+        return
+    
     client_request = ui.context.client.request
     if not client_request:
         ui.label("No Request found.").classes("text-orange-500")
@@ -119,6 +126,6 @@ def main_page():
         theme_url = ""
         
     app.storage.client["user_agent"] = get_user_agent(client_request.headers['user-agent'])
-    dashboard_page.create_page(net_worth_data, asset_vs_liabilities_data, cash_flow_data, avg_expenses, net_worth, mom_variation, avg_saving_ratio, fi_progress, theme_url, app.storage.client["user_agent"])
+    dashboard_page.create_page(net_worth_data, asset_vs_liabilities_data, incomes_vs_expenses, cash_flow_data, avg_expenses, net_worth, mom_variation, avg_saving_ratio, fi_progress, theme_url, app.storage.client["user_agent"])
 
 ui.run(port=PORT)

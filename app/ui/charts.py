@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, List, Any
 
 def create_net_worth_chart_options(net_worth_data: Dict[str, Any], user_agent: str) -> Dict[str, Any]:
     return {
@@ -17,8 +17,8 @@ def create_net_worth_chart_options(net_worth_data: Dict[str, Any], user_agent: s
         "yAxis": {
             "type": "value",
             "axisLabel": {
-                "formatter": '€ {value}',
-                "fontSize": 8 if user_agent == "mobile" else 12
+                "fontSize": 8 if user_agent == "mobile" else 12,
+                ':formatter': 'function(value) { return "€ " + value.toFixed(0).toLocaleString("it-IT") }'
                 }
         },
         "series": [{
@@ -129,4 +129,48 @@ def create_avg_expenses_options(expenses_data: Dict[str, float], user_agent: str
            'data': data
            }
        }
+    return options
+
+def create_income_vs_expenses_options(income_vs_expenses_data: Dict[str, List], user_agent: str) -> Dict[str, Any]:
+    options = {
+        'tooltip': {
+            'trigger': 'axis',
+            ':valueFormatter': 'function(value) { return "€ " + value.toFixed(2).toLocaleString("it-IT") }'
+            },
+        'grid': {'left': '15%', 'right': '5%', 'top': '10%', 'bottom': '20%'},
+        'color': ["#2b821d", "#c12e34"],
+        'xAxis': {
+            'type': 'category',
+            'axisLabel': {
+                'fontSize': 8 if user_agent == "mobile" else 12
+            },
+            'data': income_vs_expenses_data['dates'],
+            'axisTick': {'alignWithLabel': True}
+        },
+        'yAxis': {
+            'type': 'value',
+            'axisLabel': {
+                'fontSize': 8 if user_agent == "mobile" else 12,
+                ':formatter': 'function(value) { return "€ " + value.toFixed(0).toLocaleString("it-IT") }'
+            },
+            'axisLine': {'onZero': True},
+            'splitLine': {'show': False}
+            },
+        'series': [
+            {
+                'name': 'Income',
+                'type': 'bar',
+                'stack': 'total',
+                'data': income_vs_expenses_data['incomes'],
+                'emphasis': {'focus': 'series'}
+            },
+            {
+                'name': 'Expenses',
+                'type': 'bar',
+                'stack': 'total',
+                'data': income_vs_expenses_data['expenses'],
+                'emphasis': {'focus': 'series'}
+            }
+            ]
+        }
     return options
