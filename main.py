@@ -48,7 +48,8 @@ async def on_startup():
         print("--- Loading Google Sheet expenses ---")
         expenses_sheet = sheet_service.get_worksheet_as_dataframe(EXPENSES_SHEET_NAME)
         print("--- Expenses loaded successfully ---")
-        app.storage.general['cash_flow_data'] = finance_calculator.get_cash_flow_last_12_month(data_sheet, expenses_sheet)
+        app.storage.general['cash_flow_data'] = finance_calculator.get_cash_flow_last_12_months(data_sheet, expenses_sheet)
+        app.storage.general['avg_expenses'] = finance_calculator.get_average_expenses_by_category_last_12_months(expenses_sheet)
     except Exception as e:
         print(f"!!! FATAL STARTUP ERROR: {e} !!!")
         app.storage.general['startup_error'] = str(e)
@@ -103,6 +104,11 @@ def main_page():
         ui.label("No Cash Flow data could be loaded or processed.").classes("text-orange-500")
         return
     
+    avg_expenses = app.storage.general.get('avg_expenses')
+    if not avg_expenses:
+        ui.label("No Expenses data could be loaded or processed.").classes("text-orange-500")
+        return
+    
     client_request = ui.context.client.request
     if not client_request:
         ui.label("No Request found.").classes("text-orange-500")
@@ -113,6 +119,6 @@ def main_page():
         theme_url = ""
         
     app.storage.client["user_agent"] = get_user_agent(client_request.headers['user-agent'])
-    dashboard_page.create_page(net_worth_data, asset_vs_liabilities_data, cash_flow_data, net_worth, mom_variation, avg_saving_ratio, fi_progress, theme_url, app.storage.client["user_agent"])
+    dashboard_page.create_page(net_worth_data, asset_vs_liabilities_data, cash_flow_data, avg_expenses, net_worth, mom_variation, avg_saving_ratio, fi_progress, theme_url, app.storage.client["user_agent"])
 
 ui.run(port=PORT)

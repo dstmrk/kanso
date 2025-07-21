@@ -69,11 +69,10 @@ def create_asset_vs_liabilities_chart(chart_data: Dict[str, Any], user_agent: st
     }
 
 def create_cash_flow_options(cash_flow_data: Dict[str, float], user_agent: str) -> Dict[str, Any]:
-    income = cash_flow_data.get('Income', 0)
     savings = cash_flow_data.get('Savings', 0)
     expenses_total = cash_flow_data.get('Expenses', 0)
 
-    expense_categories = {k: v for k, v in cash_flow_data.items() if k not in ['Income', 'Savings', 'Expenses']}
+    expense_categories = {k: v for k, v in cash_flow_data.items() if k not in ['Savings', 'Expenses']}
     nodes = [{'name': 'Income'}, {'name': 'Savings'}, {'name': 'Expenses'}] + [
         {'name': category} for category in expense_categories
     ]
@@ -85,12 +84,11 @@ def create_cash_flow_options(cash_flow_data: Dict[str, float], user_agent: str) 
         {'source': 'Expenses', 'target': category, 'value': round(amount, 2)}
         for category, amount in expense_categories.items()
     ]
-
     options = {
         'tooltip': {
             'trigger': 'item',
             'triggerOn': 'mousemove',
-            ":valueFormatter": 'function(value) { return "€ " + value.toFixed(2).toLocaleString("it-IT")}'
+            ':valueFormatter': 'function(value) { return "€ " + value.toFixed(2).toLocaleString("it-IT")}'
             },
         'series': [{
             'type': 'sankey',
@@ -102,4 +100,33 @@ def create_cash_flow_options(cash_flow_data: Dict[str, float], user_agent: str) 
             'label': {'fontSize': 8 if user_agent == "mobile" else 12}
         }]
     }
+    return options
+
+def create_avg_expenses_options(expenses_data: Dict[str, float], user_agent: str) -> Dict[str, Any]:
+    expense_categories = {k: v for k, v in expenses_data.items()}
+    data = [
+        {'name': category, 'value': value} for category, value in expense_categories.items()
+    ]
+    options = {
+       'tooltip': {
+            'trigger': 'item',
+            ':valueFormatter': 'function(value) { return "€ " + value.toFixed(2).toLocaleString("it-IT")}'
+        },
+       'series': {
+           'type': 'pie',
+           'radius': [ 50, '80%'],
+           'avoidLabelOverlap': 'false',
+           'itemStyle': {
+               'borderRadius': 5,
+               'borderColor': '#fff',
+               'borderWidth': 1
+               },
+           'label': {
+               'minAngle': 5,
+               'fontSize': 8 if user_agent == "mobile" else 12
+               },
+           'labelLine': {'show': 'false'},
+           'data': data
+           }
+       }
     return options

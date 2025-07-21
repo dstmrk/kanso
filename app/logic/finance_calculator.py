@@ -114,8 +114,8 @@ def get_assets_liabilities(df: pd.DataFrame) -> Dict[str, Dict[str, float]]:
             }
     return asset_liabilities
 
-def get_cash_flow_last_12_month (df:pd.DataFrame, ef:pd.DataFrame) -> Dict[str, float]:
-    cash_flow = {"Income" : 0.0, "Savings": 0.0 , "Expenses": 0.0}
+def get_cash_flow_last_12_months (df:pd.DataFrame, ef:pd.DataFrame) -> Dict[str, float]:
+    cash_flow = {"Savings": 0.0 , "Expenses": 0.0}
     df_required_columns = ["Income"]
     ef_required_columns = ["Month", "Amount", "Category"]
     if not all(col in df.columns for col in df_required_columns):
@@ -128,7 +128,7 @@ def get_cash_flow_last_12_month (df:pd.DataFrame, ef:pd.DataFrame) -> Dict[str, 
         df_sorted = df_copy.sort_values(by='date_dt')
         income = df_sorted["Income"].iloc[-12:].apply(parse_monetary_value).sum()
         ef_copy = ef.copy()
-        ef_copy['date_dt'] = pd.to_datetime(ef_copy['Month'], errors='coerce')
+        ef_copy['date_dt']= pd.to_datetime(ef_copy['Month'].astype(str).str.strip(), format='%Y-%m', errors='coerce')
         ef_copy['amount_mon'] = ef_copy["Amount"].apply(parse_monetary_value)
         latest_date = ef_copy['date_dt'].max()
         start_date = (latest_date - pd.DateOffset(months=11)).replace(day=1)
@@ -136,8 +136,24 @@ def get_cash_flow_last_12_month (df:pd.DataFrame, ef:pd.DataFrame) -> Dict[str, 
         ef_last_12_months = ef_copy[mask]
         expenses_by_category = ef_last_12_months.groupby('Category')['amount_mon'].sum().reset_index()
         total_expenses = ef_last_12_months['amount_mon'].sum()
-        cash_flow["Income"] = income
         cash_flow["Expenses"] = total_expenses
         cash_flow["Savings"] = income - total_expenses
         cash_flow = cash_flow | expenses_by_category.set_index('Category')['amount_mon'].to_dict()
     return cash_flow
+
+def get_average_expenses_by_category_last_12_months (ef:pd.DataFrame) -> Dict[str, float]:
+    expenses = {}
+    ef_required_columns = ["Month", "Amount", "Category"]
+    if not all(col in ef.columns for col in ef_required_columns):
+        print(f"Error: DataFrame is missing one of the required columns: {ef_required_columns}")
+    else:
+        ef_copy = ef.copy()
+        ef_copy['date_dt']= pd.to_datetime(ef_copy['Month'].astype(str).str.strip(), format='%Y-%m', errors='coerce')
+        ef_copy['amount_mon'] = ef_copy["Amount"].apply(parse_monetary_value)
+        latest_date = ef_copy['date_dt'].max()
+        start_date = (latest_date - pd.DateOffset(months=11)).replace(day=1)
+        mask = (ef_copy['date_dt'] >= start_date) & (ef_copy['date_dt'] <= latest_date)
+        ef_last_12_months = ef_copy[mask]
+        expenses_by_category = ef_last_12_months.groupby('Category')['amount_mon'].sum().reset_index()
+        expenses = expenses_by_category.set_index('Category')['amount_mon'].to_dict()
+    return expenses
