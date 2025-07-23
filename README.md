@@ -1,1 +1,1 @@
-# mypersonalfinance
+# kanso
