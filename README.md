@@ -35,7 +35,7 @@ It's for people who want to check in on their finances once a month, track big t
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/kanso.git
+git clone https://github.com/marcodestefano/kanso.git
 cd kanso
 ```
 
