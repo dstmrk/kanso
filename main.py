@@ -12,9 +12,9 @@ APP_ROOT = Path(__file__).parent
 CREDENTIALS_FOLDER = "config/credentials"
 CREDENTIALS_FILENAME = os.getenv("GOOGLE_SHEET_CREDENTIALS_FILENAME")
 WORKBOOK_ID = os.getenv("WORKBOOK_ID")
-DATA_SHEET_NAME = os.getenv("DATA_SHEET_NAME")
-EXPENSES_SHEET_NAME = os.getenv("EXPENSES_SHEET_NAME")
-THEME_URL = os.getenv("ECHARTS_THEME_URL")
+DATA_SHEET_NAME = os.getenv("DATA_SHEET_NAME") or "Data"
+EXPENSES_SHEET_NAME = os.getenv("EXPENSES_SHEET_NAME") or "Expenses"
+THEME_FILENAME = "themes/" + (os.getenv("ECHARTS_THEME_URL") or "default_echarts_theme.json")
 PORT = os.getenv("APP_PORT") or 6789
 PORT = int(PORT)
 
@@ -34,8 +34,6 @@ async def on_startup():
             raise ValueError("DATA_SHEET_NAME environment variable not set.")
         if EXPENSES_SHEET_NAME is None:
             raise ValueError("EXPENSES_SHEET_NAME environment variable not set.")
-        if THEME_URL is None:
-            raise ValueError("THEME_URL environment variable not set.")
         print("--- Loading Google Sheet data ---")
         sheet_service = GoogleSheetService(APP_ROOT / CREDENTIALS_FOLDER / CREDENTIALS_FILENAME, WORKBOOK_ID)
         data_sheet = sheet_service.get_worksheet_as_dataframe(DATA_SHEET_NAME)
@@ -48,13 +46,13 @@ async def on_startup():
         app.storage.general['net_worth_data'] = finance_calculator.get_monthly_net_worth(data_sheet)
         app.storage.general['assets_vs_liabilities_data'] = finance_calculator.get_assets_liabilities(data_sheet)
         app.storage.general['incomes_vs_expenses_data'] = finance_calculator.get_incomes_vs_expenses(data_sheet)
-        app.storage.general['theme_url'] = THEME_URL
         print("--- Data extracted successfully ---")
         print("--- Loading Google Sheet expenses ---")
         expenses_sheet = sheet_service.get_worksheet_as_dataframe(EXPENSES_SHEET_NAME)
         print("--- Expenses loaded successfully ---")
         app.storage.general['cash_flow_data'] = finance_calculator.get_cash_flow_last_12_months(data_sheet, expenses_sheet)
         app.storage.general['avg_expenses'] = finance_calculator.get_average_expenses_by_category_last_12_months(expenses_sheet)
+        app.storage.general['theme_url'] = THEME_FILENAME
     except Exception as e:
         print(f"!!! FATAL STARTUP ERROR: {e} !!!")
         app.storage.general['startup_error'] = str(e)
