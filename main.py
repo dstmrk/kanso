@@ -2,6 +2,7 @@ import os
 from nicegui import ui, app
 from dotenv import load_dotenv
 from pathlib import Path
+from user_agents import parse
 
 from app.services.google_sheets import GoogleSheetService
 from app.logic import finance_calculator
@@ -27,31 +28,27 @@ app.add_static_files('/favicon', static_favicon_files_path)
 async def on_startup():
     try:
         if CREDENTIALS_FILENAME is None:
-            raise ValueError("CREDENTIALS_PATH environment variable not set.")
+            raise ValueError("CREDENTIALS_FILENAME environment variable not set.")
         if WORKBOOK_ID is None:
-            raise ValueError("GOOGLE_SHEET_NAME environment variable not set.")
-        if DATA_SHEET_NAME is None:
-            raise ValueError("DATA_SHEET_NAME environment variable not set.")
-        if EXPENSES_SHEET_NAME is None:
-            raise ValueError("EXPENSES_SHEET_NAME environment variable not set.")
+            raise ValueError("WORKBOOK_ID environment variable not set.")
         print("--- Loading Google Sheet data ---")
         sheet_service = GoogleSheetService(APP_ROOT / CREDENTIALS_FOLDER / CREDENTIALS_FILENAME, WORKBOOK_ID)
         data_sheet = sheet_service.get_worksheet_as_dataframe(DATA_SHEET_NAME)
         print("--- Data loaded successfully ---")
         print("--- Extracting Data ---")
-        app.storage.general['current_net_worth'] = finance_calculator.get_current_net_worth(data_sheet)
-        app.storage.general['mom_variation'] = finance_calculator.get_month_over_month_net_worth_variation(data_sheet)
-        app.storage.general['avg_saving_ratio'] = finance_calculator.get_average_saving_ratio_last_12_months(data_sheet)
-        app.storage.general['fi_progress'] = finance_calculator.get_fi_progress(data_sheet)
-        app.storage.general['net_worth_data'] = finance_calculator.get_monthly_net_worth(data_sheet)
-        app.storage.general['assets_vs_liabilities_data'] = finance_calculator.get_assets_liabilities(data_sheet)
-        app.storage.general['incomes_vs_expenses_data'] = finance_calculator.get_incomes_vs_expenses(data_sheet)
+        app.storage.general['current_net_worth'] = app.storage.general.get('current_net-worth',finance_calculator.get_current_net_worth(data_sheet))
+        app.storage.general['mom_variation'] = app.storage.general.get('mom_variation',finance_calculator.get_month_over_month_net_worth_variation(data_sheet))
+        app.storage.general['avg_saving_ratio'] = app.storage.general.get('avg_saving_ratio',finance_calculator.get_average_saving_ratio_last_12_months(data_sheet))
+        app.storage.general['fi_progress'] = app.storage.general.get('fi_progress',finance_calculator.get_fi_progress(data_sheet))
+        app.storage.general['net_worth_data'] = app.storage.general.get('net_worth_data',finance_calculator.get_monthly_net_worth(data_sheet))
+        app.storage.general['assets_vs_liabilities_data'] = app.storage.general.get('assets_vs_liabilities_data',finance_calculator.get_assets_liabilities(data_sheet))
+        app.storage.general['incomes_vs_expenses_data'] = app.storage.general.get('incomes_vs_expenses_data',finance_calculator.get_incomes_vs_expenses(data_sheet))
         print("--- Data extracted successfully ---")
         print("--- Loading Google Sheet expenses ---")
         expenses_sheet = sheet_service.get_worksheet_as_dataframe(EXPENSES_SHEET_NAME)
         print("--- Expenses loaded successfully ---")
-        app.storage.general['cash_flow_data'] = finance_calculator.get_cash_flow_last_12_months(data_sheet, expenses_sheet)
-        app.storage.general['avg_expenses'] = finance_calculator.get_average_expenses_by_category_last_12_months(expenses_sheet)
+        app.storage.general['cash_flow_data'] = app.storage.general.get('cash_flow_data',finance_calculator.get_cash_flow_last_12_months(data_sheet, expenses_sheet))
+        app.storage.general['avg_expenses'] = app.storage.general.get('avg_expenses',finance_calculator.get_average_expenses_by_category_last_12_months(expenses_sheet))
         app.storage.general['theme_url'] = THEME_FILENAME
     except Exception as e:
         print(f"!!! FATAL STARTUP ERROR: {e} !!!")
@@ -59,13 +56,14 @@ async def on_startup():
 
 def get_user_agent(http_agent: str) -> str:
     user_agent = "desktop"
-    if "mobile" in http_agent.lower():
+    agent = parse(http_agent)
+    if agent.is_mobile:
         user_agent = "mobile"
     return user_agent
 
 app.on_startup(on_startup)
 
-@ui.page('/', title='Kanso - your minimal money tracker')
+@ui.page('/', title='Kanso - Your Minimal Money Tracker')
 def main_page():
     if 'startup_error' in app.storage.general:
         error_message = app.storage.general['startup_error']

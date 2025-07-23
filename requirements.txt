@@ -2,3 +2,4 @@ gspread==6.2.1
 nicegui==2.21.1
 pandas==2.3.1
 python-dotenv==1.1.1
+user_agents==2.2.0
