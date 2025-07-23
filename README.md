@@ -86,6 +86,6 @@ kanso/
 
 ## 🧩 Tech Stack
 
-[gspread](https://github.com/burnash/gspread) – Google Sheets API wrapper
-[NiceGUI](https://nicegui.io) – UI framework for Python Web App
-[ECharts](https://echarts.apache.org/en/index.html) – Data visualizations library
+- [gspread](https://github.com/burnash/gspread) – Google Sheets API wrapper
+- [NiceGUI](https://nicegui.io) – UI framework for Python Web App
+- [ECharts](https://echarts.apache.org/en/index.html) – Data visualizations library
