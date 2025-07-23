@@ -1,6 +1,6 @@
 
 from typing import Dict, List, Any
-from nicegui import ui, app
+from nicegui import ui
 from app.ui import charts
 
 def create_page(net_worth_data: Dict[str, Any], asset_vs_liabilities_data: Dict[str, Dict[str, float]], income_vs_expenses_data: Dict[str,List], cash_flow_data: Dict[str, float], avg_expenses: Dict[str, float], net_worth: float, mom_variation: float, avg_saving_ratio: float, fi_progress: float, theme: str, user_agent: str):

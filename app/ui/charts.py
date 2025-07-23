@@ -73,10 +73,21 @@ def create_cash_flow_options(cash_flow_data: Dict[str, float], user_agent: str) 
     expenses_total = cash_flow_data.get('Expenses', 0)
 
     expense_categories = {k: v for k, v in cash_flow_data.items() if k not in ['Savings', 'Expenses']}
-    nodes = [{'name': 'Income'}, {'name': 'Savings'}, {'name': 'Expenses'}] + [
-        {'name': category} for category in expense_categories
+    colors = [
+            "#e6b600",
+            "#95706d",
+            "#9bbc99",
+            "#8c6ac4",
+            "#ea7e53",
+            "#0098d9",
+            "#e098c7",
+            "#73c0de",
+            "#3fb27f"
     ]
-
+    nodes = [{'name': 'Income', 'itemStyle': {'color': '#2b821d'}}, {'name': 'Savings', 'itemStyle': {'color': '#005eaa'}}, {'name': 'Expenses', 'itemStyle': {'color': '#c12e34'}}] + [
+        {'name': category, 'itemStyle': {'color': colors[i% len(colors)]}} for i, category in enumerate(expense_categories)
+    ]
+    
     links = [
         {'source': 'Income', 'target': 'Savings', 'value': round(savings, 2)},
         {'source': 'Income', 'target': 'Expenses', 'value': round(expenses_total, 2)},
@@ -96,7 +107,7 @@ def create_cash_flow_options(cash_flow_data: Dict[str, float], user_agent: str) 
             'data': nodes,
             'links': links,
             'emphasis': {'focus': 'adjacency'},
-            'lineStyle': {'color': 'source', 'curveness': 0.5},
+            'lineStyle': {'color': 'source', 'curveness': 0.3},
             'label': {'fontSize': 8 if user_agent == "mobile" else 12}
         }]
     }
@@ -126,7 +137,8 @@ def create_avg_expenses_options(expenses_data: Dict[str, float], user_agent: str
                'fontSize': 8 if user_agent == "mobile" else 12
                },
            'labelLine': {'show': 'false'},
-           'data': data
+           'data': data,
+           'emphasis': {'focus': 'self'}
            }
        }
     return options
@@ -162,14 +174,14 @@ def create_income_vs_expenses_options(income_vs_expenses_data: Dict[str, List], 
                 'type': 'bar',
                 'stack': 'total',
                 'data': income_vs_expenses_data['incomes'],
-                'emphasis': {'focus': 'series'}
+                'emphasis': {'focus': 'self'}
             },
             {
                 'name': 'Expenses',
                 'type': 'bar',
                 'stack': 'total',
                 'data': income_vs_expenses_data['expenses'],
-                'emphasis': {'focus': 'series'}
+                'emphasis': {'focus': 'self'}
             }
             ]
         }
