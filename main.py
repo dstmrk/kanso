@@ -9,7 +9,8 @@ from app.ui import dashboard_page
 
 load_dotenv()
 APP_ROOT = Path(__file__).parent
-CREDENTIALS_PATH = os.getenv("GOOGLE_SHEET_CREDENTIAL_PATH")
+CREDENTIALS_FOLDER = "config/credentials"
+CREDENTIALS_FILENAME = os.getenv("GOOGLE_SHEET_CREDENTIALS_FILENAME")
 WORKBOOK_ID = os.getenv("WORKBOOK_ID")
 DATA_SHEET_NAME = os.getenv("DATA_SHEET_NAME")
 EXPENSES_SHEET_NAME = os.getenv("EXPENSES_SHEET_NAME")
@@ -25,7 +26,7 @@ app.add_static_files('/favicon', static_favicon_files_path)
 
 async def on_startup():
     try:
-        if CREDENTIALS_PATH is None:
+        if CREDENTIALS_FILENAME is None:
             raise ValueError("CREDENTIALS_PATH environment variable not set.")
         if WORKBOOK_ID is None:
             raise ValueError("GOOGLE_SHEET_NAME environment variable not set.")
@@ -36,7 +37,7 @@ async def on_startup():
         if THEME_URL is None:
             raise ValueError("THEME_URL environment variable not set.")
         print("--- Loading Google Sheet data ---")
-        sheet_service = GoogleSheetService(APP_ROOT / CREDENTIALS_PATH, WORKBOOK_ID)
+        sheet_service = GoogleSheetService(APP_ROOT / CREDENTIALS_FOLDER / CREDENTIALS_FILENAME, WORKBOOK_ID)
         data_sheet = sheet_service.get_worksheet_as_dataframe(DATA_SHEET_NAME)
         print("--- Data loaded successfully ---")
         print("--- Extracting Data ---")

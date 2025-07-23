@@ -210,4 +210,4 @@ __marimo__/
 .vscode/
 .nicegui/
 .DS_Store
-gsheet_credentials.json
+config/credentials
