@@ -22,6 +22,7 @@ DATA_SHEET_NAME = os.getenv("DATA_SHEET_NAME", "Data")
 EXPENSES_SHEET_NAME = os.getenv("EXPENSES_SHEET_NAME", "Expenses")
 THEME_FILENAME = "themes/" + os.getenv("ECHARTS_THEME_URL", "default_echarts_theme.json")
 PORT = int(os.getenv("APP_PORT", 6789))
+TITLE = "kanso - your minimal money tracker"
 
 # === Utilities ===
 def get_user_agent(http_agent: str | None) -> str:
@@ -33,7 +34,7 @@ def get_or_store(key: str, compute_fn):
     return app.storage.user[key]
 
 # === Page ===
-@ui.page('/', title='Kanso - Your Minimal Money Tracker')
+@ui.page('/', title=TITLE)
 def main_page():
     try:
         if not CREDENTIALS_FILENAME or not WORKBOOK_ID:
@@ -73,6 +74,7 @@ def main_page():
 
         # Render dashboard
         dashboard_page.create_page(
+            TITLE,
             net_worth_data,
             asset_vs_liabilities_data,
             incomes_vs_expenses,
