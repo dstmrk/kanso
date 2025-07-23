@@ -17,8 +17,11 @@ THEME_URL = os.getenv("ECHARTS_THEME_URL")
 PORT = os.getenv("APP_PORT") or 6789
 PORT = int(PORT)
 
-static_files_path = APP_ROOT / 'static' / 'themes'
-app.add_static_files('/themes', static_files_path)
+static_files_folder = APP_ROOT / 'static'
+static_theme_files_path = static_files_folder / 'themes'
+static_favicon_files_path = static_files_folder / 'favicon'
+app.add_static_files('/themes', static_theme_files_path)
+app.add_static_files('/favicon', static_favicon_files_path)
 
 async def on_startup():
     try:
@@ -63,7 +66,7 @@ def get_user_agent(http_agent: str) -> str:
 
 app.on_startup(on_startup)
 
-@ui.page('/', title='My Personal Finance Dashboard', favicon='💰')
+@ui.page('/', title='Kanso - your minimal money tracker')
 def main_page():
     if 'startup_error' in app.storage.general:
         error_message = app.storage.general['startup_error']
@@ -128,4 +131,4 @@ def main_page():
     app.storage.client["user_agent"] = get_user_agent(client_request.headers['user-agent'])
     dashboard_page.create_page(net_worth_data, asset_vs_liabilities_data, incomes_vs_expenses, cash_flow_data, avg_expenses, net_worth, mom_variation, avg_saving_ratio, fi_progress, theme_url, app.storage.client["user_agent"])
 
-ui.run(port=PORT)
+ui.run(port=PORT, favicon= static_favicon_files_path / "favicon.ico")

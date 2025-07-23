@@ -4,11 +4,10 @@ from nicegui import ui, app
 from app.ui import charts
 
 def create_page(net_worth_data: Dict[str, Any], asset_vs_liabilities_data: Dict[str, Dict[str, float]], income_vs_expenses_data: Dict[str,List], cash_flow_data: Dict[str, float], avg_expenses: Dict[str, float], net_worth: float, mom_variation: float, avg_saving_ratio: float, fi_progress: float, theme: str, user_agent: str):
-    ui.add_head_html('<style>body {background-color: #293441; }</style>')
-    ui.colors(primary='#E0E0E0', secondary='#293441', accent='#88B04B')
-    
+    ui.add_head_html('<style>body {background-color: #1C293A; }</style>')
+    ui.colors(primary='#E0E0E0', secondary='#1C293A', accent='#88B04B')
     with ui.column().classes('items-center w-full max-w-screen-xl mx-auto'):
-        ui.label('Personal Finance Dashboard').classes('text-center text-2xl md:text-4xl font-bold my-2 text-primary')
+        ui.label('Kanso - Your Minimal Money Tracker').classes('text-center text-2xl md:text-4xl font-bold my-2 text-primary')
 
         # --- Row 1: KPI cards ---
         with ui.row().classes('w-full flex justify-between gap-4 px-4 text-primary'):
