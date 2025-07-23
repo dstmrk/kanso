@@ -28,7 +28,7 @@ RUN pip install --no-cache /wheels/*
 COPY --chown=appuser:appuser . .
 
 # Expose the port NiceGUI runs on
-EXPOSE 8080
+EXPOSE 6789
 
 # The command to run the application
 # We use the host "0.0.0.0" to make it accessible outside the container
