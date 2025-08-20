@@ -17,9 +17,10 @@ CREDENTIALS_FILENAME = os.getenv("GOOGLE_SHEET_CREDENTIALS_FILENAME")
 WORKBOOK_ID = os.getenv("WORKBOOK_ID")
 DATA_SHEET_NAME = os.getenv("DATA_SHEET_NAME", "Data")
 EXPENSES_SHEET_NAME = os.getenv("EXPENSES_SHEET_NAME", "Expenses")
-THEME_FILENAME = "themes/" + os.getenv("ECHARTS_THEME_URL", "default_echarts_theme.json")
+THEME = "light"
+THEME_FILENAME = "themes/" + os.getenv("ECHARTS_THEME_URL", THEME+"_default_echarts_theme.json")
 PORT = int(os.getenv("APP_PORT", 6789))
-ROOT_PATH = os.getenv("ROOT_PATH", "/")
+ROOT_PATH = os.getenv("ROOT_PATH", "")
 TITLE = "kanso - your minimal money tracker"
 
 HEAD_HTML = """
@@ -46,7 +47,7 @@ HEAD_HTML = """
 <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.css" rel="stylesheet" type="text/css" />
 
 <!-- Force dark theme early -->
-<script>document.documentElement.setAttribute("data-theme", "dark");</script>
+<script>document.documentElement.setAttribute("data-theme",'"""+THEME+"""');</script>
 
 <style>
   /* ensure main content isn't hidden behind bottom nav on mobile */

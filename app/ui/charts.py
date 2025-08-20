@@ -49,7 +49,7 @@ def create_asset_vs_liabilities_chart(chart_data: Dict[str, Any], user_agent: st
             ":valueFormatter": 'function(value) { return "€ " + value.toFixed(2).toLocaleString("it-IT") }'
         },
         "grid": {"left": '15%', "right": '5%', "top": '10%', "bottom": '20%'},
-        "color": ["#FFFFFF","#2b821d", "#c12e34"],
+        "color": ["#777777","#2b821d", "#c12e34"],
         "series": {
             "type": "sunburst",
             "data": data,
@@ -62,7 +62,7 @@ def create_asset_vs_liabilities_chart(chart_data: Dict[str, Any], user_agent: st
                 "show": "true",
                 "rotate": '0',
                 "minAngle": 5,
-                "color": "#ffffff",
+                "color": "#dddddd",
                 "fontSize": 8 if user_agent == "mobile" else 12
             }
         }

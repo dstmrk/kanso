@@ -19,7 +19,7 @@ def header():
     left_drawer.hide()
     right_drawer.hide()
     
-    with ui.header().classes('bg-base-200 p-2 mobile-hide'):
+    with ui.header().classes('bg-secondary p-2 mobile-hide'):
         with ui.row().classes('w-full items-center justify-between text-2xl'):
             title_left = ui.label('Kanso').classes('font-semibold cursor-pointer')
             title_left.props('tabindex="0" role="button" aria-label="Toggle menu"')

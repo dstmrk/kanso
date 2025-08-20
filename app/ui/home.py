@@ -44,7 +44,7 @@ def render():
                 fi_progress_value = '{:.2%}'.format(fi_progress)
                 with ui.card().classes('cursor-pointer' + STAT_CARDS_CLASSES).on('click', lambda: ui.navigate.to(pages.NET_WORTH_PAGE)):
                     ui.label('Net Worth').classes(STAT_CARDS_LABEL_CLASSES)
-                    ui.label(net_worth_value).classes('text-primary' + STAT_CARDS_VALUE_CLASSES)
+                    ui.label(net_worth_value).classes(STAT_CARDS_VALUE_CLASSES)
                     ui.label('As of today').classes(STAT_CARDS_DESC_CLASSES)
                 with ui.card().classes(STAT_CARDS_CLASSES):
                     ui.label('MoM Δ').classes(STAT_CARDS_LABEL_CLASSES)
@@ -63,7 +63,7 @@ def render():
                     else:
                         text_color = 'text-success'
                     ui.label(avg_saving_ratio_value).classes(text_color + STAT_CARDS_VALUE_CLASSES)
-                    ui.label('As of today').classes('text-primary' + STAT_CARDS_DESC_CLASSES)
+                    ui.label('As of today').classes(STAT_CARDS_DESC_CLASSES)
                 with ui.card().classes(STAT_CARDS_CLASSES):
                     ui.label('FI Progress').classes(STAT_CARDS_LABEL_CLASSES)
                     text_color = ''
@@ -74,7 +74,7 @@ def render():
                     else:
                         text_color = 'text-success'
                     ui.label(fi_progress_value).classes(text_color + STAT_CARDS_VALUE_CLASSES)
-                    ui.label('As of today').classes('text-primary' + STAT_CARDS_DESC_CLASSES)
+                    ui.label('As of today').classes(STAT_CARDS_DESC_CLASSES)
             # --- Row 2: 2 charts ---
             with ui.row().classes('grid grid-cols-1 lg:grid-cols-2 gap-4 w-full'):
                 with ui.card().classes(CHART_CARDS_CLASSES):
