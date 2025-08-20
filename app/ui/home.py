@@ -26,7 +26,7 @@ def render():
         cash_flow_data = utils.get_or_store(app.storage.user, 'cash_flow_data', lambda: finance_calculator.get_cash_flow_last_12_months(data_sheet, expenses_sheet))
         avg_expenses = utils.get_or_store(app.storage.user, 'avg_expenses', lambda: finance_calculator.get_average_expenses_by_category_last_12_months(expenses_sheet))
         
-        header.header()
+        header.render()
         
         with ui.column().classes('w-full max-w-screen-xl mx-auto p-4 space-y-5 main-content'):
 
@@ -101,4 +101,4 @@ def render():
                         ui.label('Income vs Expenses').classes(styles.CHART_CARDS_LABEL_CLASSES)
                         income_vs_expenses_options = charts.create_income_vs_expenses_options(incomes_vs_expenses_data, user_agent)
                         ui.echart(options=income_vs_expenses_options, theme=theme).classes(styles.CHART_CARDS_CHARTS_CLASSES)
-        dock.dock()
+        dock.render()

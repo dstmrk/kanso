@@ -2,7 +2,7 @@ from nicegui import ui, app
 from app.services import pages
 from app.ui import styles
 
-def header():
+def render():
     with ui.left_drawer(elevated=True, value=False).classes('bg-base-100') as left_drawer:
         with ui.element('ul').classes('menu w-full'):
             with ui.element('li'):
