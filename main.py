@@ -19,6 +19,7 @@ DATA_SHEET_NAME = os.getenv("DATA_SHEET_NAME", "Data")
 EXPENSES_SHEET_NAME = os.getenv("EXPENSES_SHEET_NAME", "Expenses")
 THEME_FILENAME = "themes/" + os.getenv("ECHARTS_THEME_URL", "default_echarts_theme.json")
 PORT = int(os.getenv("APP_PORT", 6789))
+ROOT_PATH = os.getenv("ROOT_PATH", "/")
 TITLE = "kanso - your minimal money tracker"
 
 HEAD_HTML = """
@@ -58,7 +59,7 @@ HEAD_HTML = """
 static_files_folder = APP_ROOT / 'static'
 app.add_static_files('/themes', static_files_folder / 'themes')
 app.add_static_files('/favicon', static_files_folder / 'favicon')
-ui.run(port=PORT, favicon=static_files_folder / "favicon" / "favicon.ico", storage_secret=secrets.token_urlsafe(32))
+ui.run(port=PORT, favicon=static_files_folder / "favicon" / "favicon.ico", root_path = ROOT_PATH, storage_secret=secrets.token_urlsafe(32))
 ui.add_head_html(HEAD_HTML, shared=True)
 try:
     if not CREDENTIALS_FILENAME or not WORKBOOK_ID:
