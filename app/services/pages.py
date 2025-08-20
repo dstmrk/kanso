@@ -1,3 +1,5 @@
 TITLE = "kanso"
 HOME_PAGE = "/home"
+EXPENSES_PAGE = "/expenses"
+USER_PAGE = "/user"
 NET_WORTH_PAGE = "/net_worth"

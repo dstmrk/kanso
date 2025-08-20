@@ -3,23 +3,31 @@ from app.services import pages
 from app.ui import styles
 
 def header():
-    with ui.left_drawer().classes('bg-base-100 w-64') as left_drawer:
-        ui.link('Dashboard', pages.HOME_PAGE).classes('p-2')
-        ui.link('Accounts', '#').classes('p-2')
-        ui.link('Reports', '#').classes('p-2')
-        ui.link('Settings', '#').classes('p-2')
-                    
-    with ui.right_drawer(fixed=False).classes('bg-base-100 w-64') as right_drawer:
-        ui.link('Account', '#').classes('p-2')
-        ui.link('Logout', '#').classes('p-2')
-                    
-    left_drawer.hide()
-    right_drawer.hide()
+    with ui.left_drawer(elevated=True, value=False).classes('bg-base-100') as left_drawer:
+        with ui.element('ul').classes('menu w-full'):
+            with ui.element('li'):
+                with ui.element('a').props('href='+pages.HOME_PAGE):
+                    ui.html(styles.HOME_SVG)
+                    ui.label('Dashboard')
+            with ui.element('li'):
+                with ui.element('a').props('href='+pages.EXPENSES_PAGE):
+                    ui.html(styles.EXPENSES_SVG)
+                    ui.label('Expenses')
     
     with ui.header().classes('bg-secondary p-2 mobile-hide'):
         with ui.row().classes('w-full items-center justify-between text-2xl'):
-            title_left = ui.label('Kanso').classes('font-semibold cursor-pointer')
-            title_left.props('tabindex="0" role="button" aria-label="Toggle menu"')
-            title_left.on('click', left_drawer.toggle)
+            with ui.row().classes('items-center gap-x-1 cursor-pointer') as title_left:
+                ui.html(styles.LOGO_SVG)
+                ui.label('Kanso').classes('font-semibold text-2xl')
+                title_left.props('tabindex="0" role="button" aria-label="Toggle menu"')
+                title_left.on('click', left_drawer.toggle)
             profile_picture = ui.html(styles.PROFILE_SVG).classes('avatar cursor-pointer')
-            profile_picture.on('click', right_drawer.toggle)
+            profile_picture.on('click', lambda: ui.navigate.to(pages.USER_PAGE))
+            
+    with ui.header().classes('bg-secondary p-2 md:hidden'):
+        with ui.row().classes('w-full justify-center'):
+            with ui.row().classes('items-center gap-x-1 cursor-pointer') as title_left:
+                ui.html(styles.LOGO_SVG)
+                ui.label('Kanso').classes('font-semibold text-2xl')
+            title_left.props('tabindex="0" role="button" aria-label="Toggle menu"')
+            title_left.on('click', lambda: ui.navigate.to(pages.HOME_PAGE))
