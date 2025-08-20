@@ -1,5 +1,6 @@
 import os
 import secrets
+from functools import wraps
 
 from nicegui import ui, app
 from dotenv import load_dotenv
@@ -7,7 +8,7 @@ from pathlib import Path
 
 from app.services.google_sheets import GoogleSheetService
 from app.services import utils, pages
-from app.ui import home, net_worth, user
+from app.ui import home, net_worth, user, styles, logout
 
 # === Load environment ===
 load_dotenv()
@@ -18,10 +19,30 @@ WORKBOOK_ID = os.getenv("WORKBOOK_ID")
 DATA_SHEET_NAME = os.getenv("DATA_SHEET_NAME", "Data")
 EXPENSES_SHEET_NAME = os.getenv("EXPENSES_SHEET_NAME", "Expenses")
 THEME = "light"
-THEME_FILENAME = "themes/" + os.getenv("ECHARTS_THEME_URL", THEME+"_default_echarts_theme.json")
 PORT = int(os.getenv("APP_PORT", 6789))
 ROOT_PATH = os.getenv("ROOT_PATH", "")
 TITLE = "kanso - your minimal money tracker"
+
+THEME_SCRIPT = """
+<script>
+  (function() {
+    // Leggiamo il tema dal localStorage. La chiave è 'nicegui|' + nome della chiave.
+    const storedTheme = localStorage.getItem('nicegui|theme');
+    let theme = 'light'; // Default
+    if (storedTheme) {
+      try {
+        // Il valore è una stringa JSON (es. '"dark"'), quindi dobbiamo fare il parse.
+        theme = JSON.parse(storedTheme);
+      } catch (e) {
+        // In caso di errore nel parse, usiamo il default.
+        console.error('Could not parse theme from localStorage:', e);
+      }
+    }
+    // Impostiamo l'attributo PRIMA che la pagina venga disegnata.
+    document.documentElement.setAttribute('data-theme', theme);
+  })();
+</script>
+"""
 
 HEAD_HTML = """
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -46,9 +67,6 @@ HEAD_HTML = """
 <!-- DaisyUI (full build from CDN; Tailwind provided by NiceGUI) -->
 <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.css" rel="stylesheet" type="text/css" />
 
-<!-- Force dark theme early -->
-<script>document.documentElement.setAttribute("data-theme",'"""+THEME+"""');</script>
-
 <style>
   /* ensure main content isn't hidden behind bottom nav on mobile */
   .main-content { padding-bottom: 4.5rem; } /* ~72px */
@@ -69,12 +87,31 @@ try:
 except Exception as e:
     print(f"!!! FATAL STARTUP ERROR: {e} !!!")
     ui.label(f"Application failed to start: {str(e)}").classes("text-red-500 font-bold")
+    
+def apply_theme(func):
+    """
+    Un decoratore che legge il tema dallo storage e lo applica
+    prima di eseguire la funzione della pagina.
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        # Legge il tema salvato (default 'light')
+        theme = app.storage.user.get('theme', 'light')
+        # Esegue il JS per impostare il tema
+        ui.run_javascript(f"document.documentElement.setAttribute('data-theme', '{theme}')")
+        app.storage.user['echarts_theme_url'] = styles.DEFAULT_ECHART_THEME_FOLDER + theme + styles.DEFAULT_ECHARTS_THEME_SUFFIX
+        # Esegue la funzione originale della pagina (es. home_page())
+        result = func(*args, **kwargs)
+        return result
+    return wrapper
 
 @ui.page('/', title=TITLE)
+@apply_theme
 def root():
         app.storage.user['data_sheet'] = sheet_service.get_worksheet_as_dataframe(DATA_SHEET_NAME).to_json(orient='split')
         app.storage.user['expenses_sheet'] = sheet_service.get_worksheet_as_dataframe(EXPENSES_SHEET_NAME).to_json(orient='split')
-        app.storage.user.setdefault('theme_url', THEME_FILENAME)
+        app.storage.user['theme'] = THEME
+        app.storage.user['echarts_theme_url'] = styles.DEFAULT_ECHART_THEME_FOLDER + THEME + styles.DEFAULT_ECHARTS_THEME_SUFFIX
         client = ui.context.client
         if not client or not client.request:
             ui.label("Client request not available.").classes("text-red-500")
@@ -83,13 +120,21 @@ def root():
         ui.navigate.to('/home')
         
 @ui.page(pages.HOME_PAGE, title = TITLE)
+@apply_theme
 def home_page():
     home.render()
     
 @ui.page(pages.NET_WORTH_PAGE, title = TITLE)
+@apply_theme
 def net_worth_page():
     net_worth.render()
 
 @ui.page(pages.USER_PAGE, title = TITLE)
+@apply_theme
 def user_page():
     user.render()
+
+@ui.page(pages.LOGOUT_PAGE, title= TITLE)
+@apply_theme
+def logout_page():
+    logout.render()

@@ -8,7 +8,7 @@ def render():
     data_sheet = app.storage.user.get('data_sheet')
     expenses_sheet = app.storage.user.get('expenses_sheet')
     user_agent = app.storage.client.get("user_agent") or ""
-    theme = app.storage.user.get("theme_url") or ""
+    echart_theme = app.storage.user.get("echarts_theme_url") or ""
     if data_sheet and expenses_sheet:
         data_sheet = utils.read_json(data_sheet)
         expenses_sheet = utils.read_json(expenses_sheet)
@@ -80,25 +80,25 @@ def render():
                 with ui.card().classes(styles.CHART_CARDS_CLASSES):
                     ui.label('Net Worth').classes(styles.CHART_CARDS_LABEL_CLASSES)
                     net_worth_options = charts.create_net_worth_chart_options(net_worth_data, user_agent)
-                    ui.echart(options=net_worth_options, theme=theme).classes(styles.CHART_CARDS_CHARTS_CLASSES)
+                    ui.echart(options=net_worth_options, theme=echart_theme).classes(styles.CHART_CARDS_CHARTS_CLASSES)
 
                 with ui.card().classes(styles.CHART_CARDS_CLASSES):
                     ui.label('Asset vs Liabilities').classes(styles.CHART_CARDS_LABEL_CLASSES)
                     asset_vs_liabilities_options = charts.create_asset_vs_liabilities_chart(asset_vs_liabilities_data, user_agent)
-                    ui.echart(options=asset_vs_liabilities_options, theme=theme).classes(styles.CHART_CARDS_CHARTS_CLASSES)
+                    ui.echart(options=asset_vs_liabilities_options, theme=echart_theme).classes(styles.CHART_CARDS_CHARTS_CLASSES)
 
             # --- Row 3: 3 charts ---
             with ui.row().classes('grid grid-cols-1 lg:grid-cols-3 gap-4 w-full'):
                 with ui.card().classes(styles.CHART_CARDS_CLASSES):
                         ui.label('Cash Flow').classes(styles.CHART_CARDS_LABEL_CLASSES)
                         cash_flow_options = charts.create_cash_flow_options(cash_flow_data, user_agent)
-                        ui.echart(options=cash_flow_options, theme=theme).classes(styles.CHART_CARDS_CHARTS_CLASSES)
+                        ui.echart(options=cash_flow_options, theme=echart_theme).classes(styles.CHART_CARDS_CHARTS_CLASSES)
                 with ui.card().classes(styles.CHART_CARDS_CLASSES):
                         ui.label('Avg Expenses').classes(styles.CHART_CARDS_LABEL_CLASSES)
                         expenses_options = charts.create_avg_expenses_options(avg_expenses, user_agent)
-                        ui.echart(options=expenses_options, theme=theme).classes(styles.CHART_CARDS_CHARTS_CLASSES)
+                        ui.echart(options=expenses_options, theme=echart_theme).classes(styles.CHART_CARDS_CHARTS_CLASSES)
                 with ui.card().classes(styles.CHART_CARDS_CLASSES):
                         ui.label('Income vs Expenses').classes(styles.CHART_CARDS_LABEL_CLASSES)
                         income_vs_expenses_options = charts.create_income_vs_expenses_options(incomes_vs_expenses_data, user_agent)
-                        ui.echart(options=income_vs_expenses_options, theme=theme).classes(styles.CHART_CARDS_CHARTS_CLASSES)
+                        ui.echart(options=income_vs_expenses_options, theme=echart_theme).classes(styles.CHART_CARDS_CHARTS_CLASSES)
         dock.render()

@@ -7,6 +7,9 @@ CHART_CARDS_CLASSES = ' bg-base-100 shadow-md'
 CHART_CARDS_LABEL_CLASSES = ' card-title mb-2'
 CHART_CARDS_CHARTS_CLASSES = ' h-64 w-full'
 
+DEFAULT_ECHART_THEME_FOLDER = 'themes/'
+DEFAULT_ECHARTS_THEME_SUFFIX = '_default_echarts_theme.json'
+
 LOGO_SVG = '''
 <svg xmlns="http://www.w3.org/2000/svg" class="size-[1.2em]" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
   <circle cx="12" cy="12" r="10" />
