@@ -145,6 +145,7 @@ def create_avg_expenses_options(expenses_data: Dict[str, float], user_agent: str
 
 def create_income_vs_expenses_options(income_vs_expenses_data: Dict[str, List], user_agent: str) -> Dict[str, Any]:
     options = {
+        'legend': {'data':['Income','Expenses']},
         'tooltip': {
             'trigger': 'axis',
             ':valueFormatter': 'function(value) { return "€ " + value.toFixed(2).toLocaleString("it-IT") }'

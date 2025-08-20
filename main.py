@@ -21,15 +21,39 @@ THEME_FILENAME = "themes/" + os.getenv("ECHARTS_THEME_URL", "default_echarts_the
 PORT = int(os.getenv("APP_PORT", 6789))
 TITLE = "kanso - your minimal money tracker"
 
-HEAD_HTML = '''<link rel="preconnect" href="https://rsms.me/">
-                <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
-                <style>
-                body {
-                        font-family: "Inter", Roboto, -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
-                        background-color: #1C293A;
-                        }
-                </style>
-            '''
+HEAD_HTML = """
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style> body { font-family: 'Inter', sans-serif; }
+        .dock button.dock-active {
+    position: relative;
+}
+
+.dock button.dock-active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 25%;       /* centers a 50% wide line */
+    width: 50%;
+    height: 2px;
+    background-color: currentColor; /* same color as text/icon */
+    border-radius: 1px;             /* optional: slightly rounded */
+}
+</style>
+
+<!-- DaisyUI (full build from CDN; Tailwind provided by NiceGUI) -->
+<link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.css" rel="stylesheet" type="text/css" />
+
+<!-- Force dark theme early -->
+<script>document.documentElement.setAttribute("data-theme", "dark");</script>
+
+<style>
+  /* ensure main content isn't hidden behind bottom nav on mobile */
+  .main-content { padding-bottom: 4.5rem; } /* ~72px */
+  .nav-icon { width: 20px; height: 20px; display:block; margin: 0 auto; }
+  .btm-label { display:block; font-size:11px; margin-top:4px; color:inherit; }
+</style>
+"""
             
 static_files_folder = APP_ROOT / 'static'
 app.add_static_files('/themes', static_files_folder / 'themes')
