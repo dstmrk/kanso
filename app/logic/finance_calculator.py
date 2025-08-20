@@ -23,9 +23,17 @@ def get_current_net_worth(df: pd.DataFrame) -> float:
         df_sorted = df_copy.sort_values(by='date_dt')
         latest_net_worth = parse_monetary_value(df_sorted["Net Worth"].iloc[-1])
     return latest_net_worth
+
+def get_last_update_date(df: pd.DataFrame) -> str:
+    df_copy = df.copy()
+    df_copy['date_dt'] = pd.to_datetime(df_copy['Date'], errors='coerce')
+    df_sorted = df_copy.sort_values(by='date_dt')
+    latest_net_worth_timestamp = df_sorted['date_dt'].iloc[-1]
+    latest_net_worth_date = pd.Timestamp(latest_net_worth_timestamp).strftime('%m-%Y')
+    return latest_net_worth_date
     
 
-def get_month_over_month_net_worth_variation(df: pd.DataFrame) -> float:
+def get_month_over_month_net_worth_variation_percentage(df: pd.DataFrame) -> float:
     mom_variation = 0.0
     required_columns = ["Net Worth"]
     if not all(col in df.columns for col in required_columns):
@@ -40,7 +48,52 @@ def get_month_over_month_net_worth_variation(df: pd.DataFrame) -> float:
             mom_variation = (current_net_worth - previous_month_net_worth)/previous_month_net_worth
     return mom_variation
 
-def get_average_saving_ratio_last_12_months(df: pd.DataFrame) -> float:
+def get_month_over_month_net_worth_variation_absolute(df: pd.DataFrame) -> float:
+    mom_variation = 0.0
+    required_columns = ["Net Worth"]
+    if not all(col in df.columns for col in required_columns):
+        print(f"Error: DataFrame is missing one of the required columns: {required_columns}")
+    else:
+        df_copy = df.copy()
+        df_copy['date_dt'] = pd.to_datetime(df_copy['Date'], errors='coerce')
+        df_sorted = df_copy.sort_values(by='date_dt')
+        previous_month_net_worth = parse_monetary_value(df_sorted["Net Worth"].iloc[-2])
+        current_net_worth = get_current_net_worth(df)
+        if previous_month_net_worth != 0:
+            mom_variation = current_net_worth - previous_month_net_worth
+    return mom_variation
+
+def get_year_over_year_net_worth_variation_percentage(df: pd.DataFrame) -> float:
+    mom_variation = 0.0
+    required_columns = ["Net Worth"]
+    if not all(col in df.columns for col in required_columns):
+        print(f"Error: DataFrame is missing one of the required columns: {required_columns}")
+    else:
+        df_copy = df.copy()
+        df_copy['date_dt'] = pd.to_datetime(df_copy['Date'], errors='coerce')
+        df_sorted = df_copy.sort_values(by='date_dt')
+        previous_year_net_worth = parse_monetary_value(df_sorted["Net Worth"].iloc[-13])
+        current_net_worth = get_current_net_worth(df)
+        if previous_year_net_worth != 0:
+            mom_variation = (current_net_worth - previous_year_net_worth)/previous_year_net_worth
+    return mom_variation
+
+def get_year_over_year_net_worth_variation_absolute(df: pd.DataFrame) -> float:
+    mom_variation = 0.0
+    required_columns = ["Net Worth"]
+    if not all(col in df.columns for col in required_columns):
+        print(f"Error: DataFrame is missing one of the required columns: {required_columns}")
+    else:
+        df_copy = df.copy()
+        df_copy['date_dt'] = pd.to_datetime(df_copy['Date'], errors='coerce')
+        df_sorted = df_copy.sort_values(by='date_dt')
+        previous_year_net_worth = parse_monetary_value(df_sorted["Net Worth"].iloc[-13])
+        current_net_worth = get_current_net_worth(df)
+        if previous_year_net_worth != 0:
+            mom_variation = current_net_worth - previous_year_net_worth
+    return mom_variation
+
+def get_average_saving_ratio_last_12_months_percentage(df: pd.DataFrame) -> float:
     avg_saving_ratio = 0.0
     required_columns = ["Income", "Expenses"]
     if not all(col in df.columns for col in required_columns):
@@ -53,6 +106,21 @@ def get_average_saving_ratio_last_12_months(df: pd.DataFrame) -> float:
         expenses = df_sorted["Expenses"].iloc[-12:].apply(parse_monetary_value).sum()
         if income != 0:
             avg_saving_ratio = (income - expenses)/income
+    return avg_saving_ratio
+
+def get_average_saving_ratio_last_12_months_absolute(df: pd.DataFrame) -> float:
+    avg_saving_ratio = 0.0
+    required_columns = ["Income", "Expenses"]
+    if not all(col in df.columns for col in required_columns):
+        print(f"Error: DataFrame is missing one of the required columns: {required_columns}")
+    else:
+        df_copy = df.copy()
+        df_copy['date_dt'] = pd.to_datetime(df_copy['Date'], errors='coerce')
+        df_sorted = df_copy.sort_values(by='date_dt')
+        income = df_sorted["Income"].iloc[-12:].apply(parse_monetary_value).sum()
+        expenses = df_sorted["Expenses"].iloc[-12:].apply(parse_monetary_value).sum()
+        if income != 0:
+            avg_saving_ratio = (income - expenses)/12
     return avg_saving_ratio
 
 def get_fi_progress(df: pd.DataFrame) -> float:
