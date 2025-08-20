@@ -19,8 +19,8 @@ def header():
             with ui.row().classes('items-center gap-x-1 cursor-pointer') as title_left:
                 ui.html(styles.LOGO_SVG)
                 ui.label('Kanso').classes('font-semibold text-2xl')
-                title_left.props('tabindex="0" role="button" aria-label="Toggle menu"')
-                title_left.on('click', left_drawer.toggle)
+            title_left.props('tabindex="0" role="button" aria-label="Toggle menu"')
+            title_left.on('click', left_drawer.toggle)
             profile_picture = ui.html(styles.PROFILE_SVG).classes('avatar cursor-pointer')
             profile_picture.on('click', lambda: ui.navigate.to(pages.USER_PAGE))
             

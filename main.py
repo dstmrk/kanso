@@ -7,7 +7,7 @@ from pathlib import Path
 
 from app.services.google_sheets import GoogleSheetService
 from app.services import utils, pages
-from app.ui import home, net_worth
+from app.ui import home, net_worth, user
 
 # === Load environment ===
 load_dotenv()
@@ -89,3 +89,7 @@ def home_page():
 @ui.page(pages.NET_WORTH_PAGE, title = TITLE)
 def net_worth_page():
     net_worth.render()
+
+@ui.page(pages.USER_PAGE, title = TITLE)
+def user_page():
+    user.render()
