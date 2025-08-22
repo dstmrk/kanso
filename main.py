@@ -98,9 +98,7 @@ def apply_theme(func):
     """
     @wraps(func)
     def wrapper(*args, **kwargs):
-        # Legge il tema salvato (default 'light')
         theme = app.storage.user.get('theme', 'light')
-        # Esegue il JS per impostare il tema
         ui.run_javascript(f"document.documentElement.setAttribute('data-theme', '{theme}')")
         app.storage.user['echarts_theme_url'] = styles.DEFAULT_ECHART_THEME_FOLDER + theme + styles.DEFAULT_ECHARTS_THEME_SUFFIX
         # Esegue la funzione originale della pagina (es. home_page())
@@ -111,10 +109,13 @@ def apply_theme(func):
 @ui.page('/', title=TITLE)
 @apply_theme
 def root():
-        app.storage.user['data_sheet'] = sheet_service.get_worksheet_as_dataframe(DATA_SHEET_NAME).to_json(orient='split')
-        app.storage.user['expenses_sheet'] = sheet_service.get_worksheet_as_dataframe(EXPENSES_SHEET_NAME).to_json(orient='split')
-        app.storage.user['theme'] = THEME
-        app.storage.user['echarts_theme_url'] = styles.DEFAULT_ECHART_THEME_FOLDER + THEME + styles.DEFAULT_ECHARTS_THEME_SUFFIX
+        if not app.storage.user.get('data_sheet'):
+          app.storage.user['data_sheet'] = sheet_service.get_worksheet_as_dataframe(DATA_SHEET_NAME).to_json(orient='split')
+        if not app.storage.user.get('expenses_sheet'):
+          app.storage.user['expenses_sheet'] = sheet_service.get_worksheet_as_dataframe(EXPENSES_SHEET_NAME).to_json(orient='split')
+        if not app.storage.user.get('theme'):
+          app.storage.user['theme'] = THEME
+          app.storage.user['echarts_theme_url'] = styles.DEFAULT_ECHART_THEME_FOLDER + THEME + styles.DEFAULT_ECHARTS_THEME_SUFFIX
         client = ui.context.client
         if not client or not client.request:
             ui.label("Client request not available.").classes("text-red-500")
