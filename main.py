@@ -26,19 +26,22 @@ TITLE = "kanso - your minimal money tracker"
 THEME_SCRIPT = """
 <script>
   (function() {
-    // Leggiamo il tema dal localStorage. La chiave è 'nicegui|' + nome della chiave.
-    const storedTheme = localStorage.getItem('nicegui|theme');
-    let theme = 'light'; // Default
+    // La chiave semplice che abbiamo definito in Python
+    const key = 'theme_for_js'; 
+    const storedTheme = localStorage.getItem(key);
+    let theme = 'light'; // Default se non troviamo nulla
+
     if (storedTheme) {
       try {
-        // Il valore è una stringa JSON (es. '"dark"'), quindi dobbiamo fare il parse.
+        // I valori in localStorage sono sempre stringhe, e NiceGUI usa JSON.
+        // Esempio: 'dark' viene salvato come '"dark"'.
         theme = JSON.parse(storedTheme);
       } catch (e) {
-        // In caso di errore nel parse, usiamo il default.
-        console.error('Could not parse theme from localStorage:', e);
+        console.error('Errore nel parsing del tema:', e);
       }
     }
-    // Impostiamo l'attributo PRIMA che la pagina venga disegnata.
+    
+    // Imposta il tema prima che il <body> venga disegnato
     document.documentElement.setAttribute('data-theme', theme);
   })();
 </script>
@@ -79,7 +82,7 @@ static_files_folder = APP_ROOT / 'static'
 app.add_static_files('/themes', static_files_folder / 'themes')
 app.add_static_files('/favicon', static_files_folder / 'favicon')
 ui.run(port=PORT, favicon=static_files_folder / "favicon" / "favicon.ico", root_path = ROOT_PATH, storage_secret=secrets.token_urlsafe(32))
-ui.add_head_html(HEAD_HTML, shared=True)
+ui.add_head_html(HEAD_HTML + THEME_SCRIPT, shared=True)
 try:
     if not CREDENTIALS_FILENAME or not WORKBOOK_ID:
         raise ValueError("Missing required environment variables")
