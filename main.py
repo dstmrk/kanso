@@ -1,3 +1,4 @@
+import json
 import os
 import secrets
 from functools import wraps
@@ -18,7 +19,7 @@ CREDENTIALS_FILENAME = os.getenv("GOOGLE_SHEET_CREDENTIALS_FILENAME")
 WORKBOOK_ID = os.getenv("WORKBOOK_ID")
 DATA_SHEET_NAME = os.getenv("DATA_SHEET_NAME", "Data")
 EXPENSES_SHEET_NAME = os.getenv("EXPENSES_SHEET_NAME", "Expenses")
-THEME = "light"
+DEFAULT_THEME = "light"
 PORT = int(os.getenv("APP_PORT", 6789))
 ROOT_PATH = os.getenv("ROOT_PATH", "")
 TITLE = "kanso - your minimal money tracker"
@@ -29,7 +30,7 @@ THEME_SCRIPT = """
     // La chiave semplice che abbiamo definito in Python
     const key = 'theme_for_js'; 
     const storedTheme = localStorage.getItem(key);
-    let theme = 'light'; // Default se non troviamo nulla
+    let theme = '""" + DEFAULT_THEME + """'; // Default se non troviamo nulla
 
     if (storedTheme) {
       try {
@@ -40,7 +41,6 @@ THEME_SCRIPT = """
         console.error('Errore nel parsing del tema:', e);
       }
     }
-    
     // Imposta il tema prima che il <body> venga disegnato
     document.documentElement.setAttribute('data-theme', theme);
   })();
@@ -82,7 +82,7 @@ static_files_folder = APP_ROOT / 'static'
 app.add_static_files('/themes', static_files_folder / 'themes')
 app.add_static_files('/favicon', static_files_folder / 'favicon')
 ui.run(port=PORT, favicon=static_files_folder / "favicon" / "favicon.ico", root_path = ROOT_PATH, storage_secret=secrets.token_urlsafe(32))
-ui.add_head_html(HEAD_HTML + THEME_SCRIPT, shared=True)
+ui.add_head_html(THEME_SCRIPT + HEAD_HTML, shared=True)
 try:
     if not CREDENTIALS_FILENAME or not WORKBOOK_ID:
         raise ValueError("Missing required environment variables")
@@ -98,10 +98,10 @@ def apply_theme(func):
     """
     @wraps(func)
     def wrapper(*args, **kwargs):
-        theme = app.storage.user.get('theme', 'light')
-        ui.run_javascript(f"document.documentElement.setAttribute('data-theme', '{theme}')")
+        theme = app.storage.user.get('theme', DEFAULT_THEME)
+        ui.run_javascript(f"""document.documentElement.setAttribute('data-theme', '{theme}');""")
+        app.storage.user['theme'] = theme
         app.storage.user['echarts_theme_url'] = styles.DEFAULT_ECHART_THEME_FOLDER + theme + styles.DEFAULT_ECHARTS_THEME_SUFFIX
-        # Esegue la funzione originale della pagina (es. home_page())
         result = func(*args, **kwargs)
         return result
     return wrapper
@@ -113,9 +113,6 @@ def root():
           app.storage.user['data_sheet'] = sheet_service.get_worksheet_as_dataframe(DATA_SHEET_NAME).to_json(orient='split')
         if not app.storage.user.get('expenses_sheet'):
           app.storage.user['expenses_sheet'] = sheet_service.get_worksheet_as_dataframe(EXPENSES_SHEET_NAME).to_json(orient='split')
-        if not app.storage.user.get('theme'):
-          app.storage.user['theme'] = THEME
-          app.storage.user['echarts_theme_url'] = styles.DEFAULT_ECHART_THEME_FOLDER + THEME + styles.DEFAULT_ECHARTS_THEME_SUFFIX
         client = ui.context.client
         if not client or not client.request:
             ui.label("Client request not available.").classes("text-red-500")
