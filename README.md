@@ -39,25 +39,34 @@ git clone https://github.com/marcodestefano/kanso.git
 cd kanso
 ```
 
-### 2. Set up a virtual environment
-
+### 2. Install [uv](https://docs.astral.sh/uv/) as python package and environment manager
 ```bash
-python -m venv venv
+curl -LsSf https://astral.sh/uv/install.sh | sh # On Windows Powershell: powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+or
+```bash
+pip install uv
+```
+
+### 3. Set up a virtual environment
+```bash
+uv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
-### 3. Install requirements
 
+### 4. Install requirements
 ```bash
-pip install -r requirements.txt
+uv sync
 ```
 
-### 4. Set up Google Sheets API credentials
+### 5. Set up Google Sheets API credentials
 
 - Follow the official guide to create a service account and download the JSON file:
 👉 https://docs.gspread.org/en/latest/oauth2.html#service-account 
 - Save the credentials JSON file in config/credentials folder.
 
-### 5. Create a .env file
+### 6. Create a .env file
 
 In the project root, create a .env file with the following keys:
 
@@ -68,7 +77,7 @@ WORKBOOK_ID=your_google_sheet_workbook_id
 
 Replace values as appropriate. The ECharts theme can be customized using the [ECharts Theme Builder](https://echarts.apache.org/en/theme-builder.html)
 
-### 6. Run the app
+### 7. Run the app
 
 Visit http://localhost:6789 to access your dashboard. You can customize the port by using the PORT key in the .env file
 
