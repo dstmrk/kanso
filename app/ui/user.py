@@ -1,4 +1,3 @@
-import json
 from nicegui import ui, app
 from app.ui import styles, header, dock
 from app.services import pages
@@ -8,10 +7,12 @@ def render():
         current_theme = app.storage.user.get('theme', 'light')
         new_theme = 'dark' if current_theme == 'light' else 'light'
         app.storage.user['theme'] = new_theme
-        theme_json_string = json.dumps(new_theme)
+        
+        # Aggiorna localStorage e DOM immediatamente
         script = f"""
-            localStorage.setItem('theme_for_js', '{theme_json_string}');
+            localStorage.setItem('kanso-theme', '{new_theme}');
             document.documentElement.setAttribute('data-theme', '{new_theme}');
+            document.documentElement.style.colorScheme = '{new_theme}';
         """
         ui.run_javascript(script)
         

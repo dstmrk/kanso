@@ -1,9 +1,8 @@
-import json
 import os
 import secrets
-from functools import wraps
 
 from nicegui import ui, app
+from fastapi import Request
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -27,22 +26,10 @@ TITLE = "kanso - your minimal money tracker"
 THEME_SCRIPT = """
 <script>
   (function() {
-    // La chiave semplice che abbiamo definito in Python
-    const key = 'theme_for_js'; 
-    const storedTheme = localStorage.getItem(key);
-    let theme = '""" + DEFAULT_THEME + """'; // Default se non troviamo nulla
-
-    if (storedTheme) {
-      try {
-        // I valori in localStorage sono sempre stringhe, e NiceGUI usa JSON.
-        // Esempio: 'dark' viene salvato come '"dark"'.
-        theme = JSON.parse(storedTheme);
-      } catch (e) {
-        console.error('Errore nel parsing del tema:', e);
-      }
-    }
-    // Imposta il tema prima che il <body> venga disegnato
+    const storedTheme = localStorage.getItem('kanso-theme');
+    const theme = storedTheme || '""" + DEFAULT_THEME + """';
     document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.style.colorScheme = theme;
   })();
 </script>
 """
@@ -91,24 +78,37 @@ except Exception as e:
     print(f"!!! FATAL STARTUP ERROR: {e} !!!")
     ui.label(f"Application failed to start: {str(e)}").classes("text-red-500 font-bold")
     
-def apply_theme(func):
-    """
-    Un decoratore che legge il tema dallo storage e lo applica
-    prima di eseguire la funzione della pagina.
-    """
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        theme = app.storage.user.get('theme', DEFAULT_THEME)
-        ui.run_javascript(f"""document.documentElement.setAttribute('data-theme', '{theme}');""")
-        app.storage.user['theme'] = theme
-        app.storage.user['echarts_theme_url'] = styles.DEFAULT_ECHART_THEME_FOLDER + theme + styles.DEFAULT_ECHARTS_THEME_SUFFIX
-        result = func(*args, **kwargs)
-        return result
-    return wrapper
+def ensure_theme_setup():
+    """Funzione helper per impostare echarts theme basato sul tema salvato."""
+    # Usa il tema salvato in app.storage o fallback al default
+    current_theme = app.storage.user.get('theme', DEFAULT_THEME)
+    
+    # Assicurati che il tema sia valido
+    if current_theme not in ['light', 'dark']:
+        current_theme = DEFAULT_THEME
+    
+    # Imposta sempre i valori necessari per echarts
+    app.storage.user['theme'] = current_theme
+    app.storage.user['echarts_theme_url'] = styles.DEFAULT_ECHART_THEME_FOLDER + current_theme + styles.DEFAULT_ECHARTS_THEME_SUFFIX
+    
+    # Sincronizza con localStorage in background (non bloccante)
+    ui.run_javascript(f"""
+        const currentTheme = localStorage.getItem('kanso-theme') || '{DEFAULT_THEME}';
+        if (currentTheme !== '{current_theme}') {{
+            // Se c'è una differenza, aggiorna il server in modo asincrono
+            fetch('/api/sync-theme', {{
+                method: 'POST',
+                headers: {{ 'Content-Type': 'application/json' }},
+                body: JSON.stringify({{ theme: currentTheme }})
+            }}).catch(() => {{
+                console.debug('Background theme sync failed');
+            }});
+        }}
+    """)
 
 @ui.page('/', title=TITLE)
-@apply_theme
 def root():
+        ensure_theme_setup()
         if not app.storage.user.get('data_sheet'):
           app.storage.user['data_sheet'] = sheet_service.get_worksheet_as_dataframe(DATA_SHEET_NAME).to_json(orient='split')
         if not app.storage.user.get('expenses_sheet'):
@@ -121,21 +121,33 @@ def root():
         ui.navigate.to('/home')
         
 @ui.page(pages.HOME_PAGE, title = TITLE)
-@apply_theme
 def home_page():
+    ensure_theme_setup()
     home.render()
     
 @ui.page(pages.NET_WORTH_PAGE, title = TITLE)
-@apply_theme
 def net_worth_page():
+    ensure_theme_setup()
     net_worth.render()
 
 @ui.page(pages.USER_PAGE, title = TITLE)
-@apply_theme
 def user_page():
+    ensure_theme_setup()
     user.render()
 
 @ui.page(pages.LOGOUT_PAGE, title= TITLE)
-@apply_theme
 def logout_page():
+    ensure_theme_setup()
     logout.render()
+
+@app.post('/api/sync-theme')
+async def sync_theme(request: Request):
+    try:
+        data = await request.json()
+        theme = data.get('theme', DEFAULT_THEME)
+        if theme in ['light', 'dark']:
+            app.storage.user['theme'] = theme
+            app.storage.user['echarts_theme_url'] = styles.DEFAULT_ECHART_THEME_FOLDER + theme + styles.DEFAULT_ECHARTS_THEME_SUFFIX
+        return {'status': 'success', 'theme': theme}
+    except:
+        return {'status': 'error'}
