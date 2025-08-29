@@ -1,4 +1,3 @@
-import asyncio
 from nicegui import ui, app
 
 from app.ui import styles, charts, header, dock
@@ -86,44 +85,27 @@ def render():
     
     # Initialize containers with skeleton loaders immediately
     with kpi_container:
-        # Skeleton per KPI cards (4 card con layout statistiche)
-        with ui.card().classes(styles.STAT_CARDS_CLASSES):
-            ui.skeleton().classes('h-4 w-20 mb-2')  # Label
-            ui.skeleton().classes('h-8 w-24 mb-1')  # Valore
-            ui.skeleton().classes('h-3 w-32')       # Descrizione
-        with ui.card().classes(styles.STAT_CARDS_CLASSES):
-            ui.skeleton().classes('h-4 w-16 mb-2')
-            ui.skeleton().classes('h-8 w-20 mb-1')
-            ui.skeleton().classes('h-3 w-36')
-        with ui.card().classes(styles.STAT_CARDS_CLASSES):
-            ui.skeleton().classes('h-4 w-16 mb-2')
-            ui.skeleton().classes('h-8 w-20 mb-1')
-            ui.skeleton().classes('h-3 w-36')
-        with ui.card().classes(styles.STAT_CARDS_CLASSES):
-            ui.skeleton().classes('h-4 w-24 mb-2')
-            ui.skeleton().classes('h-8 w-20 mb-1')
-            ui.skeleton().classes('h-3 w-40')
+        # Skeleton per KPI cards (4 card complete)
+        ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(styles.STAT_CARDS_CLASSES + ' h-20')
+        ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(styles.STAT_CARDS_CLASSES + ' h-20')
+        ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(styles.STAT_CARDS_CLASSES + ' h-20')
+        ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(styles.STAT_CARDS_CLASSES + ' h-20')
     
     with chart1_container:
-        # Skeleton per chart card
-        ui.skeleton().classes('h-6 w-32 mb-4')      # Titolo
-        ui.skeleton().classes('w-full h-64 rounded') # Grafico
+        # Skeleton per chart card completa
+        ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes('w-full h-80 rounded-lg')
     
     with chart2_container:
-        ui.skeleton().classes('h-6 w-40 mb-4')
-        ui.skeleton().classes('w-full h-64 rounded')
+        ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes('w-full h-80 rounded-lg')
     
     with chart3_container:
-        ui.skeleton().classes('h-6 w-24 mb-4')
-        ui.skeleton().classes('w-full h-64 rounded')
+        ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes('w-full h-80 rounded-lg')
     
     with chart4_container:
-        ui.skeleton().classes('h-6 w-28 mb-4')
-        ui.skeleton().classes('w-full h-64 rounded')
+        ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes('w-full h-80 rounded-lg')
     
     with chart5_container:
-        ui.skeleton().classes('h-6 w-36 mb-4')
-        ui.skeleton().classes('w-full h-64 rounded')
+        ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes('w-full h-80 rounded-lg')
     
     # Start loading components with individual timers
     def load_kpi_cards():
