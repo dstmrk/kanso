@@ -70,6 +70,7 @@ app.add_static_files('/themes', static_files_folder / 'themes')
 app.add_static_files('/favicon', static_files_folder / 'favicon')
 ui.run(port=PORT, favicon=static_files_folder / "favicon" / "favicon.ico", root_path = ROOT_PATH, storage_secret=secrets.token_urlsafe(32))
 ui.add_head_html(THEME_SCRIPT + HEAD_HTML, shared=True)
+
 try:
     if not CREDENTIALS_FILENAME or not WORKBOOK_ID:
         raise ValueError("Missing required environment variables")
