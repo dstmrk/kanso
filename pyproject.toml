@@ -1,0 +1,13 @@
+[project]
+name = "kanso"
+version = "0.1.0"
+description = "Your minimal money tracker"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "gspread==6.2.1",
+    "nicegui==2.21.1",
+    "pandas==2.3.1",
+    "python-dotenv==1.1.1",
+    "user-agents==2.2.0",
+]
