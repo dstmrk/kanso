@@ -84,30 +84,46 @@ def render():
             chart4_container = ui.card().classes(styles.CHART_CARDS_CLASSES)
             chart5_container = ui.card().classes(styles.CHART_CARDS_CLASSES)
     
-    # Initialize containers with spinners immediately
+    # Initialize containers with skeleton loaders immediately
     with kpi_container:
-        with ui.spinner(size='lg', color='primary').classes('w-full h-32 flex items-center justify-center'):
-            pass
+        # Skeleton per KPI cards (4 card con layout statistiche)
+        with ui.card().classes(styles.STAT_CARDS_CLASSES):
+            ui.skeleton().classes('h-4 w-20 mb-2')  # Label
+            ui.skeleton().classes('h-8 w-24 mb-1')  # Valore
+            ui.skeleton().classes('h-3 w-32')       # Descrizione
+        with ui.card().classes(styles.STAT_CARDS_CLASSES):
+            ui.skeleton().classes('h-4 w-16 mb-2')
+            ui.skeleton().classes('h-8 w-20 mb-1')
+            ui.skeleton().classes('h-3 w-36')
+        with ui.card().classes(styles.STAT_CARDS_CLASSES):
+            ui.skeleton().classes('h-4 w-16 mb-2')
+            ui.skeleton().classes('h-8 w-20 mb-1')
+            ui.skeleton().classes('h-3 w-36')
+        with ui.card().classes(styles.STAT_CARDS_CLASSES):
+            ui.skeleton().classes('h-4 w-24 mb-2')
+            ui.skeleton().classes('h-8 w-20 mb-1')
+            ui.skeleton().classes('h-3 w-40')
     
     with chart1_container:
-        with ui.spinner(size='lg', color='primary').classes('w-full h-32 flex items-center justify-center'):
-            pass
+        # Skeleton per chart card
+        ui.skeleton().classes('h-6 w-32 mb-4')      # Titolo
+        ui.skeleton().classes('w-full h-64 rounded') # Grafico
     
     with chart2_container:
-        with ui.spinner(size='lg', color='primary').classes('w-full h-32 flex items-center justify-center'):
-            pass
+        ui.skeleton().classes('h-6 w-40 mb-4')
+        ui.skeleton().classes('w-full h-64 rounded')
     
     with chart3_container:
-        with ui.spinner(size='lg', color='primary').classes('w-full h-32 flex items-center justify-center'):
-            pass
+        ui.skeleton().classes('h-6 w-24 mb-4')
+        ui.skeleton().classes('w-full h-64 rounded')
     
     with chart4_container:
-        with ui.spinner(size='lg', color='primary').classes('w-full h-32 flex items-center justify-center'):
-            pass
+        ui.skeleton().classes('h-6 w-28 mb-4')
+        ui.skeleton().classes('w-full h-64 rounded')
     
     with chart5_container:
-        with ui.spinner(size='lg', color='primary').classes('w-full h-32 flex items-center justify-center'):
-            pass
+        ui.skeleton().classes('h-6 w-36 mb-4')
+        ui.skeleton().classes('w-full h-64 rounded')
     
     # Start loading components with individual timers
     def load_kpi_cards():
