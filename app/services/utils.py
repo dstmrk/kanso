@@ -1,3 +1,4 @@
+import locale
 import pandas as pd
 from user_agents import parse
 from io import StringIO
@@ -12,3 +13,11 @@ def get_user_agent(http_agent: str | None) -> str:
 
 def read_json(data):
     return pd.read_json(StringIO(data), orient='split')
+
+def format_currency(amount):
+    """Format amount as currency based on system locale"""
+    try:
+        return locale.currency(amount, grouping=True)
+    except:
+        # Fallback to no currency formatting if locale setup fails
+        return '{:.0f}'.format(amount)

@@ -119,13 +119,13 @@ def render():
                 return
             
             with kpi_container:
-                net_worth_value = '€ {:.0f}'.format(kpi_data['net_worth'])
+                net_worth_value = utils.format_currency(kpi_data['net_worth'])
                 mom_variation_percentage_value = '{:.2%}'.format(kpi_data['mom_variation_percentage'])
-                mom_variation_absolute_value = '{:.0f}€'.format(kpi_data['mom_variation_absolute'])
+                mom_variation_absolute_value = utils.format_currency(kpi_data['mom_variation_absolute'])
                 yoy_variation_percentage_value = '{:.2%}'.format(kpi_data['yoy_variation_percentage'])
-                yoy_variation_absolute_value = '{:.0f}€'.format(kpi_data['yoy_variation_absolute'])
+                yoy_variation_absolute_value = utils.format_currency(kpi_data['yoy_variation_absolute'])
                 avg_saving_ratio_percentage_value = '{:.2%}'.format(kpi_data['avg_saving_ratio_percentage'])
-                avg_saving_ratio_absolute_value = '{:.0f}€'.format(kpi_data['avg_saving_ratio_absolute'])
+                avg_saving_ratio_absolute_value = utils.format_currency(kpi_data['avg_saving_ratio_absolute'])
                 
                 with ui.card().classes('cursor-pointer' + styles.STAT_CARDS_CLASSES).on('click', lambda: ui.navigate.to(pages.NET_WORTH_PAGE)):
                     ui.label('Net Worth').classes(styles.STAT_CARDS_LABEL_CLASSES)

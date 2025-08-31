@@ -1,5 +1,6 @@
 import os
 import secrets
+import locale
 
 from nicegui import ui, app
 from fastapi import Request
@@ -35,6 +36,7 @@ THEME_SCRIPT = """
 """
 
 HEAD_HTML = """
+<link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" /> 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <style> body { font-family: 'Inter', sans-serif; }
@@ -64,7 +66,8 @@ HEAD_HTML = """
   .btm-label { display:block; font-size:11px; margin-top:4px; color:inherit; }
 </style>
 """
-            
+
+locale.setlocale(locale.LC_ALL, '')
 static_files_folder = APP_ROOT / 'static'
 app.add_static_files('/themes', static_files_folder / 'themes')
 app.add_static_files('/favicon', static_files_folder / 'favicon')
