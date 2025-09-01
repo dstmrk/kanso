@@ -2,7 +2,7 @@ from nicegui import ui
 from app.services import pages
 from app.ui import styles
 
-def render():
+def render() -> None:
     # Crea sempre un nuovo drawer per ogni pagina (necessario per NiceGUI)
     with ui.left_drawer(elevated=True, value=False).classes('bg-base-100') as left_drawer:
         with ui.element('ul').classes('menu w-full'):

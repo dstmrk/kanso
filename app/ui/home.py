@@ -3,13 +3,14 @@ from nicegui import ui, app
 from app.ui import styles, charts, header, dock
 from app.services import utils, pages
 from app.logic import finance_calculator
+from typing import Optional, Dict, Any
 
-async def load_kpi_data():
-    data_sheet = app.storage.user.get('data_sheet')
-    if not data_sheet:
+async def load_kpi_data() -> Optional[Dict[str, Any]]:
+    data_sheet_str: Optional[str] = app.storage.user.get('data_sheet')
+    if not data_sheet_str:
         return None
     
-    data_sheet = utils.read_json(data_sheet)
+    data_sheet = utils.read_json(data_sheet_str)
     
     last_update_date = utils.get_or_store(app.storage.user, 'last_update_date', lambda: finance_calculator.get_last_update_date(data_sheet))
     net_worth = utils.get_or_store(app.storage.user, 'current_net_worth', lambda: finance_calculator.get_current_net_worth(data_sheet))
@@ -31,15 +32,15 @@ async def load_kpi_data():
         'avg_saving_ratio_absolute': avg_saving_ratio_absolute
     }
 
-async def load_chart_data():
-    data_sheet = app.storage.user.get('data_sheet')
-    expenses_sheet = app.storage.user.get('expenses_sheet')
+async def load_chart_data() -> Optional[Dict[str, Any]]:
+    data_sheet_str: Optional[str] = app.storage.user.get('data_sheet')
+    expenses_sheet_str: Optional[str] = app.storage.user.get('expenses_sheet')
     
-    if not data_sheet or not expenses_sheet:
+    if not data_sheet_str or not expenses_sheet_str:
         return None
     
-    data_sheet = utils.read_json(data_sheet)
-    expenses_sheet = utils.read_json(expenses_sheet)
+    data_sheet = utils.read_json(data_sheet_str)
+    expenses_sheet = utils.read_json(expenses_sheet_str)
     
     net_worth_data = utils.get_or_store(app.storage.user, 'net_worth_data', lambda: finance_calculator.get_monthly_net_worth(data_sheet))
     asset_vs_liabilities_data = utils.get_or_store(app.storage.user, 'assets_vs_liabilities_data', lambda: finance_calculator.get_assets_liabilities(data_sheet))
@@ -56,9 +57,9 @@ async def load_chart_data():
     }
 
 
-def render():
-    data_sheet = app.storage.user.get('data_sheet')
-    expenses_sheet = app.storage.user.get('expenses_sheet')
+def render() -> None:
+    data_sheet: Optional[str] = app.storage.user.get('data_sheet')
+    expenses_sheet: Optional[str] = app.storage.user.get('expenses_sheet')
     
     header.render()
     
@@ -166,9 +167,9 @@ def render():
         
         ui.timer(0.1, load, once=True)
     
-    def load_chart(container, chart_type, title):
-        async def load():
-            chart_data = await load_chart_data()
+    def load_chart(container: ui.card, chart_type: str, title: str) -> None:
+        async def load() -> None:
+            chart_data: Optional[Dict[str, Any]] = await load_chart_data()
             container.clear()
             
             if not chart_data:

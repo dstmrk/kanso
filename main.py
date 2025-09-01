@@ -1,6 +1,7 @@
 import os
 import secrets
 import locale
+from typing import Optional
 
 from nicegui import ui, app
 from fastapi import Request
@@ -15,16 +16,16 @@ from app.ui import home, net_worth, user, styles, logout
 load_dotenv()
 APP_ROOT = Path(__file__).parent
 CREDENTIALS_FOLDER = "config/credentials"
-CREDENTIALS_FILENAME = os.getenv("GOOGLE_SHEET_CREDENTIALS_FILENAME")
-WORKBOOK_ID = os.getenv("WORKBOOK_ID")
-DATA_SHEET_NAME = os.getenv("DATA_SHEET_NAME", "Data")
-EXPENSES_SHEET_NAME = os.getenv("EXPENSES_SHEET_NAME", "Expenses")
-DEFAULT_THEME = "light"
-PORT = int(os.getenv("APP_PORT", 6789))
-ROOT_PATH = os.getenv("ROOT_PATH", "")
-TITLE = "kanso - your minimal money tracker"
+CREDENTIALS_FILENAME: Optional[str] = os.getenv("GOOGLE_SHEET_CREDENTIALS_FILENAME")
+WORKBOOK_ID: Optional[str] = os.getenv("WORKBOOK_ID")
+DATA_SHEET_NAME: str = os.getenv("DATA_SHEET_NAME", "Data")
+EXPENSES_SHEET_NAME: str = os.getenv("EXPENSES_SHEET_NAME", "Expenses")
+DEFAULT_THEME: str = "light"
+PORT: int = int(os.getenv("APP_PORT", "6789"))
+ROOT_PATH: str = os.getenv("ROOT_PATH", "")
+TITLE: str = "kanso - your minimal money tracker"
 
-THEME_SCRIPT = """
+THEME_SCRIPT: str = """
 <script>
   (function() {
     const storedTheme = localStorage.getItem('kanso-theme');
@@ -35,7 +36,7 @@ THEME_SCRIPT = """
 </script>
 """
 
-HEAD_HTML = """
+HEAD_HTML: str = """
 <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" /> 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
@@ -68,12 +69,13 @@ HEAD_HTML = """
 """
 
 locale.setlocale(locale.LC_ALL, '')
-static_files_folder = APP_ROOT / 'static'
+static_files_folder: Path = APP_ROOT / 'static'
 app.add_static_files('/themes', static_files_folder / 'themes')
 app.add_static_files('/favicon', static_files_folder / 'favicon')
 ui.run(port=PORT, favicon=static_files_folder / "favicon" / "favicon.ico", root_path = ROOT_PATH, storage_secret=secrets.token_urlsafe(32))
 ui.add_head_html(THEME_SCRIPT + HEAD_HTML, shared=True)
 
+sheet_service: Optional[GoogleSheetService] = None
 try:
     if not CREDENTIALS_FILENAME or not WORKBOOK_ID:
         raise ValueError("Missing required environment variables")
@@ -82,10 +84,10 @@ except Exception as e:
     print(f"!!! FATAL STARTUP ERROR: {e} !!!")
     ui.label(f"Application failed to start: {str(e)}").classes("text-red-500 font-bold")
     
-def ensure_theme_setup():
+def ensure_theme_setup() -> None:
     """Funzione helper per impostare echarts theme basato sul tema salvato."""
     # Usa il tema salvato in app.storage o fallback al default
-    current_theme = app.storage.user.get('theme', DEFAULT_THEME)
+    current_theme: str = app.storage.user.get('theme', DEFAULT_THEME)
     
     # Assicurati che il tema sia valido
     if current_theme not in ['light', 'dark']:
@@ -111,8 +113,11 @@ def ensure_theme_setup():
     """)
 
 @ui.page('/', title=TITLE)
-def root():
+def root() -> None:
         ensure_theme_setup()
+        if sheet_service is None:
+            ui.label("Sheet service not available.").classes("text-red-500")
+            return
         if not app.storage.user.get('data_sheet'):
           app.storage.user['data_sheet'] = sheet_service.get_worksheet_as_dataframe(DATA_SHEET_NAME).to_json(orient='split')
         if not app.storage.user.get('expenses_sheet'):
@@ -121,37 +126,38 @@ def root():
         if not client or not client.request:
             ui.label("Client request not available.").classes("text-red-500")
             return
-        app.storage.client["user_agent"] = utils.get_user_agent(client.request.headers.get('user-agent'))
+        user_agent_header: Optional[str] = client.request.headers.get('user-agent')
+        app.storage.client["user_agent"] = utils.get_user_agent(user_agent_header)
         ui.navigate.to('/home')
         
 @ui.page(pages.HOME_PAGE, title = TITLE)
-def home_page():
+def home_page() -> None:
     ensure_theme_setup()
     home.render()
     
 @ui.page(pages.NET_WORTH_PAGE, title = TITLE)
-def net_worth_page():
+def net_worth_page() -> None:
     ensure_theme_setup()
     net_worth.render()
 
 @ui.page(pages.USER_PAGE, title = TITLE)
-def user_page():
+def user_page() -> None:
     ensure_theme_setup()
     user.render()
 
 @ui.page(pages.LOGOUT_PAGE, title= TITLE)
-def logout_page():
+def logout_page() -> None:
     ensure_theme_setup()
     logout.render()
 
 @app.post('/api/sync-theme')
-async def sync_theme(request: Request):
+async def sync_theme(request: Request) -> dict[str, str]:
     try:
-        data = await request.json()
-        theme = data.get('theme', DEFAULT_THEME)
+        data: dict = await request.json()
+        theme: str = data.get('theme', DEFAULT_THEME)
         if theme in ['light', 'dark']:
             app.storage.user['theme'] = theme
             app.storage.user['echarts_theme_url'] = styles.DEFAULT_ECHART_THEME_FOLDER + theme + styles.DEFAULT_ECHARTS_THEME_SUFFIX
         return {'status': 'success', 'theme': theme}
-    except:
+    except Exception:
         return {'status': 'error'}

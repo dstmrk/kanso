@@ -1,16 +1,17 @@
 from nicegui import ui, app
 from app.services import pages, utils
 from app.ui import styles
+from typing import List, Tuple
 
-ITEMS = [
+ITEMS: List[Tuple[str, str, str]] = [
     (pages.HOME_PAGE, 'Home', styles.HOME_SVG),
     (pages.EXPENSES_PAGE, 'Expenses',  styles.EXPENSES_SVG),
     (pages.USER_PAGE, 'Profile',  styles.PROFILE_SVG),
 ]
 
-def render():
-    active_tab = app.storage.user.get("active_tab", pages.HOME_PAGE)
-    buttons = []
+def render() -> None:
+    active_tab: str = app.storage.user.get("active_tab", pages.HOME_PAGE)
+    buttons: List[ui.element] = []
     with ui.row().classes('dock md:hidden fixed bottom-0 left-0 right-0 bg-base-200 z-50'):
         for i, (key, label, svg) in enumerate(ITEMS):
             classes = 'flex-1 flex flex-col items-center justify-center py-2 gap-1 rounded-none'
@@ -18,11 +19,11 @@ def render():
                 classes += ' dock-active' 
             btn = ui.element('button').classes(classes)
             buttons.append(btn)
-            with btn.on('click', lambda idx=i, k=key: change_tab(idx, k, buttons)):
+            with btn.on('click', lambda _=None, idx=i, k=key: change_tab(idx, k, buttons)):
                 ui.html(svg)
                 ui.label(label).classes('dock-label')
                 
-    def change_tab(index, key, buttons):
+    def change_tab(index: int, key: str, buttons: List[ui.element]) -> None:
         for i, btn in enumerate(buttons):
             btn.classes(remove='dock-active')
             if i == index:

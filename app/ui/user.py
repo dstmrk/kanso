@@ -1,15 +1,16 @@
 from nicegui import ui, app
 from app.ui import styles, header, dock
 from app.services import pages
+from typing import Optional
 
-def render():
-    def save_theme_preference():
-        current_theme = app.storage.user.get('theme', 'light')
-        new_theme = 'dark' if current_theme == 'light' else 'light'
+def render() -> None:
+    def save_theme_preference() -> None:
+        current_theme: str = app.storage.user.get('theme', 'light')
+        new_theme: str = 'dark' if current_theme == 'light' else 'light'
         app.storage.user['theme'] = new_theme
         
         # Aggiorna localStorage e DOM immediatamente
-        script = f"""
+        script: str = f"""
             localStorage.setItem('kanso-theme', '{new_theme}');
             document.documentElement.setAttribute('data-theme', '{new_theme}');
             document.documentElement.style.colorScheme = '{new_theme}';
@@ -22,7 +23,7 @@ def render():
         with ui.element('label').classes('flex cursor-pointer gap-2 items-center'):
             ui.html(styles.SUN_SVG)
             toggle = ui.element('input').props('type="checkbox" value="dark"').classes('toggle').on('click', save_theme_preference)
-            current_theme = app.storage.user.get('theme', 'light')
+            current_theme: str = app.storage.user.get('theme', 'light')
             if current_theme == 'dark':
                 toggle.props('checked')
             ui.html(styles.MOON_SVG)
