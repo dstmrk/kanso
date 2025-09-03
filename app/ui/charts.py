@@ -1,25 +1,49 @@
-from typing import Dict, List, Any
+class ChartOptionsBuilder:
+    """Centralized chart options builder with common formatting."""
+    
+    @staticmethod
+    def get_font_size(user_agent):
+        """Get font size based on user agent."""
+        return 8 if user_agent == "mobile" else 12
+    
+    @staticmethod
+    def get_common_tooltip():
+        """Get common tooltip configuration."""
+        return {
+            ':valueFormatter': 'function(value) { return "€ " + value.toFixed(2).toLocaleString("it-IT") }'
+        }
+    
+    @staticmethod
+    def get_common_grid():
+        """Get common grid configuration."""
+        return {"left": '15%', "right": '5%', "top": '10%', "bottom": '20%'}
+    
+    @staticmethod
+    def get_currency_axis_label(user_agent):
+        """Get currency formatted axis label."""
+        return {
+            "fontSize": ChartOptionsBuilder.get_font_size(user_agent),
+            ':formatter': 'function(value) { return "€ " + value.toFixed(0).toLocaleString("it-IT") }'
+        }
 
-def create_net_worth_chart_options(net_worth_data: Dict[str, Any], user_agent: str) -> Dict[str, Any]:
+
+def create_net_worth_chart_options(net_worth_data, user_agent):
     return {
         "tooltip": {
             "trigger": "axis",
-            ":valueFormatter": 'function(value) { return "€ " + value.toFixed(2).toLocaleString("it-IT") }'
-            },
-        "grid": {"left": '15%', "right": '5%', "top": '10%', "bottom": '20%'},
+            **ChartOptionsBuilder.get_common_tooltip()
+        },
+        "grid": ChartOptionsBuilder.get_common_grid(),
         "xAxis": {
             "type": "category",
             "data": net_worth_data.get('dates', []),
             "axisLabel": {
-                "fontSize": 8 if user_agent == "mobile" else 12
-                }
+                "fontSize": ChartOptionsBuilder.get_font_size(user_agent)
+            }
         },
         "yAxis": {
             "type": "value",
-            "axisLabel": {
-                "fontSize": 8 if user_agent == "mobile" else 12,
-                ':formatter': 'function(value) { return "€ " + value.toFixed(0).toLocaleString("it-IT") }'
-                }
+            "axisLabel": ChartOptionsBuilder.get_currency_axis_label(user_agent)
         },
         "series": [{
             "name": "Net Worth",
@@ -30,7 +54,7 @@ def create_net_worth_chart_options(net_worth_data: Dict[str, Any], user_agent: s
         }]
     }
     
-def create_asset_vs_liabilities_chart(chart_data: Dict[str, Any], user_agent: str) -> Dict[str, Any]:
+def create_asset_vs_liabilities_chart(chart_data, user_agent):
     data = []
     for category_name, items in chart_data.items():
         category = {
@@ -43,12 +67,13 @@ def create_asset_vs_liabilities_chart(chart_data: Dict[str, Any], user_agent: st
                 'value': abs(value)
             })
         data.append(category)
+    
     return {
         "tooltip": {
             "trigger": 'item',
-            ":valueFormatter": 'function(value) { return "€ " + value.toFixed(2).toLocaleString("it-IT") }'
+            **ChartOptionsBuilder.get_common_tooltip()
         },
-        "grid": {"left": '15%', "right": '5%', "top": '10%', "bottom": '20%'},
+        "grid": ChartOptionsBuilder.get_common_grid(),
         "color": ["#777777","#2b821d", "#c12e34"],
         "series": {
             "type": "sunburst",
@@ -63,29 +88,28 @@ def create_asset_vs_liabilities_chart(chart_data: Dict[str, Any], user_agent: st
                 "rotate": '0',
                 "minAngle": 5,
                 "color": "#dddddd",
-                "fontSize": 8 if user_agent == "mobile" else 12
+                "fontSize": ChartOptionsBuilder.get_font_size(user_agent)
             }
         }
     }
 
-def create_cash_flow_options(cash_flow_data: Dict[str, float], user_agent: str) -> Dict[str, Any]:
+def create_cash_flow_options(cash_flow_data, user_agent):
     savings = cash_flow_data.get('Savings', 0)
     expenses_total = cash_flow_data.get('Expenses', 0)
-
     expense_categories = {k: v for k, v in cash_flow_data.items() if k not in ['Savings', 'Expenses']}
+    
     colors = [
-            "#e6b600",
-            "#95706d",
-            "#9bbc99",
-            "#8c6ac4",
-            "#ea7e53",
-            "#0098d9",
-            "#e098c7",
-            "#73c0de",
-            "#3fb27f"
+        "#e6b600", "#95706d", "#9bbc99", "#8c6ac4", "#ea7e53",
+        "#0098d9", "#e098c7", "#73c0de", "#3fb27f"
     ]
-    nodes = [{'name': 'Income', 'itemStyle': {'color': '#2b821d'}}, {'name': 'Savings', 'itemStyle': {'color': '#005eaa'}}, {'name': 'Expenses', 'itemStyle': {'color': '#c12e34'}}] + [
-        {'name': category, 'itemStyle': {'color': colors[i% len(colors)]}} for i, category in enumerate(expense_categories)
+    
+    nodes = [
+        {'name': 'Income', 'itemStyle': {'color': '#2b821d'}}, 
+        {'name': 'Savings', 'itemStyle': {'color': '#005eaa'}}, 
+        {'name': 'Expenses', 'itemStyle': {'color': '#c12e34'}}
+    ] + [
+        {'name': category, 'itemStyle': {'color': colors[i % len(colors)]}} 
+        for i, category in enumerate(expense_categories)
     ]
     
     links = [
@@ -95,12 +119,13 @@ def create_cash_flow_options(cash_flow_data: Dict[str, float], user_agent: str) 
         {'source': 'Expenses', 'target': category, 'value': round(amount, 2)}
         for category, amount in expense_categories.items()
     ]
-    options = {
+    
+    return {
         'tooltip': {
             'trigger': 'item',
             'triggerOn': 'mousemove',
-            ':valueFormatter': 'function(value) { return "€ " + value.toFixed(2).toLocaleString("it-IT")}'
-            },
+            **ChartOptionsBuilder.get_common_tooltip()
+        },
         'series': [{
             'type': 'sankey',
             'layout': 'none',
@@ -108,67 +133,63 @@ def create_cash_flow_options(cash_flow_data: Dict[str, float], user_agent: str) 
             'links': links,
             'emphasis': {'focus': 'adjacency'},
             'lineStyle': {'color': 'source', 'curveness': 0.3},
-            'label': {'fontSize': 8 if user_agent == "mobile" else 12}
+            'label': {'fontSize': ChartOptionsBuilder.get_font_size(user_agent)}
         }]
     }
-    return options
 
-def create_avg_expenses_options(expenses_data: Dict[str, float], user_agent: str) -> Dict[str, Any]:
-    expense_categories = {k: v for k, v in expenses_data.items()}
+def create_avg_expenses_options(expenses_data, user_agent):
     data = [
-        {'name': category, 'value': value} for category, value in expense_categories.items()
+        {'name': category, 'value': value} 
+        for category, value in expenses_data.items()
     ]
-    options = {
-       'tooltip': {
+    
+    return {
+        'tooltip': {
             'trigger': 'item',
-            ':valueFormatter': 'function(value) { return "€ " + value.toFixed(2).toLocaleString("it-IT")}'
+            **ChartOptionsBuilder.get_common_tooltip()
         },
-       'series': {
-           'type': 'pie',
-           'radius': [ 50, '80%'],
-           'avoidLabelOverlap': 'false',
-           'itemStyle': {
-               'borderRadius': 5,
-               'borderColor': '#fff',
-               'borderWidth': 1
-               },
-           'label': {
-               'minAngle': 5,
-               'fontSize': 8 if user_agent == "mobile" else 12
-               },
-           'labelLine': {'show': 'false'},
-           'data': data,
-           'emphasis': {'focus': 'self'}
-           }
-       }
-    return options
+        'series': {
+            'type': 'pie',
+            'radius': [50, '80%'],
+            'avoidLabelOverlap': 'false',
+            'itemStyle': {
+                'borderRadius': 5,
+                'borderColor': '#fff',
+                'borderWidth': 1
+            },
+            'label': {
+                'minAngle': 5,
+                'fontSize': ChartOptionsBuilder.get_font_size(user_agent)
+            },
+            'labelLine': {'show': 'false'},
+            'data': data,
+            'emphasis': {'focus': 'self'}
+        }
+    }
 
-def create_income_vs_expenses_options(income_vs_expenses_data: Dict[str, List], user_agent: str) -> Dict[str, Any]:
-    options = {
-        'legend': {'data':['Income','Expenses']},
+def create_income_vs_expenses_options(income_vs_expenses_data, user_agent):
+    return {
+        'legend': {'data': ['Income', 'Expenses']},
         'tooltip': {
             'trigger': 'axis',
-            ':valueFormatter': 'function(value) { return "€ " + value.toFixed(2).toLocaleString("it-IT") }'
-            },
-        'grid': {'left': '15%', 'right': '5%', 'top': '10%', 'bottom': '20%'},
+            **ChartOptionsBuilder.get_common_tooltip()
+        },
+        'grid': ChartOptionsBuilder.get_common_grid(),
         'color': ["#2b821d", "#c12e34"],
         'xAxis': {
             'type': 'category',
             'axisLabel': {
-                'fontSize': 8 if user_agent == "mobile" else 12
+                'fontSize': ChartOptionsBuilder.get_font_size(user_agent)
             },
             'data': income_vs_expenses_data['dates'],
             'axisTick': {'alignWithLabel': True}
         },
         'yAxis': {
             'type': 'value',
-            'axisLabel': {
-                'fontSize': 8 if user_agent == "mobile" else 12,
-                ':formatter': 'function(value) { return "€ " + value.toFixed(0).toLocaleString("it-IT") }'
-            },
+            'axisLabel': ChartOptionsBuilder.get_currency_axis_label(user_agent),
             'axisLine': {'onZero': True},
             'splitLine': {'show': False}
-            },
+        },
         'series': [
             {
                 'name': 'Income',
@@ -184,6 +205,5 @@ def create_income_vs_expenses_options(income_vs_expenses_data: Dict[str, List], 
                 'data': income_vs_expenses_data['expenses'],
                 'emphasis': {'focus': 'self'}
             }
-            ]
-        }
-    return options
+        ]
+    }

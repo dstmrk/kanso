@@ -1,17 +1,15 @@
 from nicegui import ui, app
 from app.services import pages, utils
 from app.ui import styles
-from typing import List, Tuple
-
-ITEMS: List[Tuple[str, str, str]] = [
+ITEMS = [
     (pages.HOME_PAGE, 'Home', styles.HOME_SVG),
     (pages.EXPENSES_PAGE, 'Expenses',  styles.EXPENSES_SVG),
     (pages.USER_PAGE, 'Profile',  styles.PROFILE_SVG),
 ]
 
-def render() -> None:
-    active_tab: str = app.storage.user.get("active_tab", pages.HOME_PAGE)
-    buttons: List[ui.element] = []
+def render():
+    active_tab = app.storage.user.get("active_tab", pages.HOME_PAGE)
+    buttons = []
     with ui.row().classes('dock md:hidden fixed bottom-0 left-0 right-0 bg-base-200 z-50'):
         for i, (key, label, svg) in enumerate(ITEMS):
             classes = 'flex-1 flex flex-col items-center justify-center py-2 gap-1 rounded-none'
@@ -23,7 +21,7 @@ def render() -> None:
                 ui.html(svg)
                 ui.label(label).classes('dock-label')
                 
-    def change_tab(index: int, key: str, buttons: List[ui.element]) -> None:
+    def change_tab(index, key, buttons):
         for i, btn in enumerate(buttons):
             btn.classes(remove='dock-active')
             if i == index:

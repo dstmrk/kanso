@@ -1,38 +1,66 @@
-import os
 import secrets
 import locale
-from typing import Optional
+import os
 
 from nicegui import ui, app
-from fastapi import Request
 from dotenv import load_dotenv
 from pathlib import Path
 
+from app.core.config import AppConfig
+from app.core.state_manager import state_manager
 from app.services.google_sheets import GoogleSheetService
 from app.services import utils, pages
 from app.ui import home, net_worth, user, styles, logout
 
-# === Load environment ===
+# === Load environment and configure app ===
 load_dotenv()
 APP_ROOT = Path(__file__).parent
-CREDENTIALS_FOLDER = "config/credentials"
-CREDENTIALS_FILENAME: Optional[str] = os.getenv("GOOGLE_SHEET_CREDENTIALS_FILENAME")
-WORKBOOK_ID: Optional[str] = os.getenv("WORKBOOK_ID")
-DATA_SHEET_NAME: str = os.getenv("DATA_SHEET_NAME", "Data")
-EXPENSES_SHEET_NAME: str = os.getenv("EXPENSES_SHEET_NAME", "Expenses")
-DEFAULT_THEME: str = "light"
-PORT: int = int(os.getenv("APP_PORT", "6789"))
-ROOT_PATH: str = os.getenv("ROOT_PATH", "")
-TITLE: str = "kanso - your minimal money tracker"
 
-THEME_SCRIPT: str = """
+# Storage secret management - persist across app restarts
+STORAGE_SECRET_FILE = APP_ROOT / ".storage_secret"
+
+def get_or_create_storage_secret():
+    """Get existing storage secret or create a new one if it doesn't exist."""
+    if STORAGE_SECRET_FILE.exists():
+        try:
+            with open(STORAGE_SECRET_FILE, 'r') as f:
+                secret = f.read().strip()
+                if secret:  # Ensure it's not empty
+                    return secret
+        except (IOError, OSError):
+            pass  # Fall through to create new secret
+    
+    # Create new secret and save it
+    secret = secrets.token_urlsafe(32)
+    try:
+        with open(STORAGE_SECRET_FILE, 'w') as f:
+            f.write(secret)
+        # Make file readable only by owner for security
+        os.chmod(STORAGE_SECRET_FILE, 0o600)
+    except (IOError, OSError) as e:
+        print(f"Warning: Could not save storage secret to file: {e}")
+    
+    return secret
+
+# Initialize global configuration
+app_config: AppConfig = AppConfig.from_env(APP_ROOT)
+# Update the module-level config instance
+import app.core.config as config_module
+config_module.config = app_config
+
+THEME_SCRIPT: str = f"""
 <script>
-  (function() {
+  (function() {{
     const storedTheme = localStorage.getItem('kanso-theme');
-    const theme = storedTheme || '""" + DEFAULT_THEME + """';
+    const theme = storedTheme || '{app_config.default_theme}';
     document.documentElement.setAttribute('data-theme', theme);
     document.documentElement.style.colorScheme = theme;
-  })();
+    
+    // Ensure localStorage has the theme value if it was missing
+    if (!storedTheme) {{
+      localStorage.setItem('kanso-theme', theme);
+    }}
+  }})();
 </script>
 """
 
@@ -68,96 +96,145 @@ HEAD_HTML: str = """
 </style>
 """
 
+# === Initialize application ===
 locale.setlocale(locale.LC_ALL, '')
-static_files_folder: Path = APP_ROOT / 'static'
-app.add_static_files('/themes', static_files_folder / 'themes')
-app.add_static_files('/favicon', static_files_folder / 'favicon')
-ui.run(port=PORT, favicon=static_files_folder / "favicon" / "favicon.ico", root_path = ROOT_PATH, storage_secret=secrets.token_urlsafe(32))
+
+# Validate configuration and setup paths
+try:
+    app_config.validate()
+except (ValueError, FileNotFoundError) as e:
+    print(f"!!! CONFIGURATION ERROR: {e} !!!")
+    ui.label(f"Application configuration error: {str(e)}").classes("text-red-500 font-bold")
+
+# Setup static files
+app.add_static_files('/themes', app_config.static_path / 'themes')
+app.add_static_files('/favicon', app_config.static_path / 'favicon')
+
+# Configure NiceGUI with persistent storage secret
+ui.run(
+    port=app_config.app_port, 
+    favicon=app_config.static_path / "favicon" / "favicon.ico", 
+    root_path=app_config.root_path, 
+    storage_secret=get_or_create_storage_secret()
+)
 ui.add_head_html(THEME_SCRIPT + HEAD_HTML, shared=True)
 
-sheet_service: Optional[GoogleSheetService] = None
+# Initialize Google Sheets service
+sheet_service = None
 try:
-    if not CREDENTIALS_FILENAME or not WORKBOOK_ID:
-        raise ValueError("Missing required environment variables")
-    sheet_service = GoogleSheetService(APP_ROOT / CREDENTIALS_FOLDER / CREDENTIALS_FILENAME, WORKBOOK_ID)
+    sheet_service = GoogleSheetService(app_config.credentials_path, app_config.workbook_id)
 except Exception as e:
     print(f"!!! FATAL STARTUP ERROR: {e} !!!")
     ui.label(f"Application failed to start: {str(e)}").classes("text-red-500 font-bold")
     
-def ensure_theme_setup() -> None:
-    """Funzione helper per impostare echarts theme basato sul tema salvato."""
-    # Usa il tema salvato in app.storage o fallback al default
-    current_theme: str = app.storage.user.get('theme', DEFAULT_THEME)
+def ensure_theme_setup():
+    """Helper function to set up echarts theme based on saved theme."""
+    # Check if this is the first time setup (no theme in storage)
+    is_first_setup = 'theme' not in app.storage.user
     
-    # Assicurati che il tema sia valido
+    # Use saved theme from app.storage or fallback to default
+    current_theme = app.storage.user.get('theme', app_config.default_theme)
+    
+    # Ensure the theme is valid
     if current_theme not in ['light', 'dark']:
-        current_theme = DEFAULT_THEME
+        current_theme = app_config.default_theme
     
-    # Imposta sempre i valori necessari per echarts
+    # Always set necessary values for echarts
     app.storage.user['theme'] = current_theme
     app.storage.user['echarts_theme_url'] = styles.DEFAULT_ECHART_THEME_FOLDER + current_theme + styles.DEFAULT_ECHARTS_THEME_SUFFIX
     
-    # Sincronizza con localStorage in background (non bloccante)
-    ui.run_javascript(f"""
-        const currentTheme = localStorage.getItem('kanso-theme') || '{DEFAULT_THEME}';
-        if (currentTheme !== '{current_theme}') {{
-            // Se c'è una differenza, aggiorna il server in modo asincrono
-            fetch('/api/sync-theme', {{
-                method: 'POST',
-                headers: {{ 'Content-Type': 'application/json' }},
-                body: JSON.stringify({{ theme: currentTheme }})
-            }}).catch(() => {{
-                console.debug('Background theme sync failed');
-            }});
-        }}
-    """)
+    # Sync theme between server storage and client localStorage
+    if is_first_setup:
+        # First setup: ensure localStorage matches our default theme
+        ui.run_javascript(f"""
+            localStorage.setItem('kanso-theme', '{current_theme}');
+            document.documentElement.setAttribute('data-theme', '{current_theme}');
+            document.documentElement.style.colorScheme = '{current_theme}';
+        """)
+    else:
+        # Normal sync: check if client and server are aligned
+        ui.run_javascript(f"""
+            const currentTheme = localStorage.getItem('kanso-theme') || '{app_config.default_theme}';
+            if (currentTheme !== '{current_theme}') {{
+                // If there's a difference, update the server asynchronously
+                fetch('/api/sync-theme', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ theme: currentTheme }})
+                }}).catch(() => {{
+                    console.debug('Background theme sync failed');
+                }});
+            }}
+        """)
 
-@ui.page('/', title=TITLE)
-def root() -> None:
+@ui.page('/', title=app_config.title)
+def root():
+        """Root page that redirects to home after loading necessary data."""
         ensure_theme_setup()
         if sheet_service is None:
             ui.label("Sheet service not available.").classes("text-red-500")
             return
+        # Load data sheets into user storage if not already present
         if not app.storage.user.get('data_sheet'):
-          app.storage.user['data_sheet'] = sheet_service.get_worksheet_as_dataframe(DATA_SHEET_NAME).to_json(orient='split')
+          app.storage.user['data_sheet'] = sheet_service.get_worksheet_as_dataframe(app_config.data_sheet_name).to_json(orient='split')
         if not app.storage.user.get('expenses_sheet'):
-          app.storage.user['expenses_sheet'] = sheet_service.get_worksheet_as_dataframe(EXPENSES_SHEET_NAME).to_json(orient='split')
+          app.storage.user['expenses_sheet'] = sheet_service.get_worksheet_as_dataframe(app_config.expenses_sheet_name).to_json(orient='split')
+        # Detect client device type for responsive UI
         client = ui.context.client
         if not client or not client.request:
             ui.label("Client request not available.").classes("text-red-500")
             return
-        user_agent_header: Optional[str] = client.request.headers.get('user-agent')
+        user_agent_header = client.request.headers.get('user-agent')
         app.storage.client["user_agent"] = utils.get_user_agent(user_agent_header)
         ui.navigate.to('/home')
         
-@ui.page(pages.HOME_PAGE, title = TITLE)
-def home_page() -> None:
+@ui.page(pages.HOME_PAGE, title=app_config.title)
+def home_page():
+    """Main dashboard page showing financial overview."""
     ensure_theme_setup()
     home.render()
     
-@ui.page(pages.NET_WORTH_PAGE, title = TITLE)
-def net_worth_page() -> None:
+@ui.page(pages.NET_WORTH_PAGE, title=app_config.title)
+def net_worth_page():
+    """Net worth tracking page with historical data."""
     ensure_theme_setup()
     net_worth.render()
 
-@ui.page(pages.USER_PAGE, title = TITLE)
-def user_page() -> None:
+@ui.page(pages.USER_PAGE, title=app_config.title)
+def user_page():
+    """User settings and preferences page."""
     ensure_theme_setup()
     user.render()
 
-@ui.page(pages.LOGOUT_PAGE, title= TITLE)
-def logout_page() -> None:
+@ui.page(pages.LOGOUT_PAGE, title=app_config.title)
+def logout_page():
+    """Logout page for clearing user session."""
     ensure_theme_setup()
     logout.render()
 
 @app.post('/api/sync-theme')
-async def sync_theme(request: Request) -> dict[str, str]:
+async def sync_theme(request):
+    """API endpoint to synchronize theme changes from client-side."""
     try:
-        data: dict = await request.json()
-        theme: str = data.get('theme', DEFAULT_THEME)
+        data = await request.json()
+        theme = data.get('theme', app_config.default_theme)
+        # Validate and update theme if valid
         if theme in ['light', 'dark']:
             app.storage.user['theme'] = theme
             app.storage.user['echarts_theme_url'] = styles.DEFAULT_ECHART_THEME_FOLDER + theme + styles.DEFAULT_ECHARTS_THEME_SUFFIX
+            print(f"Theme synced to: {theme}")  # Debug log
         return {'status': 'success', 'theme': theme}
-    except Exception:
+    except Exception as e:
+        print(f"Theme sync error: {e}")
         return {'status': 'error'}
+
+@app.get('/api/cache-stats')
+async def cache_stats():
+    """Get cache statistics for debugging and monitoring."""
+    return state_manager.get_cache_stats()
+
+@app.post('/api/cache-clear')
+async def clear_cache():
+    """Clear cache manually (useful for development)."""
+    state_manager.invalidate_cache()
+    return {'status': 'success', 'message': 'Cache cleared'}

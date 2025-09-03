@@ -211,3 +211,6 @@ __marimo__/
 .nicegui/
 .DS_Store
 config/credentials
+
+# App-specific secrets
+.storage_secret
