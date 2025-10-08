@@ -186,7 +186,7 @@ class FinanceCalculator:
                         date_col = col
                         break
             if date_col is not None:
-                assets_copy['date_dt'] = pd.to_datetime(assets_copy[date_col], errors='coerce')
+                assets_copy['date_dt'] = pd.to_datetime(assets_copy[date_col], format='%Y-%m', errors='coerce')
                 assets_sorted = assets_copy.sort_values(by='date_dt')
                 latest_row = assets_sorted.iloc[-1]
                 # Extract scalar value from the date_dt column
@@ -233,7 +233,7 @@ class FinanceCalculator:
                         date_col = col
                         break
             if date_col is not None:
-                liabilities_copy['date_dt'] = pd.to_datetime(liabilities_copy[date_col], errors='coerce')
+                liabilities_copy['date_dt'] = pd.to_datetime(liabilities_copy[date_col], format='%Y-%m', errors='coerce')
                 liabilities_sorted = liabilities_copy.sort_values(by='date_dt')
                 # Use reference date from Assets to get the corresponding row in Liabilities
                 if reference_date is not None:
