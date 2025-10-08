@@ -53,8 +53,18 @@ def create_net_worth_chart_options(net_worth_data, user_agent):
             "areaStyle": {}
         }]
     }
-    
+
 def create_asset_vs_liabilities_chart(chart_data, user_agent):
+    # Convert ObservableDict to regular dict (NiceGUI compatibility)
+    chart_data = dict(chart_data)
+    for key in chart_data:
+        if hasattr(chart_data[key], 'items'):
+            chart_data[key] = dict(chart_data[key])
+            # Handle nested dicts
+            for subkey in list(chart_data[key].keys()):
+                if hasattr(chart_data[key][subkey], 'items'):
+                    chart_data[key][subkey] = dict(chart_data[key][subkey])
+
     data = []
     for category_name, items in chart_data.items():
         category = {
@@ -62,12 +72,27 @@ def create_asset_vs_liabilities_chart(chart_data, user_agent):
             'children': []
         }
         for item_name, value in items.items():
-            category['children'].append({
-                'name': item_name,
-                'value': abs(value)
-            })
+            # Check if value is a dict (nested structure from MultiIndex)
+            if isinstance(value, dict):
+                # MultiIndex case: create subcategory with children
+                subcategory = {
+                    'name': item_name,
+                    'children': []
+                }
+                for sub_item_name, sub_value in value.items():
+                    subcategory['children'].append({
+                        'name': sub_item_name,
+                        'value': abs(sub_value)
+                    })
+                category['children'].append(subcategory)
+            else:
+                # Single header case: direct value
+                category['children'].append({
+                    'name': item_name,
+                    'value': abs(value)
+                })
         data.append(category)
-    
+
     return {
         "tooltip": {
             "trigger": 'item',

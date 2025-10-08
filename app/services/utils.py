@@ -12,7 +12,14 @@ def get_user_agent(http_agent):
     return "mobile" if http_agent and parse(http_agent).is_mobile else "desktop"
 
 def read_json(data):
-    return pd.read_json(StringIO(data), orient='split')
+    df = pd.read_json(StringIO(data), orient='split')
+
+    # Check if columns are tuples (indicates MultiIndex was serialized)
+    if df.columns.size > 0 and isinstance(df.columns[0], tuple):
+        # Reconstruct MultiIndex from tuples
+        df.columns = pd.MultiIndex.from_tuples(df.columns)
+
+    return df
 
 def format_currency(amount):
     """Format amount as currency based on system locale"""

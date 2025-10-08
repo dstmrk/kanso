@@ -177,6 +177,10 @@ def root():
         # Load data sheets into user storage if not already present
         if not app.storage.user.get('data_sheet'):
           app.storage.user['data_sheet'] = sheet_service.get_worksheet_as_dataframe(app_config.data_sheet_name).to_json(orient='split')
+        if not app.storage.user.get('assets_sheet'):
+          app.storage.user['assets_sheet'] = sheet_service.get_worksheet_as_dataframe(app_config.assets_sheet_name, header=[0,1] ).to_json(orient='split')
+        if not app.storage.user.get('liabilities_sheet'):
+          app.storage.user['liabilities_sheet'] = sheet_service.get_worksheet_as_dataframe(app_config.liabilities_sheet_name, header=[0,1]).to_json(orient='split')
         if not app.storage.user.get('expenses_sheet'):
           app.storage.user['expenses_sheet'] = sheet_service.get_worksheet_as_dataframe(app_config.expenses_sheet_name).to_json(orient='split')
         # Detect client device type for responsive UI

@@ -16,6 +16,8 @@ class AppConfig:
     google_sheet_credentials_filename: Optional[str] = None
     workbook_id: Optional[str] = None
     data_sheet_name: str = "Data"
+    assets_sheet_name: str = "Assets"
+    liabilities_sheet_name: str = "Liabilities"
     expenses_sheet_name: str = "Expenses"
     
     # App settings
@@ -38,6 +40,8 @@ class AppConfig:
             google_sheet_credentials_filename=os.getenv("GOOGLE_SHEET_CREDENTIALS_FILENAME"),
             workbook_id=os.getenv("WORKBOOK_ID"),
             data_sheet_name=os.getenv("DATA_SHEET_NAME", "Data"),
+            assets_sheet_name=os.getenv("ASSETS_SHEET_NAME", "Assets"),
+            liabilities_sheet_name=os.getenv("LIABILITIES_SHEET_NAME", "Liabilities"),
             expenses_sheet_name=os.getenv("EXPENSES_SHEET_NAME", "Expenses"),
             app_port=int(os.getenv("APP_PORT", "6789")),
             root_path=os.getenv("ROOT_PATH", ""),

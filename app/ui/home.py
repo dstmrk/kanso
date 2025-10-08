@@ -40,6 +40,8 @@ class HomeRenderer:
     async def load_chart_data(self):
         """Load and cache chart data for dashboard visualizations."""
         data_sheet_str = app.storage.user.get('data_sheet')
+        assets_sheet_str = app.storage.user.get('assets_sheet')
+        liabilities_sheet_str = app.storage.user.get('liabilities_sheet')
         expenses_sheet_str = app.storage.user.get('expenses_sheet')
         
         if not data_sheet_str or not expenses_sheet_str:
@@ -47,8 +49,10 @@ class HomeRenderer:
         
         def compute_chart_data():
             data_sheet = utils.read_json(data_sheet_str)
+            assets_sheet = utils.read_json(assets_sheet_str)
+            liabilities_sheet = utils.read_json(liabilities_sheet_str)
             expenses_sheet = utils.read_json(expenses_sheet_str)
-            calculator = FinanceCalculator(data_sheet, expenses_sheet)
+            calculator = FinanceCalculator(data_sheet, assets_sheet, liabilities_sheet, expenses_sheet)
             
             return {
                 'net_worth_data': calculator.get_monthly_net_worth(),

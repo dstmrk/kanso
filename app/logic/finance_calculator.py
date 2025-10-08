@@ -16,11 +16,15 @@ def parse_monetary_value(value):
 class FinanceCalculator:
     """Optimized finance calculator with cached DataFrame preprocessing."""
     
-    def __init__(self, df, expenses_df=None):
+    def __init__(self, df, assets_df = None, liabilities_df = None, expenses_df=None):
         self.original_df = df
         self.expenses_df = expenses_df
+        self.assets_df = assets_df
+        self.liabilities_df = liabilities_df
         self._processed_df = None
         self._processed_expenses_df = None
+        self._processed_assets_df = None
+        self._processed_liabilities_df = None
         
     @property 
     def processed_df(self):
@@ -165,29 +169,109 @@ class FinanceCalculator:
             'dates': df['date_dt'].dt.strftime('%Y-%m').tolist(),
             'values': df['net_worth_parsed'].tolist()
         }
-    
     def get_assets_liabilities(self):
-        """Get latest assets and liabilities breakdown."""
-        required_columns = ['Cash', 'Pension Fund', 'Stocks', 'Real Estate', 'Crypto', 'Other', 'Mortgage', 'Loans']
-        if not self._validate_columns(required_columns):
-            return {'Assets': {}, 'Liabilities': {}}
-        
-        latest = self.processed_df.iloc[-1]
-        
-        return {
-            "Assets": {
-                "Cash": latest['cash_parsed'],
-                "Pension Fund": latest['pension_fund_parsed'],
-                "Stocks": latest['stocks_parsed'],
-                "Real Estate": latest['real_estate_parsed'],
-                "Crypto": latest['crypto_parsed'],
-                "Other": latest['other_parsed']
-            },
-            "Liabilities": {
-                "Mortgage": latest['mortgage_parsed'],
-                "Loans": latest['loans_parsed']
-            }
-        }
+        asset_liabilities = {'Assets': {}, 'Liabilities': {}}
+        reference_date = None
+        if not self.assets_df.empty:
+            assets_copy = self.assets_df.copy()
+            # Find Date column
+            date_col = None
+            for col in assets_copy.columns:
+                if isinstance(col, tuple):
+                    if 'Date' in col[0] or 'Date' in col[1]:
+                        date_col = col
+                        break
+                else:
+                    if 'Date' in col:
+                        date_col = col
+                        break
+            if date_col is not None:
+                assets_copy['date_dt'] = pd.to_datetime(assets_copy[date_col], errors='coerce')
+                assets_sorted = assets_copy.sort_values(by='date_dt')
+                latest_row = assets_sorted.iloc[-1]
+                # Extract scalar value from the date_dt column
+                reference_date = assets_sorted['date_dt'].iloc[-1]
+                # Extract values dynamically from columns
+                for col in assets_sorted.columns:
+                    # Skip date columns (original and converted)
+                    if col == date_col:
+                        continue
+                    # Skip if column name contains 'date_dt' (handles both tuple and string columns)
+                    if (isinstance(col, tuple) and 'date_dt' in col) or col == 'date_dt':
+                        continue
+                    if isinstance(col, tuple) and len(col) == 2:
+                        # MultiIndex: (category, item)
+                        category, item = col
+                        # Strip whitespace from category and item names
+                        category = category.strip()
+                        item = item.strip()
+                        # Skip empty categories
+                        if not category:
+                            continue
+                        value = parse_monetary_value(latest_row[col])
+                        if category not in asset_liabilities['Assets']:
+                            asset_liabilities['Assets'][category] = {}
+                        asset_liabilities['Assets'][category][item] = value
+                    else:
+                        # Single header: column name is the item
+                        item = col
+                        value = parse_monetary_value(latest_row[col])
+                        asset_liabilities['Assets'][item] = value
+        # Process Liabilities DataFrame
+        if not self.liabilities_df.empty:
+            liabilities_copy = self.liabilities_df.copy()
+            # Find Date column
+            date_col = None
+            for col in liabilities_copy.columns:
+                if isinstance(col, tuple):
+                    # Check both levels of MultiIndex for 'Date', 'Data', or 'Category'
+                    if any(keyword in col[0] or keyword in col[1] for keyword in ['Date', 'Data', 'Category']):
+                        date_col = col
+                        break
+                else:
+                    if any(keyword in col for keyword in ['Date', 'Data', 'Category']):
+                        date_col = col
+                        break
+            if date_col is not None:
+                liabilities_copy['date_dt'] = pd.to_datetime(liabilities_copy[date_col], errors='coerce')
+                liabilities_sorted = liabilities_copy.sort_values(by='date_dt')
+                # Use reference date from Assets to get the corresponding row in Liabilities
+                if reference_date is not None:
+                    # Find the row with the same date as Assets, or the closest earlier date
+                    matching_rows = liabilities_sorted[liabilities_sorted['date_dt'] <= reference_date]
+                    if not matching_rows.empty:
+                        latest_row = matching_rows.iloc[-1]
+                    else:
+                        latest_row = liabilities_sorted.iloc[-1]
+                else:
+                    latest_row = liabilities_sorted.iloc[-1]
+                # Extract values dynamically from columns
+                for col in liabilities_sorted.columns:
+                    # Skip date columns (original and converted)
+                    if col == date_col:
+                        continue
+                    # Skip if column name contains 'date_dt' (handles both tuple and string columns)
+                    if (isinstance(col, tuple) and 'date_dt' in col) or col == 'date_dt':
+                        continue
+                    if isinstance(col, tuple) and len(col) == 2:
+                        # MultiIndex: (category, item)
+                        category, item = col
+                        # Strip whitespace from category and item names
+                        category = category.strip()
+                        item = item.strip()
+                        # Skip empty categories
+                        if not category or category == 'Category':
+                            continue
+                        value = parse_monetary_value(latest_row[col])
+                        if category not in asset_liabilities['Liabilities']:
+                            asset_liabilities['Liabilities'][category] = {}
+                        asset_liabilities['Liabilities'][category][item] = value
+                    else:
+                        # Single header: column name is the item
+                        item = col
+                        value = parse_monetary_value(latest_row[col])
+                        asset_liabilities['Liabilities'][item] = value
+        return asset_liabilities
     
     def get_cash_flow_last_12_months(self):
         """Get cash flow data for last 12 months."""
