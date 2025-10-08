@@ -1,3 +1,4 @@
+from typing import List
 from nicegui import ui, app
 from app.services import pages, utils
 from app.ui import styles
@@ -7,9 +8,9 @@ ITEMS = [
     (pages.USER_PAGE, 'Profile',  styles.PROFILE_SVG),
 ]
 
-def render():
+def render() -> None:
     active_tab = app.storage.user.get("active_tab", pages.HOME_PAGE)
-    buttons = []
+    buttons: List = []
     with ui.row().classes('dock md:hidden fixed bottom-0 left-0 right-0 bg-base-200 z-50'):
         for i, (key, label, svg) in enumerate(ITEMS):
             classes = 'flex-1 flex flex-col items-center justify-center py-2 gap-1 rounded-none'

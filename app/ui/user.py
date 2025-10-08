@@ -3,10 +3,10 @@ from app.ui import styles, header, dock
 from app.services import pages
 from app.core.state_manager import state_manager
 
-def render():
+def render() -> None:
     """Render the user settings page with theme toggle and data refresh."""
     
-    def save_theme_preference():
+    def save_theme_preference() -> None:
         current_theme: str = app.storage.user.get('theme', 'light')
         new_theme: str = 'dark' if current_theme == 'light' else 'light'
         app.storage.user['theme'] = new_theme
@@ -20,7 +20,7 @@ def render():
         ui.run_javascript(script)
         
 
-    def refresh_data():
+    def refresh_data() -> None:
         """Force refresh of all cached data by clearing the cache."""
         state_manager.invalidate_cache()
         ui.notify('Data cache cleared! Data will be refreshed on next page visit.', type='positive')

@@ -1,3 +1,4 @@
+from typing import Dict, Any, Optional, Literal
 from nicegui import ui, app
 
 from app.ui import styles, charts, header, dock
@@ -8,8 +9,8 @@ from app.core.state_manager import state_manager
 
 class HomeRenderer:
     """Home dashboard renderer with clean separation of concerns."""
-    
-    async def load_kpi_data(self):
+
+    async def load_kpi_data(self) -> Optional[Dict[str, Any]]:
         """Load and cache key performance indicators from financial data."""
         data_sheet_str = app.storage.user.get('data_sheet')
         if not data_sheet_str:
@@ -37,7 +38,7 @@ class HomeRenderer:
             ttl_seconds=86400
         )
 
-    async def load_chart_data(self):
+    async def load_chart_data(self) -> Optional[Dict[str, Any]]:
         """Load and cache chart data for dashboard visualizations."""
         data_sheet_str = app.storage.user.get('data_sheet')
         assets_sheet_str = app.storage.user.get('assets_sheet')
@@ -69,7 +70,7 @@ class HomeRenderer:
             ttl_seconds=86400
         )
 
-    async def render_kpi_cards(self, container):
+    async def render_kpi_cards(self, container: ui.row) -> None:
         """Render KPI cards with real data, replacing skeleton loaders."""
         kpi_data = await self.load_kpi_data()
         container.clear()
@@ -125,7 +126,7 @@ class HomeRenderer:
                 ui.label(avg_saving_ratio_percentage_value).classes(text_color + styles.STAT_CARDS_VALUE_CLASSES)
                 ui.label(avg_saving_ratio_absolute_value + ' saved on average each month').classes(styles.STAT_CARDS_DESC_CLASSES)
 
-    async def render_chart(self, container, chart_type, title):
+    async def render_chart(self, container: ui.card, chart_type: Literal['net_worth', 'asset_vs_liabilities', 'cash_flow', 'avg_expenses', 'income_vs_expenses'], title: str) -> None:
         """Render a specific chart type into the given container."""
         chart_data = await self.load_chart_data()
         container.clear()
@@ -136,12 +137,16 @@ class HomeRenderer:
                 ui.label('No data available').classes('text-center text-gray-500')
             return
         
-        user_agent = app.storage.client.get("user_agent") or ""
+        user_agent_raw = app.storage.client.get("user_agent")
+        if user_agent_raw == "mobile":
+            user_agent: Literal["mobile", "desktop"] = "mobile"
+        else:
+            user_agent = "desktop"
         echart_theme = app.storage.user.get("echarts_theme_url") or ""
-        
+
         with container:
             ui.label(title).classes(styles.CHART_CARDS_LABEL_CLASSES)
-            
+
             if chart_type == 'net_worth':
                 options = charts.create_net_worth_chart_options(chart_data['net_worth_data'], user_agent)
             elif chart_type == 'asset_vs_liabilities':
@@ -155,7 +160,7 @@ class HomeRenderer:
             
             ui.echart(options=options, theme=echart_theme).classes(styles.CHART_CARDS_CHARTS_CLASSES)
 
-    def render_skeleton_ui(self):
+    def render_skeleton_ui(self) -> Dict[str, Any]:
         """Render skeleton UI structure with loading placeholders."""
         with ui.column().classes('w-full max-w-screen-xl mx-auto p-4 space-y-5 main-content'):
             # --- Row 1: KPI cards container ---
@@ -191,7 +196,7 @@ class HomeRenderer:
         }
 
 
-def render():
+def render() -> None:
     """Render the home dashboard with KPI cards and financial charts."""
     data_sheet = app.storage.user.get('data_sheet')
     expenses_sheet = app.storage.user.get('expenses_sheet')

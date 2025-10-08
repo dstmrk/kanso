@@ -1,5 +1,5 @@
 import time
-from typing import TypeVar
+from typing import TypeVar, Dict, Any, Callable, Optional
 import asyncio
 from nicegui import app
 
@@ -8,16 +8,16 @@ T = TypeVar('T')
 class StateManager:
     """
     Intelligent state and cache manager for financial data.
-    
+
     Optimized for monthly data updates - uses long TTL caching
     to minimize expensive pandas calculations.
     """
-    
-    def __init__(self, default_ttl_seconds=86400):  # 24 hours default
+
+    def __init__(self, default_ttl_seconds: int = 86400) -> None:  # 24 hours default
         self.default_ttl = default_ttl_seconds
-        self._cache = {}
-    
-    def _get_cache_key(self, user_storage_key, computation_key):
+        self._cache: Dict[str, Dict[str, Any]] = {}
+
+    def _get_cache_key(self, user_storage_key: str, computation_key: str) -> str:
         """Generate unique cache key for user data + computation."""
         # Use data hash to invalidate cache when data changes
         try:
@@ -29,19 +29,19 @@ class StateManager:
             # Fallback if there are storage issues
             return f"{user_storage_key}:{computation_key}:fallback"
     
-    def _is_cache_valid(self, cache_entry):
+    def _is_cache_valid(self, cache_entry: Dict[str, Any]) -> bool:
         """Check if cache entry is still valid."""
         if 'timestamp' not in cache_entry or 'ttl' not in cache_entry:
             return False
         return time.time() - cache_entry['timestamp'] < cache_entry['ttl']
-    
+
     async def get_or_compute(
-        self, 
-        user_storage_key,
-        computation_key, 
-        compute_fn,
-        ttl_seconds=None
-    ):
+        self,
+        user_storage_key: str,
+        computation_key: str,
+        compute_fn: Callable[[], T],
+        ttl_seconds: Optional[int] = None
+    ) -> T:
         """
         Get cached result or compute if not available/expired.
         
@@ -75,10 +75,10 @@ class StateManager:
         
         return result
     
-    def invalidate_cache(self, pattern=None):
+    def invalidate_cache(self, pattern: Optional[str] = None) -> None:
         """
         Invalidate cache entries.
-        
+
         Args:
             pattern: If provided, only invalidate keys containing this pattern
         """
@@ -88,8 +88,8 @@ class StateManager:
             keys_to_remove = [key for key in self._cache.keys() if pattern in key]
             for key in keys_to_remove:
                 del self._cache[key]
-    
-    def get_cache_stats(self):
+
+    def get_cache_stats(self) -> Dict[str, Any]:
         """Get cache statistics for debugging."""
         total_entries = len(self._cache)
         valid_entries = sum(1 for entry in self._cache.values() if self._is_cache_valid(entry))
@@ -103,9 +103,9 @@ class StateManager:
 
 # Cache decorator for synchronous functions
 def cached_computation(
-    user_storage_key,
-    computation_key,
-    ttl_seconds=None
+    user_storage_key: str,
+    computation_key: str,
+    ttl_seconds: Optional[int] = None
 ):
     """
     Decorator to automatically cache results of heavy computations.

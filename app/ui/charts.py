@@ -1,25 +1,27 @@
+from typing import Dict, Any, Literal, List
+
 class ChartOptionsBuilder:
     """Centralized chart options builder with common formatting."""
-    
+
     @staticmethod
-    def get_font_size(user_agent):
+    def get_font_size(user_agent: Literal["mobile", "desktop"]) -> int:
         """Get font size based on user agent."""
         return 8 if user_agent == "mobile" else 12
-    
+
     @staticmethod
-    def get_common_tooltip():
+    def get_common_tooltip() -> Dict[str, str]:
         """Get common tooltip configuration."""
         return {
             ':valueFormatter': 'function(value) { return "€ " + value.toFixed(2).toLocaleString("it-IT") }'
         }
-    
+
     @staticmethod
-    def get_common_grid():
+    def get_common_grid() -> Dict[str, str]:
         """Get common grid configuration."""
         return {"left": '15%', "right": '5%', "top": '10%', "bottom": '20%'}
-    
+
     @staticmethod
-    def get_currency_axis_label(user_agent):
+    def get_currency_axis_label(user_agent: Literal["mobile", "desktop"]) -> Dict[str, Any]:
         """Get currency formatted axis label."""
         return {
             "fontSize": ChartOptionsBuilder.get_font_size(user_agent),
@@ -27,7 +29,7 @@ class ChartOptionsBuilder:
         }
 
 
-def create_net_worth_chart_options(net_worth_data, user_agent):
+def create_net_worth_chart_options(net_worth_data: Dict[str, Any], user_agent: Literal["mobile", "desktop"]) -> Dict[str, Any]:
     return {
         "tooltip": {
             "trigger": "axis",
@@ -54,7 +56,7 @@ def create_net_worth_chart_options(net_worth_data, user_agent):
         }]
     }
 
-def create_asset_vs_liabilities_chart(chart_data, user_agent):
+def create_asset_vs_liabilities_chart(chart_data: Dict[str, Any], user_agent: Literal["mobile", "desktop"]) -> Dict[str, Any]:
     # Convert ObservableDict to regular dict (NiceGUI compatibility)
     chart_data = dict(chart_data)
     for key in chart_data:
@@ -65,9 +67,9 @@ def create_asset_vs_liabilities_chart(chart_data, user_agent):
                 if hasattr(chart_data[key][subkey], 'items'):
                     chart_data[key][subkey] = dict(chart_data[key][subkey])
 
-    data = []
+    data: List[Dict[str, Any]] = []
     for category_name, items in chart_data.items():
-        category = {
+        category: Dict[str, Any] = {
             'name': category_name,
             'children': []
         }
@@ -75,7 +77,7 @@ def create_asset_vs_liabilities_chart(chart_data, user_agent):
             # Check if value is a dict (nested structure from MultiIndex)
             if isinstance(value, dict):
                 # MultiIndex case: create subcategory with children
-                subcategory = {
+                subcategory: Dict[str, Any] = {
                     'name': item_name,
                     'children': []
                 }
@@ -118,7 +120,7 @@ def create_asset_vs_liabilities_chart(chart_data, user_agent):
         }
     }
 
-def create_cash_flow_options(cash_flow_data, user_agent):
+def create_cash_flow_options(cash_flow_data: Dict[str, float], user_agent: Literal["mobile", "desktop"]) -> Dict[str, Any]:
     savings = cash_flow_data.get('Savings', 0)
     expenses_total = cash_flow_data.get('Expenses', 0)
     expense_categories = {k: v for k, v in cash_flow_data.items() if k not in ['Savings', 'Expenses']}
@@ -162,7 +164,7 @@ def create_cash_flow_options(cash_flow_data, user_agent):
         }]
     }
 
-def create_avg_expenses_options(expenses_data, user_agent):
+def create_avg_expenses_options(expenses_data: Dict[str, float], user_agent: Literal["mobile", "desktop"]) -> Dict[str, Any]:
     data = [
         {'name': category, 'value': value} 
         for category, value in expenses_data.items()
@@ -192,7 +194,7 @@ def create_avg_expenses_options(expenses_data, user_agent):
         }
     }
 
-def create_income_vs_expenses_options(income_vs_expenses_data, user_agent):
+def create_income_vs_expenses_options(income_vs_expenses_data: Dict[str, Any], user_agent: Literal["mobile", "desktop"]) -> Dict[str, Any]:
     return {
         'legend': {'data': ['Income', 'Expenses']},
         'tooltip': {

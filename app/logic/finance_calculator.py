@@ -1,9 +1,9 @@
 # app/logic/finance_calculator.py
 
 import pandas as pd
-from typing import Dict
+from typing import Dict, Any, List, Optional
 
-def parse_monetary_value(value):
+def parse_monetary_value(value: Any) -> float:
     """Utility function to parse monetary values from various formats."""
     if not isinstance(value, str):
         return float(value) if value is not None else 0.0
@@ -15,8 +15,8 @@ def parse_monetary_value(value):
 
 class FinanceCalculator:
     """Optimized finance calculator with cached DataFrame preprocessing."""
-    
-    def __init__(self, df, assets_df = None, liabilities_df = None, expenses_df=None):
+
+    def __init__(self, df: pd.DataFrame, assets_df: Optional[pd.DataFrame] = None, liabilities_df: Optional[pd.DataFrame] = None, expenses_df: Optional[pd.DataFrame] = None) -> None:
         self.original_df = df
         self.expenses_df = expenses_df
         self.assets_df = assets_df
@@ -26,35 +26,35 @@ class FinanceCalculator:
         self._processed_assets_df = None
         self._processed_liabilities_df = None
         
-    @property 
-    def processed_df(self):
+    @property
+    def processed_df(self) -> pd.DataFrame:
         """Lazily processed and cached main DataFrame."""
         if self._processed_df is None:
             self._processed_df = self._preprocess_main_df()
         return self._processed_df
-        
+
     @property
-    def processed_expenses_df(self):
+    def processed_expenses_df(self) -> Optional[pd.DataFrame]:
         """Lazily processed and cached expenses DataFrame."""
         if self.expenses_df is not None and self._processed_expenses_df is None:
             self._processed_expenses_df = self._preprocess_expenses_df()
         return self._processed_expenses_df
 
     @property
-    def processed_assets_df(self):
+    def processed_assets_df(self) -> Optional[pd.DataFrame]:
         """Lazily processed and cached assets DataFrame."""
         if self.assets_df is not None and self._processed_assets_df is None:
             self._processed_assets_df = self._preprocess_assets_df()
         return self._processed_assets_df
 
     @property
-    def processed_liabilities_df(self):
+    def processed_liabilities_df(self) -> Optional[pd.DataFrame]:
         """Lazily processed and cached liabilities DataFrame."""
         if self.liabilities_df is not None and self._processed_liabilities_df is None:
             self._processed_liabilities_df = self._preprocess_liabilities_df()
         return self._processed_liabilities_df
 
-    def _preprocess_main_df(self):
+    def _preprocess_main_df(self) -> pd.DataFrame:
         """Preprocess main DataFrame once with all required transformations."""
         df = self.original_df.copy()
         df['date_dt'] = pd.to_datetime(df['Date'], errors='coerce')
@@ -69,7 +69,7 @@ class FinanceCalculator:
         
         return df
         
-    def _preprocess_expenses_df(self):
+    def _preprocess_expenses_df(self) -> Optional[pd.DataFrame]:
         """Preprocess expenses DataFrame once."""
         if self.expenses_df is None:
             return None
@@ -79,7 +79,7 @@ class FinanceCalculator:
         df['amount_parsed'] = df['Amount'].apply(parse_monetary_value)
         return df.sort_values(by='date_dt')
 
-    def _preprocess_assets_df(self):
+    def _preprocess_assets_df(self) -> Optional[pd.DataFrame]:
         """Preprocess assets DataFrame once with date parsing and sorting."""
         if self.assets_df is None or self.assets_df.empty:
             return None
@@ -104,7 +104,7 @@ class FinanceCalculator:
 
         return df
 
-    def _preprocess_liabilities_df(self):
+    def _preprocess_liabilities_df(self) -> Optional[pd.DataFrame]:
         """Preprocess liabilities DataFrame once with date parsing and sorting."""
         if self.liabilities_df is None or self.liabilities_df.empty:
             return None
@@ -129,25 +129,25 @@ class FinanceCalculator:
 
         return df
 
-    def _validate_columns(self, required_columns):
+    def _validate_columns(self, required_columns: List[str]) -> bool:
         """Validate required columns exist."""
         missing_cols = [col for col in required_columns if col not in self.original_df.columns]
         if missing_cols:
             print(f"Error: DataFrame missing columns: {missing_cols}")
             return False
         return True
-    
-    def get_current_net_worth(self):
+
+    def get_current_net_worth(self) -> float:
         """Get the most recent net worth value."""
         if not self._validate_columns(['Net Worth']):
             return 0.0
         return self.processed_df['net_worth_parsed'].iloc[-1]
-    
-    def get_last_update_date(self):
+
+    def get_last_update_date(self) -> str:
         """Get the date of the last update in MM-YYYY format."""
         return self.processed_df['date_dt'].iloc[-1].strftime('%m-%Y')
-    
-    def get_month_over_month_net_worth_variation_percentage(self):
+
+    def get_month_over_month_net_worth_variation_percentage(self) -> float:
         """Get month over month net worth percentage change."""
         if not self._validate_columns(['Net Worth']):
             return 0.0
@@ -161,18 +161,18 @@ class FinanceCalculator:
         
         return (current - previous) / previous if previous != 0 else 0.0
     
-    def get_month_over_month_net_worth_variation_absolute(self):
+    def get_month_over_month_net_worth_variation_absolute(self) -> float:
         """Get month over month net worth absolute change."""
         if not self._validate_columns(['Net Worth']):
             return 0.0
-        
+
         df = self.processed_df
         if len(df) < 2:
             return 0.0
-            
+
         return df['net_worth_parsed'].iloc[-1] - df['net_worth_parsed'].iloc[-2]
-    
-    def get_year_over_year_net_worth_variation_percentage(self):
+
+    def get_year_over_year_net_worth_variation_percentage(self) -> float:
         """Get year over year net worth percentage change."""
         if not self._validate_columns(['Net Worth']):
             return 0.0
@@ -186,44 +186,44 @@ class FinanceCalculator:
         
         return (current - previous_year) / previous_year if previous_year != 0 else 0.0
     
-    def get_year_over_year_net_worth_variation_absolute(self):
+    def get_year_over_year_net_worth_variation_absolute(self) -> float:
         """Get year over year net worth absolute change."""
         if not self._validate_columns(['Net Worth']):
             return 0.0
-        
+
         df = self.processed_df
         if len(df) < 13:
             return 0.0
-            
+
         return df['net_worth_parsed'].iloc[-1] - df['net_worth_parsed'].iloc[-13]
-    
-    def get_average_saving_ratio_last_12_months_percentage(self):
+
+    def get_average_saving_ratio_last_12_months_percentage(self) -> float:
         """Get average saving ratio for last 12 months as percentage."""
         if not self._validate_columns(['Income', 'Expenses']):
             return 0.0
-        
+
         df = self.processed_df
         income: float = df['income_parsed'].iloc[-12:].sum()
         expenses: float = df['expenses_parsed'].iloc[-12:].sum()
-        
+
         return (income - expenses) / income if income != 0 else 0.0
-    
-    def get_average_saving_ratio_last_12_months_absolute(self):
+
+    def get_average_saving_ratio_last_12_months_absolute(self) -> float:
         """Get average monthly savings for last 12 months."""
         if not self._validate_columns(['Income', 'Expenses']):
             return 0.0
-        
+
         df = self.processed_df
         income: float = df['income_parsed'].iloc[-12:].sum()
         expenses: float = df['expenses_parsed'].iloc[-12:].sum()
-        
+
         return (income - expenses) / 12 if income != 0 else 0.0
-    
-    def get_fi_progress(self):
+
+    def get_fi_progress(self) -> float:
         """Get FI progress - placeholder implementation."""
         return 0.263
-    
-    def get_monthly_net_worth(self):
+
+    def get_monthly_net_worth(self) -> Dict[str, List]:
         """Get monthly net worth data for charting."""
         if not self._validate_columns(['Date', 'Net Worth']):
             return {'dates': [], 'values': []}
@@ -233,8 +233,9 @@ class FinanceCalculator:
             'dates': df['date_dt'].dt.strftime('%Y-%m').tolist(),
             'values': df['net_worth_parsed'].tolist()
         }
-    def get_assets_liabilities(self):
-        asset_liabilities = {'Assets': {}, 'Liabilities': {}}
+    def get_assets_liabilities(self) -> Dict[str, Dict[str, Any]]:
+        """Get assets and liabilities breakdown from the latest data."""
+        asset_liabilities: Dict[str, Dict[str, Any]] = {'Assets': {}, 'Liabilities': {}}
         reference_date = None
 
         # Use preprocessed DataFrames
@@ -326,7 +327,7 @@ class FinanceCalculator:
 
         return asset_liabilities
     
-    def get_cash_flow_last_12_months(self):
+    def get_cash_flow_last_12_months(self) -> Dict[str, float]:
         """Get cash flow data for last 12 months."""
         if not self._validate_columns(['Income']):
             return {"Savings": 0.0, "Expenses": 0.0}
@@ -353,7 +354,7 @@ class FinanceCalculator:
         
         return result
     
-    def get_average_expenses_by_category_last_12_months(self):
+    def get_average_expenses_by_category_last_12_months(self) -> Dict[str, float]:
         """Get average expenses by category for last 12 months."""
         if self.processed_expenses_df is None:
             return {}
@@ -365,7 +366,7 @@ class FinanceCalculator:
         ef_last_12: pd.DataFrame = ef[(ef['date_dt'] >= start_date) & (ef['date_dt'] <= latest_date)]
         return ef_last_12.groupby('Category')['amount_parsed'].sum().to_dict()
     
-    def get_incomes_vs_expenses(self):
+    def get_incomes_vs_expenses(self) -> Dict[str, List]:
         """Get income vs expenses data for charting."""
         if not self._validate_columns(['Date', 'Income', 'Expenses']):
             return {'dates': [], 'incomes': [], 'expenses': []}

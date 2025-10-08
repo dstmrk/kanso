@@ -5,7 +5,7 @@ from app.services import utils
 from app.logic.finance_calculator import FinanceCalculator
 import pandas as pd
 
-def render():
+def render() -> None:
     data_sheet_str = app.storage.user.get('data_sheet')
     
     header.render()

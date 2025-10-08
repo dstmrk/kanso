@@ -1,12 +1,12 @@
-from typing import Union, List
+from typing import Union, List, Optional
 import gspread
 import pandas as pd
 from pathlib import Path
 
 class GoogleSheetService:
     """Service class for interacting with Google Sheets API."""
-    
-    def __init__(self, credentials_path, workbook_id):
+
+    def __init__(self, credentials_path: Union[str, Path], workbook_id: str) -> None:
         """Initialize with credentials and workbook ID."""
         self.creds_path = Path(credentials_path)
         self.workbook_id = workbook_id
@@ -14,7 +14,7 @@ class GoogleSheetService:
             raise FileNotFoundError(f"Credentials file not found at: {self.creds_path}")
         self.client = self._authenticate()
 
-    def _authenticate(self):
+    def _authenticate(self) -> gspread.Client:
         """Authenticate with Google Sheets using service account credentials."""
         return gspread.service_account(filename=str(self.creds_path))
 
@@ -27,6 +27,7 @@ class GoogleSheetService:
             df = pd.DataFrame(data)
 
             # Handle MultiIndex columns (two-level: category and specific item)
+            header_rows_to_drop: List[int]
             if isinstance(header, list) and len(header) == 2:
                 # Create MultiIndex from the two header rows
                 header_data = [df.iloc[i].tolist() for i in header]
@@ -37,7 +38,7 @@ class GoogleSheetService:
             else:
                 # Single header row
                 df.columns = df.iloc[header]
-                header_rows_to_drop = [header]
+                header_rows_to_drop = [header] if isinstance(header, int) else list(header)
 
             df = df.drop(header_rows_to_drop)
 
