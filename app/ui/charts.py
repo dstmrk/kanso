@@ -9,10 +9,10 @@ class ChartOptionsBuilder:
         return 8 if user_agent == "mobile" else 12
 
     @staticmethod
-    def get_common_tooltip() -> Dict[str, str]:
-        """Get common tooltip configuration."""
+    def get_common_tooltip(currency: str = 'USD') -> Dict[str, str]:
+        """Get common tooltip configuration with currency formatting."""
         return {
-            ':valueFormatter': 'function(value) { return "€ " + value.toFixed(2).toLocaleString("it-IT") }'
+            ':valueFormatter': f'function(value) {{ return value.toLocaleString(undefined, {{style: "currency", currency: "{currency}", minimumFractionDigits: 2, maximumFractionDigits: 2}}) }}'
         }
 
     @staticmethod
@@ -21,19 +21,19 @@ class ChartOptionsBuilder:
         return {"left": '15%', "right": '5%', "top": '10%', "bottom": '20%'}
 
     @staticmethod
-    def get_currency_axis_label(user_agent: Literal["mobile", "desktop"]) -> Dict[str, Any]:
+    def get_currency_axis_label(user_agent: Literal["mobile", "desktop"], currency: str = 'USD') -> Dict[str, Any]:
         """Get currency formatted axis label."""
         return {
             "fontSize": ChartOptionsBuilder.get_font_size(user_agent),
-            ':formatter': 'function(value) { return "€ " + value.toFixed(0).toLocaleString("it-IT") }'
+            ':formatter': f'function(value) {{ return value.toLocaleString(undefined, {{style: "currency", currency: "{currency}", maximumFractionDigits: 0}}) }}'
         }
 
 
-def create_net_worth_chart_options(net_worth_data: Dict[str, Any], user_agent: Literal["mobile", "desktop"]) -> Dict[str, Any]:
+def create_net_worth_chart_options(net_worth_data: Dict[str, Any], user_agent: Literal["mobile", "desktop"], currency: str = 'USD') -> Dict[str, Any]:
     return {
         "tooltip": {
             "trigger": "axis",
-            **ChartOptionsBuilder.get_common_tooltip()
+            **ChartOptionsBuilder.get_common_tooltip(currency)
         },
         "grid": ChartOptionsBuilder.get_common_grid(),
         "xAxis": {
@@ -45,7 +45,7 @@ def create_net_worth_chart_options(net_worth_data: Dict[str, Any], user_agent: L
         },
         "yAxis": {
             "type": "value",
-            "axisLabel": ChartOptionsBuilder.get_currency_axis_label(user_agent)
+            "axisLabel": ChartOptionsBuilder.get_currency_axis_label(user_agent, currency)
         },
         "series": [{
             "name": "Net Worth",
@@ -56,7 +56,7 @@ def create_net_worth_chart_options(net_worth_data: Dict[str, Any], user_agent: L
         }]
     }
 
-def create_asset_vs_liabilities_chart(chart_data: Dict[str, Any], user_agent: Literal["mobile", "desktop"]) -> Dict[str, Any]:
+def create_asset_vs_liabilities_chart(chart_data: Dict[str, Any], user_agent: Literal["mobile", "desktop"], currency: str = 'USD') -> Dict[str, Any]:
     # Convert ObservableDict to regular dict (NiceGUI compatibility)
     chart_data = dict(chart_data)
     for key in chart_data:
@@ -98,7 +98,7 @@ def create_asset_vs_liabilities_chart(chart_data: Dict[str, Any], user_agent: Li
     return {
         "tooltip": {
             "trigger": 'item',
-            **ChartOptionsBuilder.get_common_tooltip()
+            **ChartOptionsBuilder.get_common_tooltip(currency)
         },
         "grid": ChartOptionsBuilder.get_common_grid(),
         "color": ["#777777","#2b821d", "#c12e34"],
@@ -120,25 +120,25 @@ def create_asset_vs_liabilities_chart(chart_data: Dict[str, Any], user_agent: Li
         }
     }
 
-def create_cash_flow_options(cash_flow_data: Dict[str, float], user_agent: Literal["mobile", "desktop"]) -> Dict[str, Any]:
+def create_cash_flow_options(cash_flow_data: Dict[str, float], user_agent: Literal["mobile", "desktop"], currency: str = 'USD') -> Dict[str, Any]:
     savings = cash_flow_data.get('Savings', 0)
     expenses_total = cash_flow_data.get('Expenses', 0)
     expense_categories = {k: v for k, v in cash_flow_data.items() if k not in ['Savings', 'Expenses']}
-    
+
     colors = [
         "#e6b600", "#95706d", "#9bbc99", "#8c6ac4", "#ea7e53",
         "#0098d9", "#e098c7", "#73c0de", "#3fb27f"
     ]
-    
+
     nodes = [
-        {'name': 'Income', 'itemStyle': {'color': '#2b821d'}}, 
-        {'name': 'Savings', 'itemStyle': {'color': '#005eaa'}}, 
+        {'name': 'Income', 'itemStyle': {'color': '#2b821d'}},
+        {'name': 'Savings', 'itemStyle': {'color': '#005eaa'}},
         {'name': 'Expenses', 'itemStyle': {'color': '#c12e34'}}
     ] + [
-        {'name': category, 'itemStyle': {'color': colors[i % len(colors)]}} 
+        {'name': category, 'itemStyle': {'color': colors[i % len(colors)]}}
         for i, category in enumerate(expense_categories)
     ]
-    
+
     links = [
         {'source': 'Income', 'target': 'Savings', 'value': round(savings, 2)},
         {'source': 'Income', 'target': 'Expenses', 'value': round(expenses_total, 2)},
@@ -146,12 +146,12 @@ def create_cash_flow_options(cash_flow_data: Dict[str, float], user_agent: Liter
         {'source': 'Expenses', 'target': category, 'value': round(amount, 2)}
         for category, amount in expense_categories.items()
     ]
-    
+
     return {
         'tooltip': {
             'trigger': 'item',
             'triggerOn': 'mousemove',
-            **ChartOptionsBuilder.get_common_tooltip()
+            **ChartOptionsBuilder.get_common_tooltip(currency)
         },
         'series': [{
             'type': 'sankey',
@@ -164,16 +164,16 @@ def create_cash_flow_options(cash_flow_data: Dict[str, float], user_agent: Liter
         }]
     }
 
-def create_avg_expenses_options(expenses_data: Dict[str, float], user_agent: Literal["mobile", "desktop"]) -> Dict[str, Any]:
+def create_avg_expenses_options(expenses_data: Dict[str, float], user_agent: Literal["mobile", "desktop"], currency: str = 'USD') -> Dict[str, Any]:
     data = [
-        {'name': category, 'value': value} 
+        {'name': category, 'value': value}
         for category, value in expenses_data.items()
     ]
-    
+
     return {
         'tooltip': {
             'trigger': 'item',
-            **ChartOptionsBuilder.get_common_tooltip()
+            **ChartOptionsBuilder.get_common_tooltip(currency)
         },
         'series': {
             'type': 'pie',
@@ -194,12 +194,12 @@ def create_avg_expenses_options(expenses_data: Dict[str, float], user_agent: Lit
         }
     }
 
-def create_income_vs_expenses_options(income_vs_expenses_data: Dict[str, Any], user_agent: Literal["mobile", "desktop"]) -> Dict[str, Any]:
+def create_income_vs_expenses_options(income_vs_expenses_data: Dict[str, Any], user_agent: Literal["mobile", "desktop"], currency: str = 'USD') -> Dict[str, Any]:
     return {
         'legend': {'data': ['Income', 'Expenses']},
         'tooltip': {
             'trigger': 'axis',
-            **ChartOptionsBuilder.get_common_tooltip()
+            **ChartOptionsBuilder.get_common_tooltip(currency)
         },
         'grid': ChartOptionsBuilder.get_common_grid(),
         'color': ["#2b821d", "#c12e34"],
@@ -213,7 +213,7 @@ def create_income_vs_expenses_options(income_vs_expenses_data: Dict[str, Any], u
         },
         'yAxis': {
             'type': 'value',
-            'axisLabel': ChartOptionsBuilder.get_currency_axis_label(user_agent),
+            'axisLabel': ChartOptionsBuilder.get_currency_axis_label(user_agent, currency),
             'axisLine': {'onZero': True},
             'splitLine': {'show': False}
         },

@@ -74,20 +74,23 @@ class HomeRenderer:
         """Render KPI cards with real data, replacing skeleton loaders."""
         kpi_data = await self.load_kpi_data()
         container.clear()
-        
+
         if not kpi_data:
             with container:
                 ui.label('No data available').classes('text-center text-gray-500')
             return
-        
+
+        # Get user currency preference
+        user_currency: str = app.storage.user.get('currency', utils.get_user_currency())
+
         with container:
-            net_worth_value = utils.format_currency(kpi_data['net_worth'])
-            mom_variation_percentage_value = '{:.2%}'.format(kpi_data['mom_variation_percentage'])
-            mom_variation_absolute_value = utils.format_currency(kpi_data['mom_variation_absolute'])
-            yoy_variation_percentage_value = '{:.2%}'.format(kpi_data['yoy_variation_percentage'])
-            yoy_variation_absolute_value = utils.format_currency(kpi_data['yoy_variation_absolute'])
-            avg_saving_ratio_percentage_value = '{:.2%}'.format(kpi_data['avg_saving_ratio_percentage'])
-            avg_saving_ratio_absolute_value = utils.format_currency(kpi_data['avg_saving_ratio_absolute'])
+            net_worth_value = utils.format_currency(kpi_data['net_worth'], user_currency)
+            mom_variation_percentage_value = utils.format_percentage(kpi_data['mom_variation_percentage'], user_currency)
+            mom_variation_absolute_value = utils.format_currency(kpi_data['mom_variation_absolute'], user_currency)
+            yoy_variation_percentage_value = utils.format_percentage(kpi_data['yoy_variation_percentage'], user_currency)
+            yoy_variation_absolute_value = utils.format_currency(kpi_data['yoy_variation_absolute'], user_currency)
+            avg_saving_ratio_percentage_value = utils.format_percentage(kpi_data['avg_saving_ratio_percentage'], user_currency)
+            avg_saving_ratio_absolute_value = utils.format_currency(kpi_data['avg_saving_ratio_absolute'], user_currency)
             
             with ui.card().classes('cursor-pointer' + styles.STAT_CARDS_CLASSES).on('click', lambda: ui.navigate.to(pages.NET_WORTH_PAGE)):
                 ui.label('Net Worth').classes(styles.STAT_CARDS_LABEL_CLASSES)
@@ -130,13 +133,13 @@ class HomeRenderer:
         """Render a specific chart type into the given container."""
         chart_data = await self.load_chart_data()
         container.clear()
-        
+
         if not chart_data:
             with container:
                 ui.label(title).classes(styles.CHART_CARDS_LABEL_CLASSES)
                 ui.label('No data available').classes('text-center text-gray-500')
             return
-        
+
         user_agent_raw = app.storage.client.get("user_agent")
         if user_agent_raw == "mobile":
             user_agent: Literal["mobile", "desktop"] = "mobile"
@@ -144,20 +147,23 @@ class HomeRenderer:
             user_agent = "desktop"
         echart_theme = app.storage.user.get("echarts_theme_url") or ""
 
+        # Get user currency preference
+        user_currency: str = app.storage.user.get('currency', utils.get_user_currency())
+
         with container:
             ui.label(title).classes(styles.CHART_CARDS_LABEL_CLASSES)
 
             if chart_type == 'net_worth':
-                options = charts.create_net_worth_chart_options(chart_data['net_worth_data'], user_agent)
+                options = charts.create_net_worth_chart_options(chart_data['net_worth_data'], user_agent, user_currency)
             elif chart_type == 'asset_vs_liabilities':
-                options = charts.create_asset_vs_liabilities_chart(chart_data['asset_vs_liabilities_data'], user_agent)
+                options = charts.create_asset_vs_liabilities_chart(chart_data['asset_vs_liabilities_data'], user_agent, user_currency)
             elif chart_type == 'cash_flow':
-                options = charts.create_cash_flow_options(chart_data['cash_flow_data'], user_agent)
+                options = charts.create_cash_flow_options(chart_data['cash_flow_data'], user_agent, user_currency)
             elif chart_type == 'avg_expenses':
-                options = charts.create_avg_expenses_options(chart_data['avg_expenses'], user_agent)
+                options = charts.create_avg_expenses_options(chart_data['avg_expenses'], user_agent, user_currency)
             elif chart_type == 'income_vs_expenses':
-                options = charts.create_income_vs_expenses_options(chart_data['incomes_vs_expenses_data'], user_agent)
-            
+                options = charts.create_income_vs_expenses_options(chart_data['incomes_vs_expenses_data'], user_agent, user_currency)
+
             ui.echart(options=options, theme=echart_theme).classes(styles.CHART_CARDS_CHARTS_CLASSES)
 
     def render_skeleton_ui(self) -> Dict[str, Any]:
