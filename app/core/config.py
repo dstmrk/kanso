@@ -23,7 +23,7 @@ class AppConfig:
     
     # Google Sheets
     google_sheet_credentials_filename: Optional[str] = None
-    workbook_id: Optional[str] = None
+    workbook_url: Optional[str] = None
     data_sheet_name: str = SHEET_NAME_DATA
     assets_sheet_name: str = SHEET_NAME_ASSETS
     liabilities_sheet_name: str = SHEET_NAME_LIABILITIES
@@ -47,7 +47,7 @@ class AppConfig:
             credentials_folder=os.getenv("CREDENTIALS_FOLDER", "config/credentials"),
             static_files_folder=os.getenv("STATIC_FILES_FOLDER", "static"),
             google_sheet_credentials_filename=os.getenv("GOOGLE_SHEET_CREDENTIALS_FILENAME"),
-            workbook_id=os.getenv("WORKBOOK_ID"),
+            workbook_url=os.getenv("WORKBOOK_URL"),
             data_sheet_name=os.getenv("DATA_SHEET_NAME", SHEET_NAME_DATA),
             assets_sheet_name=os.getenv("ASSETS_SHEET_NAME", SHEET_NAME_ASSETS),
             liabilities_sheet_name=os.getenv("LIABILITIES_SHEET_NAME", SHEET_NAME_LIABILITIES),
@@ -77,8 +77,8 @@ class AppConfig:
         """Validate required configuration."""
         if not self.google_sheet_credentials_filename:
             raise ValueError("GOOGLE_SHEET_CREDENTIALS_FILENAME environment variable is required")
-        if not self.workbook_id:
-            raise ValueError("WORKBOOK_ID environment variable is required")
+        if not self.workbook_url:
+            raise ValueError("WORKBOOK_URL environment variable is required")
         if not self.credentials_path.exists():
             raise FileNotFoundError(f"Credentials file not found at: {self.credentials_path}")
         logger.info("Configuration validation successful")

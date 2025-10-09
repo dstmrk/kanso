@@ -72,7 +72,7 @@ In the project root, create a .env file with the following keys:
 
 ```bash
 GOOGLE_SHEET_CREDENTIALS_FILENAME=the_filename_of_your_Google_Sheet_API_credentials
-WORKBOOK_ID=your_google_sheet_workbook_id 
+WORKBOOK_URL=your_google_sheet_workbook_url 
 ```
 
 Replace values as appropriate. The ECharts theme can be customized using the [ECharts Theme Builder](https://echarts.apache.org/en/theme-builder.html)

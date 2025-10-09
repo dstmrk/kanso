@@ -11,14 +11,14 @@ logger = logging.getLogger(__name__)
 class GoogleSheetService:
     """Service class for interacting with Google Sheets API."""
 
-    def __init__(self, credentials_path: Union[str, Path], workbook_id: str) -> None:
+    def __init__(self, credentials_path: Union[str, Path], workbook_url: str) -> None:
         """Initialize with credentials and workbook ID."""
         self.creds_path = Path(credentials_path)
-        self.workbook_id = workbook_id
+        self.workbook_url = workbook_url
         if not self.creds_path.exists():
             raise FileNotFoundError(f"Credentials file not found at: {self.creds_path}")
         self.client = self._authenticate()
-        logger.info(f"Google Sheets service initialized for workbook: {workbook_id}")
+        logger.info(f"Google Sheets service initialized for workbook: {workbook_url}")
 
     def _authenticate(self) -> gspread.Client:
         """Authenticate with Google Sheets using service account credentials."""
@@ -38,7 +38,7 @@ class GoogleSheetService:
             DataFrame containing the worksheet data
         """
         try:
-            sheet = self.client.open_by_key(self.workbook_id).worksheet(worksheet_name)
+            sheet = self.client.open_by_url(self.workbook_url).worksheet(worksheet_name)
             data = sheet.get_all_values()
             if not data:
                 return pd.DataFrame()

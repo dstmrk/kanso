@@ -131,7 +131,7 @@ ui.add_head_html(THEME_SCRIPT + HEAD_HTML, shared=True)
 # Initialize Google Sheets service
 sheet_service = None
 try:
-    sheet_service = GoogleSheetService(app_config.credentials_path, app_config.workbook_id)
+    sheet_service = GoogleSheetService(app_config.credentials_path, app_config.workbook_url)
 except Exception as e:
     logger.critical(f"Fatal startup error: {e}")
     ui.label(f"Application failed to start: {str(e)}").classes("text-red-500 font-bold")
