@@ -22,7 +22,7 @@ def parse_monetary_value(value: Any) -> float:
     if not isinstance(value, str):
         return float(value) if value is not None else 0.0
     try:
-        cleaned_value = value.replace("€", "").replace(" ", "").replace(".", "").replace(",", ".")
+        cleaned_value = value.replace("€", "").replace('$', '').replace('£', '').replace('Fr', '').replace('¥', '').replace(" ", "").replace(".", "").replace(",", ".")
         return float(cleaned_value)
     except (ValueError, TypeError):
         return 0.0
