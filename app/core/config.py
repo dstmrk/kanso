@@ -1,7 +1,10 @@
 import os
+import logging
 from pathlib import Path
 from typing import Optional
 from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class AppConfig:
@@ -33,7 +36,7 @@ class AppConfig:
     @classmethod
     def from_env(cls, app_root: Path) -> 'AppConfig':
         """Create configuration from environment variables."""
-        return cls(
+        config = cls(
             app_root=app_root,
             credentials_folder=os.getenv("CREDENTIALS_FOLDER", "config/credentials"),
             static_files_folder=os.getenv("STATIC_FILES_FOLDER", "static"),
@@ -49,6 +52,8 @@ class AppConfig:
             default_theme=os.getenv("DEFAULT_THEME", "light"),
             cache_ttl_seconds=int(os.getenv("CACHE_TTL_SECONDS", "86400"))
         )
+        logger.info(f"Configuration loaded: port={config.app_port}, theme={config.default_theme}, cache_ttl={config.cache_ttl_seconds}s")
+        return config
     
     @property
     def credentials_path(self) -> Path:
@@ -70,6 +75,7 @@ class AppConfig:
             raise ValueError("WORKBOOK_ID environment variable is required")
         if not self.credentials_path.exists():
             raise FileNotFoundError(f"Credentials file not found at: {self.credentials_path}")
+        logger.info("Configuration validation successful")
 
 # Global configuration instance (will be set in main.py)
 config: Optional[AppConfig] = None

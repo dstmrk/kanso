@@ -1,7 +1,10 @@
 # app/logic/finance_calculator.py
 
+import logging
 import pandas as pd
 from typing import Dict, Any, List, Optional
+
+logger = logging.getLogger(__name__)
 
 def parse_monetary_value(value: Any) -> float:
     """Utility function to parse monetary values from various formats."""
@@ -133,7 +136,7 @@ class FinanceCalculator:
         """Validate required columns exist."""
         missing_cols = [col for col in required_columns if col not in self.original_df.columns]
         if missing_cols:
-            print(f"Error: DataFrame missing columns: {missing_cols}")
+            logger.error(f"DataFrame missing required columns: {missing_cols}")
             return False
         return True
 

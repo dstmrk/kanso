@@ -1,7 +1,10 @@
 from typing import Union, List, Optional
+import logging
 import gspread
 import pandas as pd
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 class GoogleSheetService:
     """Service class for interacting with Google Sheets API."""
@@ -13,6 +16,7 @@ class GoogleSheetService:
         if not self.creds_path.exists():
             raise FileNotFoundError(f"Credentials file not found at: {self.creds_path}")
         self.client = self._authenticate()
+        logger.info(f"Google Sheets service initialized for workbook: {workbook_id}")
 
     def _authenticate(self) -> gspread.Client:
         """Authenticate with Google Sheets using service account credentials."""
@@ -47,5 +51,5 @@ class GoogleSheetService:
                 df = df.set_index(index_name)
             return df.reset_index()
         except gspread.exceptions.WorksheetNotFound:
-            print(f"Error: Worksheet '{worksheet_name}' not found.")
+            logger.error(f"Worksheet '{worksheet_name}' not found")
             return pd.DataFrame()

@@ -1,8 +1,10 @@
 import time
+import logging
 from typing import TypeVar, Dict, Any, Callable, Optional
 import asyncio
 from nicegui import app
 
+logger = logging.getLogger(__name__)
 T = TypeVar('T')
 
 class StateManager:
@@ -25,8 +27,9 @@ class StateManager:
             data_str = str(user_data) if user_data is not None else ""
             data_hash = hash(data_str)
             return f"{user_storage_key}:{computation_key}:{data_hash}"
-        except Exception:
+        except Exception as e:
             # Fallback if there are storage issues
+            logger.warning(f"Failed to generate cache key with hash, using fallback: {e}")
             return f"{user_storage_key}:{computation_key}:fallback"
     
     def _is_cache_valid(self, cache_entry: Dict[str, Any]) -> bool:
@@ -53,17 +56,20 @@ class StateManager:
         """
         cache_key = self._get_cache_key(user_storage_key, computation_key)
         ttl = ttl_seconds or self.default_ttl
-        
+
         # Check cache first
         if cache_key in self._cache and self._is_cache_valid(self._cache[cache_key]):
+            logger.debug(f"Cache hit for {computation_key}")
             return self._cache[cache_key]['value']
-        
+
         # Compute new value - run in thread pool to avoid blocking UI
+        logger.debug(f"Cache miss for {computation_key}, computing value")
         try:
             loop = asyncio.get_event_loop()
             result = await loop.run_in_executor(None, compute_fn)
-        except Exception:
+        except Exception as e:
             # Direct fallback if there are thread pool issues
+            logger.warning(f"Thread pool execution failed for {computation_key}, using direct execution: {e}")
             result = compute_fn()
         
         # Cache the result
@@ -83,11 +89,14 @@ class StateManager:
             pattern: If provided, only invalidate keys containing this pattern
         """
         if pattern is None:
+            count = len(self._cache)
             self._cache.clear()
+            logger.info(f"Cache cleared: {count} entries invalidated")
         else:
             keys_to_remove = [key for key in self._cache.keys() if pattern in key]
             for key in keys_to_remove:
                 del self._cache[key]
+            logger.info(f"Cache partially cleared: {len(keys_to_remove)} entries matching '{pattern}' invalidated")
 
     def get_cache_stats(self) -> Dict[str, Any]:
         """Get cache statistics for debugging."""

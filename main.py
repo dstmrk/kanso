@@ -1,6 +1,7 @@
 import secrets
 import locale
 import os
+import logging
 
 from nicegui import ui, app
 from dotenv import load_dotenv
@@ -11,6 +12,14 @@ from app.core.state_manager import state_manager
 from app.services.google_sheets import GoogleSheetService
 from app.services import utils, pages
 from app.ui import home, net_worth, user, styles, logout
+
+# === Configure logging ===
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
 
 # === Load environment and configure app ===
 load_dotenv()
@@ -38,8 +47,8 @@ def get_or_create_storage_secret():
         # Make file readable only by owner for security
         os.chmod(STORAGE_SECRET_FILE, 0o600)
     except (IOError, OSError) as e:
-        print(f"Warning: Could not save storage secret to file: {e}")
-    
+        logger.warning(f"Could not save storage secret to file: {e}")
+
     return secret
 
 # Initialize global configuration
@@ -103,7 +112,7 @@ locale.setlocale(locale.LC_ALL, '')
 try:
     app_config.validate()
 except (ValueError, FileNotFoundError) as e:
-    print(f"!!! CONFIGURATION ERROR: {e} !!!")
+    logger.error(f"Configuration error: {e}")
     ui.label(f"Application configuration error: {str(e)}").classes("text-red-500 font-bold")
 
 # Setup static files
@@ -124,7 +133,7 @@ sheet_service = None
 try:
     sheet_service = GoogleSheetService(app_config.credentials_path, app_config.workbook_id)
 except Exception as e:
-    print(f"!!! FATAL STARTUP ERROR: {e} !!!")
+    logger.critical(f"Fatal startup error: {e}")
     ui.label(f"Application failed to start: {str(e)}").classes("text-red-500 font-bold")
     
 def ensure_theme_setup():
@@ -226,10 +235,10 @@ async def sync_theme(request):
         if theme in ['light', 'dark']:
             app.storage.user['theme'] = theme
             app.storage.user['echarts_theme_url'] = styles.DEFAULT_ECHART_THEME_FOLDER + theme + styles.DEFAULT_ECHARTS_THEME_SUFFIX
-            print(f"Theme synced to: {theme}")  # Debug log
+            logger.debug(f"Theme synced to: {theme}")
         return {'status': 'success', 'theme': theme}
     except Exception as e:
-        print(f"Theme sync error: {e}")
+        logger.error(f"Theme sync error: {e}")
         return {'status': 'error'}
 
 @app.get('/api/cache-stats')
