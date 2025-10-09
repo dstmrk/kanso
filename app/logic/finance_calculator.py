@@ -4,6 +4,17 @@ import logging
 import pandas as pd
 from typing import Dict, Any, List, Optional
 
+from app.core.constants import (
+    COL_DATE, COL_NET_WORTH, COL_INCOME, COL_EXPENSES,
+    COL_MONTH, COL_AMOUNT, COL_CATEGORY,
+    COL_DATE_DT, COL_NET_WORTH_PARSED, COL_INCOME_PARSED,
+    COL_EXPENSES_PARSED, COL_AMOUNT_PARSED,
+    MONETARY_COLUMNS, CATEGORY_ASSETS, CATEGORY_LIABILITIES,
+    CATEGORY_SAVINGS, CATEGORY_EXPENSES,
+    DATE_FORMAT_STORAGE, DATE_FORMAT_DISPLAY,
+    MONTHS_IN_YEAR, MONTHS_LOOKBACK_YEAR
+)
+
 logger = logging.getLogger(__name__)
 
 def parse_monetary_value(value: Any) -> float:
@@ -60,16 +71,14 @@ class FinanceCalculator:
     def _preprocess_main_df(self) -> pd.DataFrame:
         """Preprocess main DataFrame once with all required transformations."""
         df = self.original_df.copy()
-        df['date_dt'] = pd.to_datetime(df['Date'], errors='coerce')
-        df = df.sort_values(by='date_dt')
-        
+        df[COL_DATE_DT] = pd.to_datetime(df[COL_DATE], errors='coerce')
+        df = df.sort_values(by=COL_DATE_DT)
+
         # Parse monetary columns once
-        monetary_columns = ['Net Worth', 'Income', 'Expenses', 'Cash', 'Pension Fund', 
-                          'Stocks', 'Real Estate', 'Crypto', 'Other', 'Mortgage', 'Loans']
-        for col in monetary_columns:
+        for col in MONETARY_COLUMNS:
             if col in df.columns:
                 df[f'{col.lower().replace(" ", "_")}_parsed'] = df[col].apply(parse_monetary_value)
-        
+
         return df
         
     def _preprocess_expenses_df(self) -> Optional[pd.DataFrame]:
@@ -78,9 +87,9 @@ class FinanceCalculator:
             return None
 
         df = self.expenses_df.copy()
-        df['date_dt'] = pd.to_datetime(df['Month'].astype(str).str.strip(), format='%Y-%m', errors='coerce')
-        df['amount_parsed'] = df['Amount'].apply(parse_monetary_value)
-        return df.sort_values(by='date_dt')
+        df[COL_DATE_DT] = pd.to_datetime(df[COL_MONTH].astype(str).str.strip(), format=DATE_FORMAT_STORAGE, errors='coerce')
+        df[COL_AMOUNT_PARSED] = df[COL_AMOUNT].apply(parse_monetary_value)
+        return df.sort_values(by=COL_DATE_DT)
 
     def _preprocess_assets_df(self) -> Optional[pd.DataFrame]:
         """Preprocess assets DataFrame once with date parsing and sorting."""
@@ -93,17 +102,17 @@ class FinanceCalculator:
         date_col = None
         for col in df.columns:
             if isinstance(col, tuple):
-                if 'Date' in col[0] or 'Date' in col[1]:
+                if COL_DATE in col[0] or COL_DATE in col[1]:
                     date_col = col
                     break
             else:
-                if 'Date' in col:
+                if COL_DATE in col:
                     date_col = col
                     break
 
         if date_col is not None:
-            df['date_dt'] = pd.to_datetime(df[date_col], format='%Y-%m', errors='coerce')
-            df = df.sort_values(by='date_dt')
+            df[COL_DATE_DT] = pd.to_datetime(df[date_col], format=DATE_FORMAT_STORAGE, errors='coerce')
+            df = df.sort_values(by=COL_DATE_DT)
 
         return df
 
@@ -118,17 +127,17 @@ class FinanceCalculator:
         date_col = None
         for col in df.columns:
             if isinstance(col, tuple):
-                if any(keyword in col[0] or keyword in col[1] for keyword in ['Date', 'Data', 'Category']):
+                if any(keyword in col[0] or keyword in col[1] for keyword in [COL_DATE, 'Data', COL_CATEGORY]):
                     date_col = col
                     break
             else:
-                if any(keyword in col for keyword in ['Date', 'Data', 'Category']):
+                if any(keyword in col for keyword in [COL_DATE, 'Data', COL_CATEGORY]):
                     date_col = col
                     break
 
         if date_col is not None:
-            df['date_dt'] = pd.to_datetime(df[date_col], format='%Y-%m', errors='coerce')
-            df = df.sort_values(by='date_dt')
+            df[COL_DATE_DT] = pd.to_datetime(df[date_col], format=DATE_FORMAT_STORAGE, errors='coerce')
+            df = df.sort_values(by=COL_DATE_DT)
 
         return df
 
@@ -142,17 +151,17 @@ class FinanceCalculator:
 
     def get_current_net_worth(self) -> float:
         """Get the most recent net worth value."""
-        if not self._validate_columns(['Net Worth']):
+        if not self._validate_columns([COL_NET_WORTH]):
             return 0.0
-        return self.processed_df['net_worth_parsed'].iloc[-1]
+        return self.processed_df[COL_NET_WORTH_PARSED].iloc[-1]
 
     def get_last_update_date(self) -> str:
         """Get the date of the last update in MM-YYYY format."""
-        return self.processed_df['date_dt'].iloc[-1].strftime('%m-%Y')
+        return self.processed_df[COL_DATE_DT].iloc[-1].strftime(DATE_FORMAT_DISPLAY)
 
     def get_month_over_month_net_worth_variation_percentage(self) -> float:
         """Get month over month net worth percentage change."""
-        if not self._validate_columns(['Net Worth']):
+        if not self._validate_columns([COL_NET_WORTH]):
             return 0.0
         
         df = self.processed_df
@@ -166,7 +175,7 @@ class FinanceCalculator:
     
     def get_month_over_month_net_worth_variation_absolute(self) -> float:
         """Get month over month net worth absolute change."""
-        if not self._validate_columns(['Net Worth']):
+        if not self._validate_columns([COL_NET_WORTH]):
             return 0.0
 
         df = self.processed_df
@@ -177,50 +186,50 @@ class FinanceCalculator:
 
     def get_year_over_year_net_worth_variation_percentage(self) -> float:
         """Get year over year net worth percentage change."""
-        if not self._validate_columns(['Net Worth']):
+        if not self._validate_columns([COL_NET_WORTH]):
             return 0.0
         
         df = self.processed_df
-        if len(df) < 13:
+        if len(df) < MONTHS_LOOKBACK_YEAR:
             return 0.0
             
         current: float = df['net_worth_parsed'].iloc[-1]
-        previous_year: float = df['net_worth_parsed'].iloc[-13]
+        previous_year: float = df['net_worth_parsed'].iloc[-MONTHS_LOOKBACK_YEAR]
         
         return (current - previous_year) / previous_year if previous_year != 0 else 0.0
     
     def get_year_over_year_net_worth_variation_absolute(self) -> float:
         """Get year over year net worth absolute change."""
-        if not self._validate_columns(['Net Worth']):
+        if not self._validate_columns([COL_NET_WORTH]):
             return 0.0
 
         df = self.processed_df
-        if len(df) < 13:
+        if len(df) < MONTHS_LOOKBACK_YEAR:
             return 0.0
 
-        return df['net_worth_parsed'].iloc[-1] - df['net_worth_parsed'].iloc[-13]
+        return df['net_worth_parsed'].iloc[-1] - df['net_worth_parsed'].iloc[-MONTHS_LOOKBACK_YEAR]
 
     def get_average_saving_ratio_last_12_months_percentage(self) -> float:
         """Get average saving ratio for last 12 months as percentage."""
-        if not self._validate_columns(['Income', 'Expenses']):
+        if not self._validate_columns([COL_INCOME, COL_EXPENSES]):
             return 0.0
 
         df = self.processed_df
-        income: float = df['income_parsed'].iloc[-12:].sum()
-        expenses: float = df['expenses_parsed'].iloc[-12:].sum()
+        income: float = df[COL_INCOME_PARSED].iloc[-MONTHS_IN_YEAR:].sum()
+        expenses: float = df[COL_EXPENSES_PARSED].iloc[-MONTHS_IN_YEAR:].sum()
 
         return (income - expenses) / income if income != 0 else 0.0
 
     def get_average_saving_ratio_last_12_months_absolute(self) -> float:
         """Get average monthly savings for last 12 months."""
-        if not self._validate_columns(['Income', 'Expenses']):
+        if not self._validate_columns([COL_INCOME, COL_EXPENSES]):
             return 0.0
 
         df = self.processed_df
-        income: float = df['income_parsed'].iloc[-12:].sum()
-        expenses: float = df['expenses_parsed'].iloc[-12:].sum()
+        income: float = df[COL_INCOME_PARSED].iloc[-MONTHS_IN_YEAR:].sum()
+        expenses: float = df[COL_EXPENSES_PARSED].iloc[-MONTHS_IN_YEAR:].sum()
 
-        return (income - expenses) / 12 if income != 0 else 0.0
+        return (income - expenses) / MONTHS_IN_YEAR if income != 0 else 0.0
 
     def get_fi_progress(self) -> float:
         """Get FI progress - placeholder implementation."""
@@ -228,17 +237,17 @@ class FinanceCalculator:
 
     def get_monthly_net_worth(self) -> Dict[str, List]:
         """Get monthly net worth data for charting."""
-        if not self._validate_columns(['Date', 'Net Worth']):
+        if not self._validate_columns([COL_DATE, COL_NET_WORTH]):
             return {'dates': [], 'values': []}
         
-        df = self.processed_df.dropna(subset=['date_dt'])
+        df = self.processed_df.dropna(subset=[COL_DATE_DT])
         return {
-            'dates': df['date_dt'].dt.strftime('%Y-%m').tolist(),
+            'dates': df[COL_DATE_DT].dt.strftime(DATE_FORMAT_STORAGE).tolist(),
             'values': df['net_worth_parsed'].tolist()
         }
     def get_assets_liabilities(self) -> Dict[str, Dict[str, Any]]:
         """Get assets and liabilities breakdown from the latest data."""
-        asset_liabilities: Dict[str, Dict[str, Any]] = {'Assets': {}, 'Liabilities': {}}
+        asset_liabilities: Dict[str, Dict[str, Any]] = {CATEGORY_ASSETS: {}, CATEGORY_LIABILITIES: {}}
         reference_date = None
 
         # Use preprocessed DataFrames
@@ -248,7 +257,7 @@ class FinanceCalculator:
         if assets_df is not None and not assets_df.empty:
             # Get latest row
             latest_row = assets_df.iloc[-1]
-            reference_date = assets_df['date_dt'].iloc[-1]
+            reference_date = assets_df[COL_DATE_DT].iloc[-1]
 
             # Extract values dynamically from columns
             for col in assets_df.columns:
@@ -274,20 +283,20 @@ class FinanceCalculator:
                     if not category:
                         continue
                     value = parse_monetary_value(latest_row[col])
-                    if category not in asset_liabilities['Assets']:
-                        asset_liabilities['Assets'][category] = {}
-                    asset_liabilities['Assets'][category][item] = value
+                    if category not in asset_liabilities[CATEGORY_ASSETS]:
+                        asset_liabilities[CATEGORY_ASSETS][category] = {}
+                    asset_liabilities[CATEGORY_ASSETS][category][item] = value
                 else:
                     # Single header: column name is the item
                     item = col
                     value = parse_monetary_value(latest_row[col])
-                    asset_liabilities['Assets'][item] = value
+                    asset_liabilities[CATEGORY_ASSETS][item] = value
 
         # Process Liabilities DataFrame
         if liabilities_df is not None and not liabilities_df.empty:
             # Use reference date from Assets to get the corresponding row
             if reference_date is not None:
-                matching_rows = liabilities_df[liabilities_df['date_dt'] <= reference_date]
+                matching_rows = liabilities_df[liabilities_df[COL_DATE_DT] <= reference_date]
                 if not matching_rows.empty:
                     latest_row = matching_rows.iloc[-1]
                 else:
@@ -305,10 +314,10 @@ class FinanceCalculator:
                     continue
                 # Skip Date column
                 if isinstance(col, tuple):
-                    if any(keyword in col[0] or keyword in col[1] for keyword in ['Date', 'Data', 'Category']):
+                    if any(keyword in col[0] or keyword in col[1] for keyword in ['Date', 'Data', COL_CATEGORY]):
                         continue
                 else:
-                    if any(keyword in col for keyword in ['Date', 'Data', 'Category']):
+                    if any(keyword in col for keyword in ['Date', 'Data', COL_CATEGORY]):
                         continue
 
                 if isinstance(col, tuple) and len(col) == 2:
@@ -316,43 +325,43 @@ class FinanceCalculator:
                     category, item = col
                     category = category.strip()
                     item = item.strip()
-                    if not category or category == 'Category':
+                    if not category or category == COL_CATEGORY:
                         continue
                     value = parse_monetary_value(latest_row[col])
-                    if category not in asset_liabilities['Liabilities']:
-                        asset_liabilities['Liabilities'][category] = {}
-                    asset_liabilities['Liabilities'][category][item] = value
+                    if category not in asset_liabilities[CATEGORY_LIABILITIES]:
+                        asset_liabilities[CATEGORY_LIABILITIES][category] = {}
+                    asset_liabilities[CATEGORY_LIABILITIES][category][item] = value
                 else:
                     # Single header: column name is the item
                     item = col
                     value = parse_monetary_value(latest_row[col])
-                    asset_liabilities['Liabilities'][item] = value
+                    asset_liabilities[CATEGORY_LIABILITIES][item] = value
 
         return asset_liabilities
     
     def get_cash_flow_last_12_months(self) -> Dict[str, float]:
         """Get cash flow data for last 12 months."""
-        if not self._validate_columns(['Income']):
-            return {"Savings": 0.0, "Expenses": 0.0}
+        if not self._validate_columns([COL_INCOME]):
+            return {CATEGORY_SAVINGS: 0.0, CATEGORY_EXPENSES: 0.0}
         
         if self.processed_expenses_df is None:
-            return {"Savings": 0.0, "Expenses": 0.0}
+            return {CATEGORY_SAVINGS: 0.0, CATEGORY_EXPENSES: 0.0}
         
         # Income from main df
-        income = self.processed_df['income_parsed'].iloc[-12:].sum()
+        income = self.processed_df[COL_INCOME_PARSED].iloc[-MONTHS_IN_YEAR:].sum()
         
         # Expenses from expenses df (last 12 months)
         ef: pd.DataFrame = self.processed_expenses_df
-        latest_date: pd.Timestamp = ef['date_dt'].max()
-        start_date: pd.Timestamp = (latest_date - pd.DateOffset(months=11)).replace(day=1)
+        latest_date: pd.Timestamp = ef[COL_DATE_DT].max()
+        start_date: pd.Timestamp = (latest_date - pd.DateOffset(months=MONTHS_IN_YEAR-1)).replace(day=1)
         
-        ef_last_12: pd.DataFrame = ef[(ef['date_dt'] >= start_date) & (ef['date_dt'] <= latest_date)]
-        total_expenses: float = ef_last_12['amount_parsed'].sum()
+        ef_last_12: pd.DataFrame = ef[(ef[COL_DATE_DT] >= start_date) & (ef[COL_DATE_DT] <= latest_date)]
+        total_expenses: float = ef_last_12[COL_AMOUNT_PARSED].sum()
         
         # Expenses by category
-        expenses_by_category: Dict[str, float] = ef_last_12.groupby('Category')['amount_parsed'].sum().to_dict()
+        expenses_by_category: Dict[str, float] = ef_last_12.groupby(COL_CATEGORY)[COL_AMOUNT_PARSED].sum().to_dict()
         
-        result: Dict[str, float] = {"Expenses": total_expenses, "Savings": income - total_expenses}
+        result: Dict[str, float] = {CATEGORY_EXPENSES: total_expenses, CATEGORY_SAVINGS: income - total_expenses}
         result.update(expenses_by_category)
         
         return result
@@ -363,22 +372,22 @@ class FinanceCalculator:
             return {}
         
         ef: pd.DataFrame = self.processed_expenses_df
-        latest_date: pd.Timestamp = ef['date_dt'].max()
-        start_date: pd.Timestamp = (latest_date - pd.DateOffset(months=11)).replace(day=1)
+        latest_date: pd.Timestamp = ef[COL_DATE_DT].max()
+        start_date: pd.Timestamp = (latest_date - pd.DateOffset(months=MONTHS_IN_YEAR-1)).replace(day=1)
         
-        ef_last_12: pd.DataFrame = ef[(ef['date_dt'] >= start_date) & (ef['date_dt'] <= latest_date)]
-        return ef_last_12.groupby('Category')['amount_parsed'].sum().to_dict()
+        ef_last_12: pd.DataFrame = ef[(ef[COL_DATE_DT] >= start_date) & (ef[COL_DATE_DT] <= latest_date)]
+        return ef_last_12.groupby(COL_CATEGORY)[COL_AMOUNT_PARSED].sum().to_dict()
     
     def get_incomes_vs_expenses(self) -> Dict[str, List]:
         """Get income vs expenses data for charting."""
-        if not self._validate_columns(['Date', 'Income', 'Expenses']):
+        if not self._validate_columns([COL_DATE, COL_INCOME, COL_EXPENSES]):
             return {'dates': [], 'incomes': [], 'expenses': []}
         
-        df = self.processed_df.dropna(subset=['date_dt']).iloc[-12:]
+        df = self.processed_df.dropna(subset=[COL_DATE_DT]).iloc[-MONTHS_IN_YEAR:]
         
         return {
-            'dates': df['date_dt'].dt.strftime('%Y-%m').tolist(),
-            'incomes': df['income_parsed'].tolist(),
-            'expenses': [-x for x in df['expenses_parsed'].tolist()]  # Negative for chart
+            'dates': df[COL_DATE_DT].dt.strftime(DATE_FORMAT_STORAGE).tolist(),
+            'incomes': df[COL_INCOME_PARSED].tolist(),
+            'expenses': [-x for x in df[COL_EXPENSES_PARSED].tolist()]  # Negative for chart
         }
 
