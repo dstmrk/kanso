@@ -16,7 +16,41 @@ from app.core.constants import (
     COL_MONTH,
     COL_NET_WORTH,
 )
-from app.logic.finance_calculator import FinanceCalculator, parse_monetary_value
+from app.logic.finance_calculator import FinanceCalculator, detect_currency, parse_monetary_value
+
+
+class TestDetectCurrency:
+    """Tests for detect_currency function."""
+
+    def test_detect_eur(self):
+        """Test detecting EUR from € symbol."""
+        assert detect_currency("€ 100") == "EUR"
+        assert detect_currency("100 €") == "EUR"
+
+    def test_detect_usd(self):
+        """Test detecting USD from $ symbol."""
+        assert detect_currency("$100") == "USD"
+        assert detect_currency("100 $") == "USD"
+
+    def test_detect_gbp(self):
+        """Test detecting GBP from £ symbol."""
+        assert detect_currency("£100") == "GBP"
+        assert detect_currency("100 £") == "GBP"
+
+    def test_detect_chf(self):
+        """Test detecting CHF from Fr or CHF."""
+        assert detect_currency("Fr 100") == "CHF"
+        assert detect_currency("CHF 100") == "CHF"
+
+    def test_detect_jpy(self):
+        """Test detecting JPY from ¥ or JPY."""
+        assert detect_currency("¥100") == "JPY"
+        assert detect_currency("JPY 100") == "JPY"
+
+    def test_detect_none(self):
+        """Test no currency symbol returns None."""
+        assert detect_currency("1234.56") is None
+        assert detect_currency("abc") is None
 
 
 class TestParseMonetaryValue:
@@ -29,26 +63,51 @@ class TestParseMonetaryValue:
         assert parse_monetary_value("€ 123,45") == 123.45
 
     def test_parse_us_format(self):
-        """Test parsing US format is NOT supported (designed for European only)"""
-        # Function removes all dots, then converts commas to dots
-        # So "$1,234.56" becomes "1,23456" then "1.23456"
-        assert parse_monetary_value("$1,234.56") == 1.23456
-        assert parse_monetary_value("$1,000.00") == 1.0
-        assert parse_monetary_value("$123.45") == 12345.0
+        """Test parsing US format: $1,234.56"""
+        # Now correctly parsed with intelligent detection
+        assert parse_monetary_value("$1,234.56") == 1234.56
+        assert parse_monetary_value("$1,000.00") == 1000.0
+        assert parse_monetary_value("$123.45") == 123.45
+
+    def test_parse_gbp_format(self):
+        """Test parsing GBP format: £1,234.56"""
+        assert parse_monetary_value("£1,234.56") == 1234.56
+        assert parse_monetary_value("£1,000.00") == 1000.0
+        assert parse_monetary_value("£123.45") == 123.45
+
+    def test_parse_chf_format(self):
+        """Test parsing CHF format: Fr 1.234,56"""
+        assert parse_monetary_value("Fr 1.234,56") == 1234.56
+        assert parse_monetary_value("CHF 1.000,00") == 1000.0
+        assert parse_monetary_value("Fr 123,45") == 123.45
+
+    def test_parse_jpy_format(self):
+        """Test parsing JPY format (no decimals): ¥1,234"""
+        assert parse_monetary_value("¥1,234") == 1234.0
+        assert parse_monetary_value("JPY 1,000") == 1000.0
+        assert parse_monetary_value("¥123") == 123.0
 
     def test_parse_plain_number(self):
-        """Test parsing plain numbers in European format."""
-        # European format uses comma for decimals
-        assert parse_monetary_value("1234,56") == 1234.56
+        """Test parsing plain numbers without currency symbols."""
+        # Plain numbers without separators
+        assert parse_monetary_value("1234.56") == 1234.56
         assert parse_monetary_value("1000") == 1000.0
         assert parse_monetary_value("0") == 0.0
-        # Plain number with dot is treated as thousand separator and removed
-        assert parse_monetary_value("1.234") == 1234.0
 
     def test_parse_with_spaces(self):
         """Test parsing with spaces."""
         assert parse_monetary_value("€ 1 234,56") == 1234.56
+        assert parse_monetary_value("$ 1 234.56") == 1234.56
         assert parse_monetary_value("  1000  ") == 1000.0
+
+    def test_parse_currency_override(self):
+        """Test parsing with explicit currency parameter."""
+        # Force EUR interpretation on plain number
+        assert parse_monetary_value("1.234,56", currency="EUR") == 1234.56
+        # Force USD interpretation on plain number
+        assert parse_monetary_value("1,234.56", currency="USD") == 1234.56
+        # Override detected currency
+        assert parse_monetary_value("€ 1,234.56", currency="USD") == 1234.56
 
     def test_parse_numeric_types(self):
         """Test parsing numeric types directly."""
@@ -70,6 +129,15 @@ class TestParseMonetaryValue:
         assert parse_monetary_value("abc") == 0.0
         assert parse_monetary_value("€€€") == 0.0
         assert parse_monetary_value("not a number") == 0.0
+
+    def test_parse_mixed_formats(self):
+        """Test parsing with different separators."""
+        # EUR with thousands
+        assert parse_monetary_value("€ 10.000,00") == 10000.0
+        # USD with thousands
+        assert parse_monetary_value("$10,000.00") == 10000.0
+        # JPY with thousands (no decimals)
+        assert parse_monetary_value("¥10,000") == 10000.0
 
 
 class TestFinanceCalculator:
