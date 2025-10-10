@@ -1,3 +1,4 @@
+# Core dependencies
 gspread==6.2.1
 nicegui==2.21.1
 pandas==2.3.1
@@ -6,3 +7,11 @@ pytest==8.3.4
 pytest-asyncio==0.24.0
 python-dotenv==1.1.1
 user_agents==2.2.0
+
+# Development dependencies (optional)
+# Install with: uv pip install -e ".[dev]"
+# pre-commit>=3.6.0
+# black>=24.3.0
+# isort>=5.13.2
+# ruff>=0.3.4
+# mypy>=1.9.0
