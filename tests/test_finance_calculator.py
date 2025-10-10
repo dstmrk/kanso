@@ -4,15 +4,19 @@ Tests for finance_calculator module.
 Tests parse_monetary_value() and FinanceCalculator methods.
 """
 
-import pytest
 import pandas as pd
-from datetime import datetime
+import pytest
 
-from app.logic.finance_calculator import parse_monetary_value, FinanceCalculator
 from app.core.constants import (
-    COL_DATE, COL_NET_WORTH, COL_INCOME, COL_EXPENSES,
-    COL_MONTH, COL_CATEGORY, COL_AMOUNT
+    COL_AMOUNT,
+    COL_CATEGORY,
+    COL_DATE,
+    COL_EXPENSES,
+    COL_INCOME,
+    COL_MONTH,
+    COL_NET_WORTH,
 )
+from app.logic.finance_calculator import FinanceCalculator, parse_monetary_value
 
 
 class TestParseMonetaryValue:
@@ -75,14 +79,38 @@ class TestFinanceCalculator:
     def sample_data(self):
         """Create sample data for testing."""
         data = {
-            COL_DATE: ['2024-01', '2024-02', '2024-03', '2024-04', '2024-05', '2024-06',
-                      '2024-07', '2024-08', '2024-09', '2024-10', '2024-11', '2024-12',
-                      '2025-01'],
-            COL_NET_WORTH: ['€ 10.000', '€ 11.000', '€ 12.000', '€ 13.000', '€ 14.000', '€ 15.000',
-                           '€ 16.000', '€ 17.000', '€ 18.000', '€ 19.000', '€ 20.000', '€ 21.000',
-                           '€ 22.000'],
-            COL_INCOME: ['€ 3.000'] * 13,
-            COL_EXPENSES: ['€ 2.000'] * 13,
+            COL_DATE: [
+                "2024-01",
+                "2024-02",
+                "2024-03",
+                "2024-04",
+                "2024-05",
+                "2024-06",
+                "2024-07",
+                "2024-08",
+                "2024-09",
+                "2024-10",
+                "2024-11",
+                "2024-12",
+                "2025-01",
+            ],
+            COL_NET_WORTH: [
+                "€ 10.000",
+                "€ 11.000",
+                "€ 12.000",
+                "€ 13.000",
+                "€ 14.000",
+                "€ 15.000",
+                "€ 16.000",
+                "€ 17.000",
+                "€ 18.000",
+                "€ 19.000",
+                "€ 20.000",
+                "€ 21.000",
+                "€ 22.000",
+            ],
+            COL_INCOME: ["€ 3.000"] * 13,
+            COL_EXPENSES: ["€ 2.000"] * 13,
         }
         return pd.DataFrame(data)
 
@@ -90,9 +118,9 @@ class TestFinanceCalculator:
     def sample_expenses(self):
         """Create sample expenses data for testing."""
         data = {
-            COL_MONTH: ['2025-01'] * 5,
-            COL_CATEGORY: ['Food', 'Transport', 'Housing', 'Entertainment', 'Other'],
-            COL_AMOUNT: ['€ 500', '€ 300', '€ 800', '€ 200', '€ 200']
+            COL_MONTH: ["2025-01"] * 5,
+            COL_CATEGORY: ["Food", "Transport", "Housing", "Entertainment", "Other"],
+            COL_AMOUNT: ["€ 500", "€ 300", "€ 800", "€ 200", "€ 200"],
         }
         return pd.DataFrame(data)
 
@@ -114,7 +142,7 @@ class TestFinanceCalculator:
     def test_get_last_update_date(self, calculator):
         """Test getting last update date."""
         date = calculator.get_last_update_date()
-        assert date == '01-2025'  # MM-YYYY format
+        assert date == "01-2025"  # MM-YYYY format
 
     def test_get_month_over_month_variation_percentage(self, calculator):
         """Test getting month-over-month variation percentage."""
@@ -153,59 +181,61 @@ class TestFinanceCalculator:
     def test_get_monthly_net_worth(self, calculator):
         """Test getting monthly net worth data."""
         data = calculator.get_monthly_net_worth()
-        assert len(data['dates']) == 13
-        assert len(data['values']) == 13
-        assert data['dates'][0] == '2024-01'
-        assert data['dates'][-1] == '2025-01'
-        assert data['values'][0] == 10000.0
-        assert data['values'][-1] == 22000.0
+        assert len(data["dates"]) == 13
+        assert len(data["values"]) == 13
+        assert data["dates"][0] == "2024-01"
+        assert data["dates"][-1] == "2025-01"
+        assert data["values"][0] == 10000.0
+        assert data["values"][-1] == 22000.0
 
     def test_get_cash_flow_last_12_months(self, calculator_with_expenses):
         """Test getting cash flow data."""
         cash_flow = calculator_with_expenses.get_cash_flow_last_12_months()
-        assert 'Savings' in cash_flow
-        assert 'Expenses' in cash_flow
+        assert "Savings" in cash_flow
+        assert "Expenses" in cash_flow
         # Total expenses from sample_expenses = 500+300+800+200+200 = 2000 (only 1 month)
-        assert cash_flow['Expenses'] == 2000.0
+        assert cash_flow["Expenses"] == 2000.0
         # Income last 12 months = 12 × 3000 = 36000, Expenses (1 month) = 2000
         # Savings = 36000 - 2000 = 34000
-        assert cash_flow['Savings'] == 36000.0 - 2000.0
+        assert cash_flow["Savings"] == 36000.0 - 2000.0
 
     def test_get_average_expenses_by_category(self, calculator_with_expenses):
         """Test getting average expenses by category."""
         expenses = calculator_with_expenses.get_average_expenses_by_category_last_12_months()
-        assert expenses['Food'] == 500.0
-        assert expenses['Transport'] == 300.0
-        assert expenses['Housing'] == 800.0
-        assert expenses['Entertainment'] == 200.0
-        assert expenses['Other'] == 200.0
+        assert expenses["Food"] == 500.0
+        assert expenses["Transport"] == 300.0
+        assert expenses["Housing"] == 800.0
+        assert expenses["Entertainment"] == 200.0
+        assert expenses["Other"] == 200.0
 
     def test_get_incomes_vs_expenses(self, calculator):
         """Test getting income vs expenses data."""
         data = calculator.get_incomes_vs_expenses()
-        assert len(data['dates']) == 12  # Last 12 months
-        assert len(data['incomes']) == 12
-        assert len(data['expenses']) == 12
+        assert len(data["dates"]) == 12  # Last 12 months
+        assert len(data["incomes"]) == 12
+        assert len(data["expenses"]) == 12
         # All incomes should be 3000
-        assert all(income == 3000.0 for income in data['incomes'])
+        assert all(income == 3000.0 for income in data["incomes"])
         # All expenses should be negative 2000
-        assert all(expense == -2000.0 for expense in data['expenses'])
+        assert all(expense == -2000.0 for expense in data["expenses"])
 
     def test_missing_columns(self):
         """Test behavior with missing required columns."""
-        df = pd.DataFrame({COL_DATE: ['2024-01']})
+        df = pd.DataFrame({COL_DATE: ["2024-01"]})
         calc = FinanceCalculator(df)
         # Should return 0.0 when columns are missing
         assert calc.get_current_net_worth() == 0.0
 
     def test_insufficient_data_for_yoy(self):
         """Test year-over-year with insufficient data."""
-        df = pd.DataFrame({
-            COL_DATE: ['2024-01', '2024-02'],
-            COL_NET_WORTH: ['€ 10.000', '€ 11.000'],
-            COL_INCOME: ['€ 3.000'] * 2,
-            COL_EXPENSES: ['€ 2.000'] * 2,
-        })
+        df = pd.DataFrame(
+            {
+                COL_DATE: ["2024-01", "2024-02"],
+                COL_NET_WORTH: ["€ 10.000", "€ 11.000"],
+                COL_INCOME: ["€ 3.000"] * 2,
+                COL_EXPENSES: ["€ 2.000"] * 2,
+            }
+        )
         calc = FinanceCalculator(df)
         # Should return 0.0 when not enough data
         assert calc.get_year_over_year_net_worth_variation_percentage() == 0.0

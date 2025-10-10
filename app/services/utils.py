@@ -1,22 +1,27 @@
 import locale
-import pandas as pd
-from typing import Dict, Any, Callable, Optional, Literal
-from user_agents import parse
+from collections.abc import Callable
 from io import StringIO
+from typing import Any, Literal
 
-def get_or_store(dict: Dict[str, Any], key: str, compute_fn: Callable[[], Any]) -> Any:
+import pandas as pd
+from user_agents import parse
+
+
+def get_or_store(dict: dict[str, Any], key: str, compute_fn: Callable[[], Any]) -> Any:
     """Get value from dict or compute and store it if not present."""
     if key not in dict:
         dict[key] = compute_fn()
     return dict[key]
 
-def get_user_agent(http_agent: Optional[str]) -> Literal["mobile", "desktop"]:
+
+def get_user_agent(http_agent: str | None) -> Literal["mobile", "desktop"]:
     """Detect if user agent is mobile or desktop."""
     return "mobile" if http_agent and parse(http_agent).is_mobile else "desktop"
 
+
 def read_json(data: str) -> pd.DataFrame:
     """Read JSON string into DataFrame, handling MultiIndex columns."""
-    df = pd.read_json(StringIO(data), orient='split')
+    df = pd.read_json(StringIO(data), orient="split")
 
     # Check if columns are tuples (indicates MultiIndex was serialized)
     if df.columns.size > 0 and isinstance(df.columns[0], tuple):
@@ -25,34 +30,32 @@ def read_json(data: str) -> pd.DataFrame:
 
     return df
 
+
 def get_user_currency() -> str:
     """Get currency code from user locale with fallback to USD.
 
     Returns currency code only if it's one of the main supported currencies:
     EUR, USD, GBP, CHF, JPY. Otherwise returns USD as default.
     """
-    supported_currencies = {'EUR', 'USD', 'GBP', 'CHF', 'JPY'}
+    supported_currencies = {"EUR", "USD", "GBP", "CHF", "JPY"}
 
     try:
         conv = locale.localeconv()
         # Extract currency from locale (format: 'EUR ' or 'USD ')
-        currency = conv.get('int_curr_symbol', 'USD').strip()
+        currency_raw = conv.get("int_curr_symbol", "USD")
+        currency = str(currency_raw).strip() if currency_raw else "USD"
 
         # Return currency if supported, otherwise default to USD
-        return currency if currency in supported_currencies else 'USD'
+        return currency if currency in supported_currencies else "USD"
     except Exception:
-        return 'USD'
+        return "USD"
+
 
 # Currency symbols mapping
-CURRENCY_SYMBOLS = {
-    'EUR': '€',
-    'USD': '$',
-    'GBP': '£',
-    'CHF': 'Fr',
-    'JPY': '¥'
-}
+CURRENCY_SYMBOLS = {"EUR": "€", "USD": "$", "GBP": "£", "CHF": "Fr", "JPY": "¥"}
 
-def format_percentage(value: float, currency: str = 'USD') -> str:
+
+def format_percentage(value: float, currency: str = "USD") -> str:
     """Format percentage with correct decimal separator based on currency.
 
     Args:
@@ -66,13 +69,14 @@ def format_percentage(value: float, currency: str = 'USD') -> str:
     percentage = value * 100
 
     # EUR, CHF use comma as decimal separator
-    if currency in ['EUR', 'CHF']:
-        return f'{percentage:.2f}%'.replace('.', ',')
+    if currency in ["EUR", "CHF"]:
+        return f"{percentage:.2f}%".replace(".", ",")
     else:
         # USD, GBP, JPY use dot as decimal separator
-        return f'{percentage:.2f}%'
+        return f"{percentage:.2f}%"
 
-def format_currency(amount: float, currency: Optional[str] = None) -> str:
+
+def format_currency(amount: float, currency: str | None = None) -> str:
     """Format amount as currency with specified currency code.
 
     Args:
@@ -87,23 +91,23 @@ def format_currency(amount: float, currency: Optional[str] = None) -> str:
         try:
             return locale.currency(amount, grouping=True)
         except Exception:
-            currency = 'USD'
+            currency = "USD"
 
-    symbol = CURRENCY_SYMBOLS.get(currency, '$')
+    symbol = CURRENCY_SYMBOLS.get(currency, "$")
 
     # Define thousands separator based on currency
     # USD, GBP: comma for thousands (100,000)
     # EUR, CHF: dot for thousands (100.000)
     # JPY: comma for thousands (100,000)
-    if currency in ['EUR', 'CHF']:
+    if currency in ["EUR", "CHF"]:
         # European style: dot for thousands
-        formatted = f'{amount:,.0f}'.replace(',', '.')
+        formatted = f"{amount:,.0f}".replace(",", ".")
     else:
         # US/UK/Japan style: comma for thousands
-        formatted = f'{amount:,.0f}'
+        formatted = f"{amount:,.0f}"
 
     # Position symbol based on currency convention
-    if currency in ['USD', 'GBP']:
-        return f'{symbol}{formatted}'
+    if currency in ["USD", "GBP"]:
+        return f"{symbol}{formatted}"
     else:
-        return f'{formatted} {symbol}'
+        return f"{formatted} {symbol}"

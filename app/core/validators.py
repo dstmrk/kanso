@@ -6,15 +6,12 @@ before processing, catching errors early and providing clear error messages.
 """
 
 import logging
-from typing import Optional, Any
 from datetime import datetime
-from pydantic import BaseModel, field_validator, ConfigDict
+from typing import Any
 
-from app.core.constants import (
-    COL_DATE, COL_NET_WORTH, COL_INCOME, COL_EXPENSES,
-    COL_MONTH, COL_CATEGORY, COL_AMOUNT,
-    DATE_FORMAT_STORAGE
-)
+from pydantic import BaseModel, ConfigDict, field_validator
+
+from app.core.constants import DATE_FORMAT_STORAGE
 
 logger = logging.getLogger(__name__)
 
@@ -25,22 +22,23 @@ class DataSheetRow(BaseModel):
 
     Validates Date format and ensures required monetary fields are present.
     """
-    model_config = ConfigDict(str_strip_whitespace=True, extra='allow')
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="allow")
 
     Date: str
-    Net_Worth: Optional[str] = None
-    Income: Optional[str] = None
-    Expenses: Optional[str] = None
-    Cash: Optional[str] = None
-    Pension_Fund: Optional[str] = None
-    Stocks: Optional[str] = None
-    Real_Estate: Optional[str] = None
-    Crypto: Optional[str] = None
-    Other: Optional[str] = None
-    Mortgage: Optional[str] = None
-    Loans: Optional[str] = None
+    Net_Worth: str | None = None
+    Income: str | None = None
+    Expenses: str | None = None
+    Cash: str | None = None
+    Pension_Fund: str | None = None
+    Stocks: str | None = None
+    Real_Estate: str | None = None
+    Crypto: str | None = None
+    Other: str | None = None
+    Mortgage: str | None = None
+    Loans: str | None = None
 
-    @field_validator('Date')
+    @field_validator("Date")
     @classmethod
     def validate_date_format(cls, v: str) -> str:
         """Validate that Date is in YYYY-MM format."""
@@ -51,23 +49,34 @@ class DataSheetRow(BaseModel):
             # Try to parse date with expected format
             datetime.strptime(v.strip(), DATE_FORMAT_STORAGE)
             return v.strip()
-        except ValueError:
-            raise ValueError(f"Date must be in YYYY-MM format, got: {v}")
+        except ValueError as e:
+            raise ValueError(f"Date must be in YYYY-MM format, got: {v}") from e
 
-    @field_validator('Net_Worth', 'Income', 'Expenses', 'Cash', 'Pension_Fund',
-                    'Stocks', 'Real_Estate', 'Crypto', 'Other', 'Mortgage', 'Loans')
+    @field_validator(
+        "Net_Worth",
+        "Income",
+        "Expenses",
+        "Cash",
+        "Pension_Fund",
+        "Stocks",
+        "Real_Estate",
+        "Crypto",
+        "Other",
+        "Mortgage",
+        "Loans",
+    )
     @classmethod
-    def validate_monetary_field(cls, v: Optional[str]) -> Optional[str]:
+    def validate_monetary_field(cls, v: str | None) -> str | None:
         """
         Validate monetary fields can be parsed.
 
         Allows various formats: "€ 1.234,56", "1234.56", "1,234.56", etc.
         """
-        if v is None or v.strip() == '':
+        if v is None or v.strip() == "":
             return None
 
         # Remove common currency symbols and spaces
-        cleaned = v.replace('€', '').replace('$', '').replace(' ', '')
+        cleaned = v.replace("€", "").replace("$", "").replace(" ", "")
 
         # Check if it's a valid monetary value (numbers, dots, commas)
         if not any(c.isdigit() for c in cleaned):
@@ -83,13 +92,14 @@ class ExpenseRow(BaseModel):
 
     Validates Month format, Category presence, and Amount format.
     """
+
     model_config = ConfigDict(str_strip_whitespace=True)
 
     Month: str
     Category: str
     Amount: str
 
-    @field_validator('Month')
+    @field_validator("Month")
     @classmethod
     def validate_month_format(cls, v: str) -> str:
         """Validate that Month is in YYYY-MM format."""
@@ -99,10 +109,10 @@ class ExpenseRow(BaseModel):
         try:
             datetime.strptime(v.strip(), DATE_FORMAT_STORAGE)
             return v.strip()
-        except ValueError:
-            raise ValueError(f"Month must be in YYYY-MM format, got: {v}")
+        except ValueError as e:
+            raise ValueError(f"Month must be in YYYY-MM format, got: {v}") from e
 
-    @field_validator('Category')
+    @field_validator("Category")
     @classmethod
     def validate_category(cls, v: str) -> str:
         """Validate that Category is not empty."""
@@ -110,7 +120,7 @@ class ExpenseRow(BaseModel):
             raise ValueError("Category cannot be empty")
         return v.strip()
 
-    @field_validator('Amount')
+    @field_validator("Amount")
     @classmethod
     def validate_amount(cls, v: str) -> str:
         """
@@ -122,7 +132,7 @@ class ExpenseRow(BaseModel):
             raise ValueError("Amount cannot be empty")
 
         # Remove common currency symbols and spaces
-        cleaned = v.replace('€', '').replace('$', '').replace(' ', '')
+        cleaned = v.replace("€", "").replace("$", "").replace(" ", "")
 
         # Check if it contains at least one digit
         if not any(c.isdigit() for c in cleaned):
@@ -131,7 +141,9 @@ class ExpenseRow(BaseModel):
         return v
 
 
-def validate_dataframe_structure(data: list[dict[str, Any]], model: type[BaseModel]) -> tuple[bool, list[str]]:
+def validate_dataframe_structure(
+    data: list[dict[str, Any]], model: type[BaseModel]
+) -> tuple[bool, list[str]]:
     """
     Validate a list of dictionaries (DataFrame rows) against a Pydantic model.
 

@@ -1,29 +1,31 @@
-import os
 import logging
-from pathlib import Path
-from typing import Optional
+import os
 from dataclasses import dataclass
+from pathlib import Path
 
 from app.core.constants import (
     CACHE_TTL_SECONDS,
-    SHEET_NAME_DATA, SHEET_NAME_ASSETS,
-    SHEET_NAME_LIABILITIES, SHEET_NAME_EXPENSES
+    SHEET_NAME_ASSETS,
+    SHEET_NAME_DATA,
+    SHEET_NAME_EXPENSES,
+    SHEET_NAME_LIABILITIES,
 )
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class AppConfig:
     """Centralized application configuration."""
-    
+
     # File paths
     app_root: Path
     credentials_folder: str = "config/credentials"
     static_files_folder: str = "static"
-    
+
     # Google Sheets
-    google_sheet_credentials_filename: Optional[str] = None
-    workbook_url: Optional[str] = None
+    google_sheet_credentials_filename: str | None = None
+    workbook_url: str | None = None
     data_sheet_name: str = SHEET_NAME_DATA
     assets_sheet_name: str = SHEET_NAME_ASSETS
     liabilities_sheet_name: str = SHEET_NAME_LIABILITIES
@@ -34,13 +36,13 @@ class AppConfig:
     root_path: str = ""
     title: str = "kanso - your minimal money tracker"
     default_theme: str = "light"
-    storage_secret: Optional[str] = None
+    storage_secret: str | None = None
 
     # Cache settings (for data that updates monthly)
     cache_ttl_seconds: int = CACHE_TTL_SECONDS
-    
+
     @classmethod
-    def from_env(cls, app_root: Path) -> 'AppConfig':
+    def from_env(cls, app_root: Path) -> "AppConfig":
         """Create configuration from environment variables."""
         config = cls(
             app_root=app_root,
@@ -56,23 +58,25 @@ class AppConfig:
             root_path=os.getenv("ROOT_PATH", ""),
             title=os.getenv("APP_TITLE", "kanso - your minimal money tracker"),
             default_theme=os.getenv("DEFAULT_THEME", "light"),
-            cache_ttl_seconds=int(os.getenv("CACHE_TTL_SECONDS", str(CACHE_TTL_SECONDS)))
+            cache_ttl_seconds=int(os.getenv("CACHE_TTL_SECONDS", str(CACHE_TTL_SECONDS))),
         )
-        logger.info(f"Configuration loaded: port={config.app_port}, theme={config.default_theme}, cache_ttl={config.cache_ttl_seconds}s")
+        logger.info(
+            f"Configuration loaded: port={config.app_port}, theme={config.default_theme}, cache_ttl={config.cache_ttl_seconds}s"
+        )
         return config
-    
+
     @property
     def credentials_path(self) -> Path:
         """Get full path to credentials file."""
         if not self.google_sheet_credentials_filename:
             raise ValueError("Google Sheet credentials filename not configured")
         return self.app_root / self.credentials_folder / self.google_sheet_credentials_filename
-    
+
     @property
     def static_path(self) -> Path:
         """Get full path to static files folder."""
         return self.app_root / self.static_files_folder
-    
+
     def validate(self) -> None:
         """Validate required configuration."""
         if not self.google_sheet_credentials_filename:
@@ -83,5 +87,6 @@ class AppConfig:
             raise FileNotFoundError(f"Credentials file not found at: {self.credentials_path}")
         logger.info("Configuration validation successful")
 
+
 # Global configuration instance (will be set in main.py)
-config: Optional[AppConfig] = None
+config: AppConfig | None = None

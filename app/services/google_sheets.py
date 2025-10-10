@@ -1,17 +1,18 @@
-from typing import Union, List, Optional
 import logging
+from pathlib import Path
+
 import gspread
 import pandas as pd
-from pathlib import Path
 
 from app.core.validators import DataSheetRow, ExpenseRow, validate_dataframe_structure
 
 logger = logging.getLogger(__name__)
 
+
 class GoogleSheetService:
     """Service class for interacting with Google Sheets API."""
 
-    def __init__(self, credentials_path: Union[str, Path], workbook_url: str) -> None:
+    def __init__(self, credentials_path: str | Path, workbook_url: str) -> None:
         """Initialize with credentials and workbook ID."""
         self.creds_path = Path(credentials_path)
         self.workbook_url = workbook_url
@@ -24,7 +25,13 @@ class GoogleSheetService:
         """Authenticate with Google Sheets using service account credentials."""
         return gspread.service_account(filename=str(self.creds_path))
 
-    def get_worksheet_as_dataframe(self, worksheet_name: str, header: Union[int, List[int]] = 0, index_col: Union[int, None] = 0, validate: bool = True) -> pd.DataFrame:
+    def get_worksheet_as_dataframe(
+        self,
+        worksheet_name: str,
+        header: int | list[int] = 0,
+        index_col: int | None = 0,
+        validate: bool = True,
+    ) -> pd.DataFrame:
         """
         Get worksheet data as a pandas DataFrame with optional validation.
 
@@ -45,7 +52,7 @@ class GoogleSheetService:
             df = pd.DataFrame(data)
 
             # Handle MultiIndex columns (two-level: category and specific item)
-            header_rows_to_drop: List[int]
+            header_rows_to_drop: list[int]
             if isinstance(header, list) and len(header) == 2:
                 # Create MultiIndex from the two header rows
                 header_data = [df.iloc[i].tolist() for i in header]
@@ -82,19 +89,21 @@ class GoogleSheetService:
         Logs warnings if validation fails but doesn't prevent data loading.
         """
         # Convert DataFrame to list of dicts for validation
-        data_rows = df.to_dict('records')
+        data_rows = df.to_dict("records")
 
         # Choose appropriate validator based on worksheet name
         validator = None
-        if 'data' in worksheet_name.lower():
+        if "data" in worksheet_name.lower():
             validator = DataSheetRow
-        elif 'expense' in worksheet_name.lower():
+        elif "expense" in worksheet_name.lower():
             validator = ExpenseRow
 
         if validator:
             is_valid, errors = validate_dataframe_structure(data_rows, validator)
             if not is_valid:
-                logger.warning(f"Validation issues in worksheet '{worksheet_name}': {len(errors)} error(s)")
+                logger.warning(
+                    f"Validation issues in worksheet '{worksheet_name}': {len(errors)} error(s)"
+                )
                 # Log first 3 errors as examples
                 for error in errors[:3]:
                     logger.warning(f"  - {error}")

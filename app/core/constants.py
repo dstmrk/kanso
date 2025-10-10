@@ -8,52 +8,60 @@ used throughout the application to improve maintainability and consistency.
 # === DataFrame Column Names ===
 
 # Main data sheet columns
-COL_DATE = 'Date'
-COL_NET_WORTH = 'Net Worth'
-COL_INCOME = 'Income'
-COL_EXPENSES = 'Expenses'
-COL_CASH = 'Cash'
-COL_PENSION_FUND = 'Pension Fund'
-COL_STOCKS = 'Stocks'
-COL_REAL_ESTATE = 'Real Estate'
-COL_CRYPTO = 'Crypto'
-COL_OTHER = 'Other'
-COL_MORTGAGE = 'Mortgage'
-COL_LOANS = 'Loans'
+COL_DATE = "Date"
+COL_NET_WORTH = "Net Worth"
+COL_INCOME = "Income"
+COL_EXPENSES = "Expenses"
+COL_CASH = "Cash"
+COL_PENSION_FUND = "Pension Fund"
+COL_STOCKS = "Stocks"
+COL_REAL_ESTATE = "Real Estate"
+COL_CRYPTO = "Crypto"
+COL_OTHER = "Other"
+COL_MORTGAGE = "Mortgage"
+COL_LOANS = "Loans"
 
 # Expenses sheet columns
-COL_MONTH = 'Month'
-COL_AMOUNT = 'Amount'
-COL_CATEGORY = 'Category'
+COL_MONTH = "Month"
+COL_AMOUNT = "Amount"
+COL_CATEGORY = "Category"
 
 # Computed/internal columns
-COL_DATE_DT = 'date_dt'
-COL_NET_WORTH_PARSED = 'net_worth_parsed'
-COL_INCOME_PARSED = 'income_parsed'
-COL_EXPENSES_PARSED = 'expenses_parsed'
-COL_AMOUNT_PARSED = 'amount_parsed'
+COL_DATE_DT = "date_dt"
+COL_NET_WORTH_PARSED = "net_worth_parsed"
+COL_INCOME_PARSED = "income_parsed"
+COL_EXPENSES_PARSED = "expenses_parsed"
+COL_AMOUNT_PARSED = "amount_parsed"
 
 # All monetary columns for main data sheet
 MONETARY_COLUMNS = [
-    COL_NET_WORTH, COL_INCOME, COL_EXPENSES, COL_CASH,
-    COL_PENSION_FUND, COL_STOCKS, COL_REAL_ESTATE,
-    COL_CRYPTO, COL_OTHER, COL_MORTGAGE, COL_LOANS
+    COL_NET_WORTH,
+    COL_INCOME,
+    COL_EXPENSES,
+    COL_CASH,
+    COL_PENSION_FUND,
+    COL_STOCKS,
+    COL_REAL_ESTATE,
+    COL_CRYPTO,
+    COL_OTHER,
+    COL_MORTGAGE,
+    COL_LOANS,
 ]
 
 # === Category Names ===
 
-CATEGORY_ASSETS = 'Assets'
-CATEGORY_LIABILITIES = 'Liabilities'
-CATEGORY_SAVINGS = 'Savings'
-CATEGORY_EXPENSES = 'Expenses'
+CATEGORY_ASSETS = "Assets"
+CATEGORY_LIABILITIES = "Liabilities"
+CATEGORY_SAVINGS = "Savings"
+CATEGORY_EXPENSES = "Expenses"
 
 # === Date Formats ===
 
 # Standard date format for storage (YYYY-MM)
-DATE_FORMAT_STORAGE = '%Y-%m'
+DATE_FORMAT_STORAGE = "%Y-%m"
 
 # Display date format (MM-YYYY)
-DATE_FORMAT_DISPLAY = '%m-%Y'
+DATE_FORMAT_DISPLAY = "%m-%Y"
 
 # === Cache Settings ===
 
@@ -65,10 +73,10 @@ CACHE_TTL_SECONDS = 86400
 # Note: These are also defined in config.py with env variable fallbacks
 # These serve as default constants
 
-SHEET_NAME_DATA = 'Data'
-SHEET_NAME_ASSETS = 'Assets'
-SHEET_NAME_LIABILITIES = 'Liabilities'
-SHEET_NAME_EXPENSES = 'Expenses'
+SHEET_NAME_DATA = "Data"
+SHEET_NAME_ASSETS = "Assets"
+SHEET_NAME_LIABILITIES = "Liabilities"
+SHEET_NAME_EXPENSES = "Expenses"
 
 # === Time Periods ===
 
