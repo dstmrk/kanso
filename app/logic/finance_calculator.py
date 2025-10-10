@@ -1,4 +1,29 @@
 # app/logic/finance_calculator.py
+"""Financial calculations and monetary value parsing.
+
+This module provides the core financial calculation logic for the Kanso application.
+It includes intelligent multi-currency parsing and a comprehensive calculator class
+for computing financial KPIs from monthly data.
+
+Key features:
+    - Multi-currency support (EUR, USD, GBP, CHF, JPY)
+    - Intelligent format detection (European vs US/UK formats)
+    - Cached DataFrame preprocessing for performance
+    - Net worth tracking and variation calculations
+    - Savings ratio and cash flow analysis
+
+Example:
+    >>> from app.logic.finance_calculator import FinanceCalculator, parse_monetary_value
+    >>> # Parse various currency formats
+    >>> parse_monetary_value("€ 1.234,56")
+    1234.56
+    >>> parse_monetary_value("$1,234.56")
+    1234.56
+    >>> # Create calculator instance
+    >>> calc = FinanceCalculator(df)
+    >>> calc.get_current_net_worth()
+    50000.0
+"""
 
 import logging
 import re
@@ -43,8 +68,7 @@ CURRENCY_CONFIG: dict[str, tuple[str, str, bool]] = {
 
 
 def detect_currency(value: str) -> str | None:
-    """
-    Detect currency from symbol in string.
+    """Detect currency from symbol in string.
 
     Args:
         value: String potentially containing currency symbol
@@ -66,8 +90,7 @@ def detect_currency(value: str) -> str | None:
 
 
 def parse_monetary_value(value: Any, currency: str | None = None) -> float:
-    """
-    Parse monetary value with intelligent currency detection.
+    """Parse monetary value with intelligent currency detection.
 
     Supports multiple currency formats:
     - EUR, CHF: European format (1.234,56)
@@ -149,7 +172,34 @@ def parse_monetary_value(value: Any, currency: str | None = None) -> float:
 
 
 class FinanceCalculator:
-    """Optimized finance calculator with cached DataFrame preprocessing."""
+    """Optimized finance calculator with cached DataFrame preprocessing.
+
+    This class provides comprehensive financial calculations including net worth tracking,
+    savings ratios, cash flow analysis, and asset/liability breakdowns. It uses lazy
+    preprocessing and caching to avoid redundant pandas operations.
+
+    The calculator expects monthly financial data with dates in YYYY-MM format and
+    supports multiple currency formats for monetary values.
+
+    Attributes:
+        original_df: The raw main DataFrame with Date, Net Worth, Income, Expenses columns
+        expenses_df: Optional expenses breakdown DataFrame
+        assets_df: Optional assets breakdown DataFrame
+        liabilities_df: Optional liabilities breakdown DataFrame
+
+    Example:
+        >>> df = pd.DataFrame({
+        ...     'Date': ['2024-01', '2024-02'],
+        ...     'Net Worth': ['€ 10.000', '€ 11.000'],
+        ...     'Income': ['€ 3.000', '€ 3.000'],
+        ...     'Expenses': ['€ 2.000', '€ 2.000']
+        ... })
+        >>> calc = FinanceCalculator(df)
+        >>> calc.get_current_net_worth()
+        11000.0
+        >>> calc.get_month_over_month_net_worth_variation_percentage()
+        0.1
+    """
 
     def __init__(
         self,
@@ -158,6 +208,18 @@ class FinanceCalculator:
         liabilities_df: pd.DataFrame | None = None,
         expenses_df: pd.DataFrame | None = None,
     ) -> None:
+        """Initialize the calculator with financial data.
+
+        Args:
+            df: Main DataFrame containing Date, Net Worth, Income, and Expenses columns
+            assets_df: Optional DataFrame with detailed asset breakdown (supports MultiIndex)
+            liabilities_df: Optional DataFrame with detailed liability breakdown (supports MultiIndex)
+            expenses_df: Optional DataFrame with Month, Category, and Amount columns
+
+        Note:
+            DataFrames are not processed immediately. Processing happens lazily when
+            data is first accessed through properties like `processed_df`.
+        """
         self.original_df = df
         self.expenses_df = expenses_df
         self.assets_df = assets_df
@@ -196,7 +258,20 @@ class FinanceCalculator:
         return self._processed_liabilities_df
 
     def _preprocess_main_df(self) -> pd.DataFrame:
-        """Preprocess main DataFrame once with all required transformations."""
+        """Preprocess main DataFrame once with all required transformations.
+
+        Performs the following operations:
+        - Converts Date column to datetime objects
+        - Sorts by date
+        - Parses all monetary columns (Net Worth, Income, Expenses, etc.) to float
+
+        Returns:
+            Preprocessed DataFrame with additional parsed columns and date_dt column
+
+        Note:
+            This method is called lazily only once when `processed_df` is first accessed.
+            The result is cached to avoid redundant processing.
+        """
         df = self.original_df.copy()
         df[COL_DATE_DT] = pd.to_datetime(df[COL_DATE], errors="coerce")
         df = df.sort_values(by=COL_DATE_DT)
@@ -209,7 +284,14 @@ class FinanceCalculator:
         return df
 
     def _preprocess_expenses_df(self) -> pd.DataFrame | None:
-        """Preprocess expenses DataFrame once."""
+        """Preprocess expenses DataFrame once.
+
+        Converts Month column to datetime, parses Amount column to float, and sorts by date.
+
+        Returns:
+            Preprocessed expenses DataFrame with date_dt and amount_parsed columns,
+            or None if no expenses DataFrame was provided
+        """
         if self.expenses_df is None:
             return None
 
@@ -221,7 +303,15 @@ class FinanceCalculator:
         return df.sort_values(by=COL_DATE_DT)
 
     def _preprocess_assets_df(self) -> pd.DataFrame | None:
-        """Preprocess assets DataFrame once with date parsing and sorting."""
+        """Preprocess assets DataFrame once with date parsing and sorting.
+
+        Handles both single-level and MultiIndex column structures. Locates the Date
+        column dynamically and converts it to datetime for sorting.
+
+        Returns:
+            Preprocessed assets DataFrame with date_dt column, or None if no assets
+            DataFrame was provided
+        """
         if self.assets_df is None or self.assets_df.empty:
             return None
 
@@ -248,7 +338,15 @@ class FinanceCalculator:
         return df
 
     def _preprocess_liabilities_df(self) -> pd.DataFrame | None:
-        """Preprocess liabilities DataFrame once with date parsing and sorting."""
+        """Preprocess liabilities DataFrame once with date parsing and sorting.
+
+        Handles both single-level and MultiIndex column structures. Locates the Date
+        column dynamically and converts it to datetime for sorting.
+
+        Returns:
+            Preprocessed liabilities DataFrame with date_dt column, or None if no
+            liabilities DataFrame was provided
+        """
         if self.liabilities_df is None or self.liabilities_df.empty:
             return None
 
@@ -278,7 +376,17 @@ class FinanceCalculator:
         return df
 
     def _validate_columns(self, required_columns: list[str]) -> bool:
-        """Validate required columns exist."""
+        """Validate that required columns exist in the original DataFrame.
+
+        Args:
+            required_columns: List of column names that must be present
+
+        Returns:
+            True if all required columns exist, False otherwise
+
+        Note:
+            Logs an error message listing missing columns if validation fails.
+        """
         missing_cols = [col for col in required_columns if col not in self.original_df.columns]
         if missing_cols:
             logger.error(f"DataFrame missing required columns: {missing_cols}")
@@ -286,17 +394,35 @@ class FinanceCalculator:
         return True
 
     def get_current_net_worth(self) -> float:
-        """Get the most recent net worth value."""
+        """Get the most recent net worth value.
+
+        Returns:
+            Current net worth as float, or 0.0 if Net Worth column is missing
+        """
         if not self._validate_columns([COL_NET_WORTH]):
             return 0.0
         return self.processed_df[COL_NET_WORTH_PARSED].iloc[-1]
 
     def get_last_update_date(self) -> str:
-        """Get the date of the last update in MM-YYYY format."""
+        """Get the date of the last update.
+
+        Returns:
+            Date string in MM-YYYY format (e.g., "01-2025")
+        """
         return self.processed_df[COL_DATE_DT].iloc[-1].strftime(DATE_FORMAT_DISPLAY)
 
     def get_month_over_month_net_worth_variation_percentage(self) -> float:
-        """Get month over month net worth percentage change."""
+        """Get month-over-month net worth percentage change.
+
+        Calculates the relative change between the last two months.
+
+        Returns:
+            Percentage change as decimal (e.g., 0.05 for 5% increase),
+            or 0.0 if insufficient data or Net Worth column is missing
+
+        Example:
+            If net worth went from €20,000 to €21,000, returns 0.05 (5% increase)
+        """
         if not self._validate_columns([COL_NET_WORTH]):
             return 0.0
 
@@ -310,7 +436,17 @@ class FinanceCalculator:
         return (current - previous) / previous if previous != 0 else 0.0
 
     def get_month_over_month_net_worth_variation_absolute(self) -> float:
-        """Get month over month net worth absolute change."""
+        """Get month-over-month net worth absolute change.
+
+        Calculates the absolute difference between the last two months.
+
+        Returns:
+            Absolute change in currency units (e.g., 1000.0 for €1,000 increase),
+            or 0.0 if insufficient data or Net Worth column is missing
+
+        Example:
+            If net worth went from €20,000 to €21,000, returns 1000.0
+        """
         if not self._validate_columns([COL_NET_WORTH]):
             return 0.0
 
@@ -321,7 +457,17 @@ class FinanceCalculator:
         return df["net_worth_parsed"].iloc[-1] - df["net_worth_parsed"].iloc[-2]
 
     def get_year_over_year_net_worth_variation_percentage(self) -> float:
-        """Get year over year net worth percentage change."""
+        """Get year-over-year net worth percentage change.
+
+        Compares current net worth with the value from 13 months ago.
+
+        Returns:
+            Percentage change as decimal (e.g., 1.2 for 120% increase),
+            or 0.0 if insufficient data (less than 13 months) or Net Worth column is missing
+
+        Example:
+            If net worth went from €10,000 to €22,000, returns 1.2 (120% increase)
+        """
         if not self._validate_columns([COL_NET_WORTH]):
             return 0.0
 
@@ -335,7 +481,17 @@ class FinanceCalculator:
         return (current - previous_year) / previous_year if previous_year != 0 else 0.0
 
     def get_year_over_year_net_worth_variation_absolute(self) -> float:
-        """Get year over year net worth absolute change."""
+        """Get year-over-year net worth absolute change.
+
+        Compares current net worth with the value from 13 months ago.
+
+        Returns:
+            Absolute change in currency units (e.g., 12000.0 for €12,000 increase),
+            or 0.0 if insufficient data (less than 13 months) or Net Worth column is missing
+
+        Example:
+            If net worth went from €10,000 to €22,000, returns 12000.0
+        """
         if not self._validate_columns([COL_NET_WORTH]):
             return 0.0
 
@@ -346,7 +502,17 @@ class FinanceCalculator:
         return df["net_worth_parsed"].iloc[-1] - df["net_worth_parsed"].iloc[-MONTHS_LOOKBACK_YEAR]
 
     def get_average_saving_ratio_last_12_months_percentage(self) -> float:
-        """Get average saving ratio for last 12 months as percentage."""
+        """Get average saving ratio for last 12 months as percentage.
+
+        Calculates (total income - total expenses) / total income for the last 12 months.
+
+        Returns:
+            Saving ratio as decimal (e.g., 0.33 for 33% savings rate),
+            or 0.0 if Income or Expenses columns are missing
+
+        Example:
+            If income is €36,000 and expenses are €24,000, returns 0.33 (33% savings rate)
+        """
         if not self._validate_columns([COL_INCOME, COL_EXPENSES]):
             return 0.0
 
@@ -357,7 +523,17 @@ class FinanceCalculator:
         return (income - expenses) / income if income != 0 else 0.0
 
     def get_average_saving_ratio_last_12_months_absolute(self) -> float:
-        """Get average monthly savings for last 12 months."""
+        """Get average monthly savings for last 12 months.
+
+        Calculates (total income - total expenses) / 12 for the last 12 months.
+
+        Returns:
+            Average monthly savings in currency units (e.g., 1000.0 for €1,000/month),
+            or 0.0 if Income or Expenses columns are missing
+
+        Example:
+            If total savings over 12 months is €12,000, returns 1000.0 (€1,000/month average)
+        """
         if not self._validate_columns([COL_INCOME, COL_EXPENSES]):
             return 0.0
 
@@ -368,11 +544,30 @@ class FinanceCalculator:
         return (income - expenses) / MONTHS_IN_YEAR if income != 0 else 0.0
 
     def get_fi_progress(self) -> float:
-        """Get FI progress - placeholder implementation."""
+        """Get Financial Independence (FI) progress.
+
+        Returns:
+            FI progress as decimal (e.g., 0.263 for 26.3% progress toward FI goal)
+
+        Note:
+            This is currently a placeholder implementation returning a fixed value.
+            Should be implemented based on user's FI number and current net worth.
+        """
         return 0.263
 
     def get_monthly_net_worth(self) -> dict[str, list]:
-        """Get monthly net worth data for charting."""
+        """Get monthly net worth data for charting.
+
+        Returns:
+            Dictionary with 'dates' (list of YYYY-MM strings) and 'values' (list of floats),
+            or empty lists if Date or Net Worth columns are missing
+
+        Example:
+            {
+                'dates': ['2024-01', '2024-02', '2024-03'],
+                'values': [10000.0, 11000.0, 12000.0]
+            }
+        """
         if not self._validate_columns([COL_DATE, COL_NET_WORTH]):
             return {"dates": [], "values": []}
 
@@ -383,7 +578,26 @@ class FinanceCalculator:
         }
 
     def get_assets_liabilities(self) -> dict[str, dict[str, Any]]:
-        """Get assets and liabilities breakdown from the latest data."""
+        """Get assets and liabilities breakdown from the latest data.
+
+        Extracts values from the most recent row of assets_df and liabilities_df.
+        Supports both single-level columns and MultiIndex columns (category, item).
+
+        Returns:
+            Dictionary with 'Assets' and 'Liabilities' keys, each containing nested
+            dictionaries of categories and their values
+
+        Example:
+            {
+                'Assets': {
+                    'Cash': 5000.0,
+                    'Stocks': {'AAPL': 10000.0, 'GOOGL': 8000.0}
+                },
+                'Liabilities': {
+                    'Mortgage': 200000.0
+                }
+            }
+        """
         asset_liabilities: dict[str, dict[str, Any]] = {
             CATEGORY_ASSETS: {},
             CATEGORY_LIABILITIES: {},
@@ -483,7 +697,23 @@ class FinanceCalculator:
         return asset_liabilities
 
     def get_cash_flow_last_12_months(self) -> dict[str, float]:
-        """Get cash flow data for last 12 months."""
+        """Get cash flow data for last 12 months.
+
+        Calculates total income, total expenses, and savings for the last 12 months.
+        Also includes breakdown by expense categories if expenses_df is available.
+
+        Returns:
+            Dictionary with 'Savings', 'Expenses', and category keys mapping to float values
+
+        Example:
+            {
+                'Savings': 12000.0,
+                'Expenses': 24000.0,
+                'Food': 6000.0,
+                'Transport': 3000.0,
+                'Housing': 15000.0
+            }
+        """
         if not self._validate_columns([COL_INCOME]):
             return {CATEGORY_SAVINGS: 0.0, CATEGORY_EXPENSES: 0.0}
 
@@ -519,7 +749,15 @@ class FinanceCalculator:
         return result
 
     def get_average_expenses_by_category_last_12_months(self) -> dict[str, float]:
-        """Get average expenses by category for last 12 months."""
+        """Get total expenses by category for last 12 months.
+
+        Returns:
+            Dictionary mapping category names to total expense amounts,
+            or empty dict if expenses_df is not available
+
+        Example:
+            {'Food': 6000.0, 'Transport': 3000.0, 'Housing': 15000.0}
+        """
         if self.processed_expenses_df is None:
             return {}
 
@@ -535,7 +773,23 @@ class FinanceCalculator:
         return ef_last_12.groupby(COL_CATEGORY)[COL_AMOUNT_PARSED].sum().to_dict()
 
     def get_incomes_vs_expenses(self) -> dict[str, list]:
-        """Get income vs expenses data for charting."""
+        """Get income vs expenses data for charting last 12 months.
+
+        Returns:
+            Dictionary with 'dates' (YYYY-MM strings), 'incomes' (positive floats),
+            and 'expenses' (negative floats for chart display),
+            or empty lists if required columns are missing
+
+        Example:
+            {
+                'dates': ['2024-01', '2024-02', '2024-03'],
+                'incomes': [3000.0, 3000.0, 3000.0],
+                'expenses': [-2000.0, -2000.0, -2000.0]
+            }
+
+        Note:
+            Expenses are returned as negative values for waterfall chart visualization.
+        """
         if not self._validate_columns([COL_DATE, COL_INCOME, COL_EXPENSES]):
             return {"dates": [], "incomes": [], "expenses": []}
 

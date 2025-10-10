@@ -1,3 +1,16 @@
+"""Application configuration management.
+
+This module provides centralized configuration loading from environment variables
+with sensible defaults. Configuration includes paths, Google Sheets settings,
+app settings, and cache configuration.
+
+Example:
+    >>> from app.core.config import AppConfig
+    >>> config = AppConfig.from_env(Path(__file__).parent.parent)
+    >>> config.validate()
+    >>> print(f"Running on port {config.app_port}")
+"""
+
 import logging
 import os
 from dataclasses import dataclass
@@ -16,7 +29,33 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class AppConfig:
-    """Centralized application configuration."""
+    """Centralized application configuration.
+
+    Loads configuration from environment variables with defaults. Provides
+    properties for computed paths and validation methods.
+
+    Attributes:
+        app_root: Root directory of the application
+        credentials_folder: Relative path to credentials folder (default: "config/credentials")
+        static_files_folder: Relative path to static files (default: "static")
+        google_sheet_credentials_filename: Name of credentials JSON file
+        workbook_url: URL of Google Sheets workbook
+        data_sheet_name: Name of main data worksheet (default: "Data")
+        assets_sheet_name: Name of assets worksheet (default: "Assets")
+        liabilities_sheet_name: Name of liabilities worksheet (default: "Liabilities")
+        expenses_sheet_name: Name of expenses worksheet (default: "Expenses")
+        app_port: Port to run the application on (default: 6789)
+        root_path: Root path for the application (default: "")
+        title: Application title (default: "kanso - your minimal money tracker")
+        default_theme: UI theme (default: "light")
+        storage_secret: Secret for session storage
+        cache_ttl_seconds: Cache TTL in seconds (default: 86400 = 24 hours)
+
+    Example:
+        >>> config = AppConfig.from_env(Path.cwd())
+        >>> config.validate()
+        >>> service = GoogleSheetService(config.credentials_path, config.workbook_url)
+    """
 
     # File paths
     app_root: Path
@@ -43,7 +82,38 @@ class AppConfig:
 
     @classmethod
     def from_env(cls, app_root: Path) -> "AppConfig":
-        """Create configuration from environment variables."""
+        """Create configuration from environment variables.
+
+        Loads all configuration from environment variables with sensible defaults.
+        Environment variables should be defined in a .env file or system environment.
+
+        Args:
+            app_root: Root directory path of the application
+
+        Returns:
+            AppConfig instance with values from environment or defaults
+
+        Environment Variables:
+            CREDENTIALS_FOLDER: Path to credentials folder (default: "config/credentials")
+            STATIC_FILES_FOLDER: Path to static files (default: "static")
+            GOOGLE_SHEET_CREDENTIALS_FILENAME: Required - credentials JSON filename
+            WORKBOOK_URL: Required - Google Sheets workbook URL
+            DATA_SHEET_NAME: Main data worksheet name (default: "Data")
+            ASSETS_SHEET_NAME: Assets worksheet name (default: "Assets")
+            LIABILITIES_SHEET_NAME: Liabilities worksheet name (default: "Liabilities")
+            EXPENSES_SHEET_NAME: Expenses worksheet name (default: "Expenses")
+            APP_PORT: Application port (default: 6789)
+            ROOT_PATH: Root path (default: "")
+            APP_TITLE: Application title
+            DEFAULT_THEME: UI theme (default: "light")
+            CACHE_TTL_SECONDS: Cache TTL in seconds (default: 86400)
+
+        Example:
+            >>> # With .env file containing required variables
+            >>> config = AppConfig.from_env(Path(__file__).parent)
+            >>> print(config.app_port)
+            6789
+        """
         config = cls(
             app_root=app_root,
             credentials_folder=os.getenv("CREDENTIALS_FOLDER", "config/credentials"),
@@ -67,18 +137,46 @@ class AppConfig:
 
     @property
     def credentials_path(self) -> Path:
-        """Get full path to credentials file."""
+        """Get full absolute path to credentials file.
+
+        Returns:
+            Path object pointing to the credentials JSON file
+
+        Raises:
+            ValueError: If google_sheet_credentials_filename is not configured
+        """
         if not self.google_sheet_credentials_filename:
             raise ValueError("Google Sheet credentials filename not configured")
         return self.app_root / self.credentials_folder / self.google_sheet_credentials_filename
 
     @property
     def static_path(self) -> Path:
-        """Get full path to static files folder."""
+        """Get full absolute path to static files folder.
+
+        Returns:
+            Path object pointing to the static files directory
+        """
         return self.app_root / self.static_files_folder
 
     def validate(self) -> None:
-        """Validate required configuration."""
+        """Validate that all required configuration is present and valid.
+
+        Checks that:
+        - GOOGLE_SHEET_CREDENTIALS_FILENAME is configured
+        - WORKBOOK_URL is configured
+        - Credentials file exists at the specified path
+
+        Raises:
+            ValueError: If required environment variables are missing
+            FileNotFoundError: If credentials file doesn't exist
+
+        Example:
+            >>> config = AppConfig.from_env(Path.cwd())
+            >>> try:
+            ...     config.validate()
+            ... except ValueError as e:
+            ...     print(f"Configuration error: {e}")
+        """
         if not self.google_sheet_credentials_filename:
             raise ValueError("GOOGLE_SHEET_CREDENTIALS_FILENAME environment variable is required")
         if not self.workbook_url:

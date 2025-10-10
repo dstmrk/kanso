@@ -1,3 +1,20 @@
+"""Google Sheets API service.
+
+This module provides a service class for interacting with Google Sheets,
+including authentication, data fetching, and optional validation.
+
+Key features:
+    - Service account authentication
+    - DataFrame conversion with single or MultiIndex support
+    - Optional Pydantic validation for data quality
+    - Non-blocking validation (logs warnings but allows data loading)
+
+Example:
+    >>> from app.services.google_sheets import GoogleSheetService
+    >>> service = GoogleSheetService('credentials.json', 'https://docs.google.com/...')
+    >>> df = service.get_worksheet_as_dataframe('Data', header=0)
+"""
+
 import logging
 from pathlib import Path
 
@@ -10,10 +27,34 @@ logger = logging.getLogger(__name__)
 
 
 class GoogleSheetService:
-    """Service class for interacting with Google Sheets API."""
+    """Service class for interacting with Google Sheets API.
+
+    Handles authentication, workbook access, and worksheet data fetching
+    with automatic conversion to pandas DataFrames.
+
+    Attributes:
+        creds_path: Path to service account credentials JSON file
+        workbook_url: URL of the Google Sheets workbook
+        client: Authenticated gspread client
+
+    Example:
+        >>> service = GoogleSheetService(
+        ...     credentials_path='config/credentials/service_account.json',
+        ...     workbook_url='https://docs.google.com/spreadsheets/d/...'
+        ... )
+        >>> df = service.get_worksheet_as_dataframe('Data')
+    """
 
     def __init__(self, credentials_path: str | Path, workbook_url: str) -> None:
-        """Initialize with credentials and workbook ID."""
+        """Initialize the Google Sheets service.
+
+        Args:
+            credentials_path: Path to Google service account credentials JSON file
+            workbook_url: Full URL of the Google Sheets workbook
+
+        Raises:
+            FileNotFoundError: If credentials file doesn't exist at the specified path
+        """
         self.creds_path = Path(credentials_path)
         self.workbook_url = workbook_url
         if not self.creds_path.exists():
@@ -22,7 +63,11 @@ class GoogleSheetService:
         logger.info(f"Google Sheets service initialized for workbook: {workbook_url}")
 
     def _authenticate(self) -> gspread.Client:
-        """Authenticate with Google Sheets using service account credentials."""
+        """Authenticate with Google Sheets using service account credentials.
+
+        Returns:
+            Authenticated gspread Client instance
+        """
         return gspread.service_account(filename=str(self.creds_path))
 
     def get_worksheet_as_dataframe(
@@ -32,17 +77,32 @@ class GoogleSheetService:
         index_col: int | None = 0,
         validate: bool = True,
     ) -> pd.DataFrame:
-        """
-        Get worksheet data as a pandas DataFrame with optional validation.
+        """Get worksheet data as a pandas DataFrame with optional validation.
+
+        Fetches all data from the specified worksheet and converts it to a DataFrame.
+        Supports both single-level and MultiIndex column headers. Optionally validates
+        data structure using Pydantic models (non-blocking).
 
         Args:
-            worksheet_name: Name of the worksheet to fetch
-            header: Row index(es) to use as column names
-            index_col: Column to use as the DataFrame index
-            validate: Whether to validate data structure (non-blocking)
+            worksheet_name: Name of the worksheet to fetch (e.g., "Data", "Expenses")
+            header: Row index or list of indices to use as column names.
+                   Use [0, 1] for two-level MultiIndex headers.
+            index_col: Column index to use as DataFrame index, or None for default index
+            validate: If True, validates data structure and logs warnings for issues.
+                     Validation is non-blocking and won't prevent data loading.
 
         Returns:
-            DataFrame containing the worksheet data
+            DataFrame containing the worksheet data, or empty DataFrame if worksheet
+            not found
+
+        Example:
+            >>> # Single header row
+            >>> df = service.get_worksheet_as_dataframe('Data', header=0)
+            >>> # Two-level MultiIndex header
+            >>> df = service.get_worksheet_as_dataframe('Assets', header=[0, 1])
+
+        Note:
+            MultiIndex columns are automatically sorted to avoid pandas performance warnings.
         """
         try:
             sheet = self.client.open_by_url(self.workbook_url).worksheet(worksheet_name)
@@ -83,10 +143,21 @@ class GoogleSheetService:
             return pd.DataFrame()
 
     def _validate_worksheet_data(self, worksheet_name: str, df: pd.DataFrame) -> None:
-        """
-        Validate worksheet data structure (non-blocking).
+        """Validate worksheet data structure (non-blocking).
 
-        Logs warnings if validation fails but doesn't prevent data loading.
+        Uses Pydantic models to validate data format and structure. Logs warnings
+        for validation errors but doesn't raise exceptions, allowing the application
+        to gracefully handle imperfect data.
+
+        Args:
+            worksheet_name: Name of worksheet being validated (used to select validator)
+            df: DataFrame to validate
+
+        Note:
+            - Automatically selects DataSheetRow validator for "data" worksheets
+            - Automatically selects ExpenseRow validator for "expense" worksheets
+            - Logs only first 3 errors as examples to avoid log spam
+            - Validation is skipped for worksheets with MultiIndex columns
         """
         # Convert DataFrame to list of dicts for validation
         data_rows = df.to_dict("records")

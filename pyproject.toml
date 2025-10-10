@@ -22,6 +22,7 @@ dev = [
     "isort>=5.13.2",
     "ruff>=0.3.4",
     "mypy>=1.9.0",
+    "pydocstyle>=6.3.0",
 ]
 
 [tool.pytest.ini_options]
@@ -96,3 +97,13 @@ disallow_untyped_defs = false
 ignore_missing_imports = true
 no_implicit_optional = true
 show_error_codes = true
+
+[tool.pydocstyle]
+convention = "google"
+add_ignore = [
+    "D100",  # Missing docstring in public module
+    "D103",  # Missing docstring in public function (allow for simple UI/rendering functions)
+    "D104",  # Missing docstring in public package
+]
+match = ".*\\.py"
+match_dir = "^(?!(tests|venv|\\.venv|build|dist)).*"

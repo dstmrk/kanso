@@ -1,3 +1,18 @@
+"""Utility functions for services.
+
+This module provides utility functions for common operations including:
+- Dictionary caching helpers
+- User agent detection
+- JSON/DataFrame conversion with MultiIndex support
+- Currency and locale handling
+- Number formatting for different currencies
+
+Example:
+    >>> from app.services.utils import format_currency, get_user_currency
+    >>> currency = get_user_currency()  # Auto-detect from locale
+    >>> formatted = format_currency(1234.56, currency)  # "€1.234" or "$1,235"
+"""
+
 import locale
 from collections.abc import Callable
 from io import StringIO
@@ -8,19 +23,65 @@ from user_agents import parse
 
 
 def get_or_store(dict: dict[str, Any], key: str, compute_fn: Callable[[], Any]) -> Any:
-    """Get value from dict or compute and store it if not present."""
+    """Get value from dict or compute and store it if not present.
+
+    Simple caching helper that checks if a key exists in a dictionary,
+    and if not, computes the value and stores it before returning.
+
+    Args:
+        dict: Dictionary to check/store in
+        key: Key to lookup or store
+        compute_fn: Function to call if key is not present (should be cheap to call)
+
+    Returns:
+        Value from dict or newly computed value
+
+    Example:
+        >>> cache = {}
+        >>> value = get_or_store(cache, 'result', lambda: expensive_calculation())
+        >>> # Second call returns cached value
+        >>> value = get_or_store(cache, 'result', lambda: expensive_calculation())
+    """
     if key not in dict:
         dict[key] = compute_fn()
     return dict[key]
 
 
 def get_user_agent(http_agent: str | None) -> Literal["mobile", "desktop"]:
-    """Detect if user agent is mobile or desktop."""
+    """Detect if user agent is mobile or desktop.
+
+    Args:
+        http_agent: HTTP User-Agent header string, or None
+
+    Returns:
+        "mobile" if user agent indicates mobile device, "desktop" otherwise
+
+    Example:
+        >>> get_user_agent("Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)")
+        'mobile'
+        >>> get_user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+        'desktop'
+    """
     return "mobile" if http_agent and parse(http_agent).is_mobile else "desktop"
 
 
 def read_json(data: str) -> pd.DataFrame:
-    """Read JSON string into DataFrame, handling MultiIndex columns."""
+    """Read JSON string into DataFrame, handling MultiIndex columns.
+
+    Reconstructs MultiIndex columns from tuples if present in the JSON data.
+    This is needed because pandas MultiIndex columns are serialized as tuples
+    when using orient="split".
+
+    Args:
+        data: JSON string in split-oriented format
+
+    Returns:
+        DataFrame with proper column structure (single or MultiIndex)
+
+    Example:
+        >>> json_str = df.to_json(orient='split')
+        >>> restored_df = read_json(json_str)
+    """
     df = pd.read_json(StringIO(data), orient="split")
 
     # Check if columns are tuples (indicates MultiIndex was serialized)
@@ -34,8 +95,20 @@ def read_json(data: str) -> pd.DataFrame:
 def get_user_currency() -> str:
     """Get currency code from user locale with fallback to USD.
 
-    Returns currency code only if it's one of the main supported currencies:
-    EUR, USD, GBP, CHF, JPY. Otherwise returns USD as default.
+    Attempts to detect currency from system locale. Only returns currency if
+    it's one of the main supported currencies: EUR, USD, GBP, CHF, JPY.
+    Otherwise returns USD as safe default.
+
+    Returns:
+        Currency code string (one of: EUR, USD, GBP, CHF, JPY)
+
+    Example:
+        >>> # On system with EUR locale
+        >>> get_user_currency()
+        'EUR'
+        >>> # On system with unsupported currency or no locale
+        >>> get_user_currency()
+        'USD'
     """
     supported_currencies = {"EUR", "USD", "GBP", "CHF", "JPY"}
 
@@ -58,12 +131,20 @@ CURRENCY_SYMBOLS = {"EUR": "€", "USD": "$", "GBP": "£", "CHF": "Fr", "JPY": "
 def format_percentage(value: float, currency: str = "USD") -> str:
     """Format percentage with correct decimal separator based on currency.
 
+    Uses comma as decimal separator for EUR/CHF (European style), dot for others.
+
     Args:
-        value: The percentage value (e.g., 0.1234 for 12.34%)
-        currency: Currency code to determine decimal separator
+        value: The percentage value as decimal (e.g., 0.1234 for 12.34%)
+        currency: Currency code to determine decimal separator (EUR, USD, GBP, CHF, JPY)
 
     Returns:
-        Formatted percentage string
+        Formatted percentage string with % symbol
+
+    Example:
+        >>> format_percentage(0.1234, "EUR")
+        '12,34%'
+        >>> format_percentage(0.1234, "USD")
+        '12.34%'
     """
     # Calculate percentage
     percentage = value * 100
@@ -79,12 +160,25 @@ def format_percentage(value: float, currency: str = "USD") -> str:
 def format_currency(amount: float, currency: str | None = None) -> str:
     """Format amount as currency with specified currency code.
 
+    Formats numbers according to currency conventions:
+    - EUR, CHF: Dot for thousands (1.234 €)
+    - USD, GBP, JPY: Comma for thousands ($1,234)
+    - Symbol positioning varies by currency
+
     Args:
-        amount: The monetary amount to format
+        amount: The monetary amount to format (will be rounded to integer)
         currency: Currency code (EUR, USD, GBP, CHF, JPY). If None, uses user locale.
 
     Returns:
-        Formatted currency string with symbol
+        Formatted currency string with symbol (e.g., "€1.234", "$1,234")
+
+    Example:
+        >>> format_currency(1234.56, "EUR")
+        '1.235 €'
+        >>> format_currency(1234.56, "USD")
+        '$1,235'
+        >>> format_currency(1234.56, "GBP")
+        '£1,235'
     """
     if currency is None:
         # Fallback to locale-based formatting

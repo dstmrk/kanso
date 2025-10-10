@@ -1,5 +1,4 @@
-"""
-Centralized constants for the Kanso application.
+"""Centralized constants for the Kanso application.
 
 This module contains all hardcoded strings, numbers, and configuration values
 used throughout the application to improve maintainability and consistency.
