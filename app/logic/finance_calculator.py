@@ -54,17 +54,9 @@ from app.core.constants import (
     MONTHS_IN_YEAR,
     MONTHS_LOOKBACK_YEAR,
 )
+from app.core.currency_formats import CURRENCY_FORMATS, get_currency_format
 
 logger = logging.getLogger(__name__)
-
-# Currency format configuration: (thousand_separator, decimal_separator, has_decimals)
-CURRENCY_CONFIG: dict[str, tuple[str, str, bool]] = {
-    "EUR": (".", ",", True),  # European format: 1.234,56
-    "CHF": (".", ",", True),  # Swiss format: 1.234,56
-    "USD": (",", ".", True),  # US format: 1,234.56
-    "GBP": (",", ".", True),  # UK format: 1,234.56
-    "JPY": (",", "", False),  # Japanese: no decimals: 1,234
-}
 
 
 def detect_currency(value: str) -> str | None:
@@ -76,15 +68,14 @@ def detect_currency(value: str) -> str | None:
     Returns:
         Currency code (EUR, USD, GBP, CHF, JPY) or None if not detected
     """
-    if "€" in value:
-        return "EUR"
-    elif "$" in value:
-        return "USD"
-    elif "£" in value:
-        return "GBP"
-    elif "Fr" in value or "CHF" in value:
+    # Check for each currency symbol from centralized config
+    for currency_code, fmt in CURRENCY_FORMATS.items():
+        if fmt.symbol in value:
+            return currency_code
+    # Also check for currency code strings
+    if "CHF" in value:
         return "CHF"
-    elif "¥" in value or "JPY" in value:
+    if "JPY" in value:
         return "JPY"
     return None
 
@@ -121,9 +112,14 @@ def parse_monetary_value(value: Any, currency: str | None = None) -> float:
     detected_currency = currency or detect_currency(value)
 
     # Get format config (default to EUR if not found)
-    thousand_sep, decimal_sep, has_decimals = CURRENCY_CONFIG.get(
-        detected_currency, CURRENCY_CONFIG["EUR"]
-    )
+    if detected_currency and detected_currency in CURRENCY_FORMATS:
+        fmt = get_currency_format(detected_currency)
+    else:
+        # Default to EUR format
+        fmt = get_currency_format("EUR")
+
+    thousand_sep = fmt.thousands_sep
+    decimal_sep = fmt.decimal_sep
 
     try:
         # Remove currency symbols and extra spaces

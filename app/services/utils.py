@@ -21,6 +21,8 @@ from typing import Any, Literal
 import pandas as pd
 from user_agents import parse
 
+from app.core.currency_formats import get_currency_format, get_supported_currencies
+
 
 def get_or_store(dict: dict[str, Any], key: str, compute_fn: Callable[[], Any]) -> Any:
     """Get value from dict or compute and store it if not present.
@@ -110,7 +112,7 @@ def get_user_currency() -> str:
         >>> get_user_currency()
         'USD'
     """
-    supported_currencies = {"EUR", "USD", "GBP", "CHF", "JPY"}
+    supported_currencies = set(get_supported_currencies())
 
     try:
         conv = locale.localeconv()
@@ -122,10 +124,6 @@ def get_user_currency() -> str:
         return currency if currency in supported_currencies else "USD"
     except Exception:
         return "USD"
-
-
-# Currency symbols mapping
-CURRENCY_SYMBOLS = {"EUR": "€", "USD": "$", "GBP": "£", "CHF": "Fr", "JPY": "¥"}
 
 
 def format_percentage(value: float, currency: str = "USD") -> str:
@@ -149,11 +147,14 @@ def format_percentage(value: float, currency: str = "USD") -> str:
     # Calculate percentage
     percentage = value * 100
 
-    # EUR, CHF use comma as decimal separator
-    if currency in ["EUR", "CHF"]:
+    # Get decimal separator from centralized config
+    fmt = get_currency_format(currency)
+
+    # Format with decimal separator from currency config
+    # If decimal_sep is comma, replace dot with comma
+    if fmt.decimal_sep == ",":
         return f"{percentage:.2f}%".replace(".", ",")
     else:
-        # USD, GBP, JPY use dot as decimal separator
         return f"{percentage:.2f}%"
 
 
@@ -161,24 +162,26 @@ def format_currency(amount: float, currency: str | None = None) -> str:
     """Format amount as currency with specified currency code.
 
     Formats numbers according to currency conventions:
-    - EUR, CHF: Dot for thousands (1.234 €)
-    - USD, GBP, JPY: Comma for thousands ($1,234)
-    - Symbol positioning varies by currency
+    - EUR, CHF: Dot for thousands, symbol after (1.234 €)
+    - USD, GBP, JPY: Comma for thousands, symbol before ($ 1,234)
+    - All currencies have space between symbol and number
 
     Args:
         amount: The monetary amount to format (will be rounded to integer)
         currency: Currency code (EUR, USD, GBP, CHF, JPY). If None, uses user locale.
 
     Returns:
-        Formatted currency string with symbol (e.g., "€1.234", "$1,234")
+        Formatted currency string with symbol and space (e.g., "1.235 €", "$ 1,235")
 
     Example:
         >>> format_currency(1234.56, "EUR")
         '1.235 €'
         >>> format_currency(1234.56, "USD")
-        '$1,235'
+        '$ 1,235'
         >>> format_currency(1234.56, "GBP")
-        '£1,235'
+        '£ 1,235'
+        >>> format_currency(1234.56, "JPY")
+        '¥ 1,235'
     """
     if currency is None:
         # Fallback to locale-based formatting
@@ -187,21 +190,17 @@ def format_currency(amount: float, currency: str | None = None) -> str:
         except Exception:
             currency = "USD"
 
-    symbol = CURRENCY_SYMBOLS.get(currency, "$")
+    # Get currency format from centralized config
+    fmt = get_currency_format(currency)
 
-    # Define thousands separator based on currency
-    # USD, GBP: comma for thousands (100,000)
-    # EUR, CHF: dot for thousands (100.000)
-    # JPY: comma for thousands (100,000)
-    if currency in ["EUR", "CHF"]:
-        # European style: dot for thousands
-        formatted = f"{amount:,.0f}".replace(",", ".")
-    else:
-        # US/UK/Japan style: comma for thousands
-        formatted = f"{amount:,.0f}"
+    # Format with appropriate thousands separator
+    # Python's format always uses comma, so replace if needed
+    formatted = f"{amount:,.0f}"
+    if fmt.thousands_sep == ".":
+        formatted = formatted.replace(",", ".")
 
-    # Position symbol based on currency convention
-    if currency in ["USD", "GBP"]:
-        return f"{symbol}{formatted}"
+    # Position symbol based on currency convention (with space)
+    if fmt.position == "before":
+        return f"{fmt.symbol} {formatted}"
     else:
-        return f"{formatted} {symbol}"
+        return f"{formatted} {fmt.symbol}"
