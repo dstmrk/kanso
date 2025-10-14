@@ -4,7 +4,7 @@ from nicegui import app, ui
 
 from app.core.state_manager import state_manager
 from app.logic.finance_calculator import FinanceCalculator
-from app.services import pages, utils
+from app.services import utils
 from app.ui import charts, dock, header, styles
 
 
@@ -108,9 +108,9 @@ class HomeRenderer:
             )
 
             with (
-                ui.card()
-                .classes("cursor-pointer" + styles.STAT_CARDS_CLASSES)
-                .on("click", lambda: ui.navigate.to(pages.NET_WORTH_PAGE))
+                ui.card().classes(styles.STAT_CARDS_CLASSES)
+                # .classes("cursor-pointer" + styles.STAT_CARDS_CLASSES)
+                # .on("click", lambda: ui.navigate.to(pages.NET_WORTH_PAGE))
             ):
                 ui.label("Net Worth").classes(styles.STAT_CARDS_LABEL_CLASSES)
                 ui.label(net_worth_value).classes(styles.STAT_CARDS_VALUE_CLASSES)

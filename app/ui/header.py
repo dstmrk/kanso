@@ -13,10 +13,10 @@ def render() -> None:
                 with ui.element("a").on("click", lambda: ui.navigate.to(pages.HOME_PAGE)):
                     ui.html(styles.HOME_SVG)
                     ui.label("Dashboard")
-            with ui.element("li"):
-                with ui.element("a").on("click", lambda: ui.navigate.to(pages.EXPENSES_PAGE)):
-                    ui.html(styles.EXPENSES_SVG)
-                    ui.label("Expenses")
+            # with ui.element("li"):
+            #     with ui.element("a").on("click", lambda: ui.navigate.to(pages.EXPENSES_PAGE)):
+            #         ui.html(styles.EXPENSES_SVG)
+            #         ui.label("Expenses")
 
     # Header desktop
     with ui.header().classes("bg-secondary p-2 mobile-hide"):
