@@ -23,11 +23,6 @@ updates:
       - "docker"
     commit-message:
       prefix: "chore(docker)"
-    ignore:
-      # Ignore Python 3.14 until stable release
-      - dependency-name: "python"
-        update-types: ["version-update:semver-major"]
-        versions: ["3.14.*"]
 
   # GitHub Actions dependencies
   - package-ecosystem: "github-actions"
