@@ -1,5 +1,10 @@
 # Kanso – Your Minimal Money Tracker
 
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/marcodestefano/kanso)
+![GitHub](https://img.shields.io/github/license/marcodestefano/kanso)
+![Python Version](https://img.shields.io/badge/python-3.13-blue)
+![Docker](https://img.shields.io/badge/docker-ready-brightgreen)
+
 **Kanso** is a minimalist, self-hostable web application designed to help you track your personal finances with clarity and calm. It leverages **Google Sheets** as the data source, and builds clean, interactive dashboards using **gspread**, **NiceGUI**, and **ECharts**.
 
 ---
