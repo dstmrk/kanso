@@ -66,31 +66,47 @@ uv sync
 👉 https://docs.gspread.org/en/latest/oauth2.html#service-account
 - Save the credentials JSON file in config/credentials folder.
 
-### 6. Create a .env file
+### 6. Configure your environment
 
-In the project root, create a .env file with the following keys:
+Edit `.env.dev.local` with your personal data:
 
 ```bash
-GOOGLE_SHEET_CREDENTIALS_FILENAME=the_filename_of_your_Google_Sheet_API_credentials
-WORKBOOK_URL=your_google_sheet_workbook_url
+GOOGLE_SHEET_CREDENTIALS_FILENAME=your_google_sheet_credentials_filename
+WORKBOOK_URL=the_workbook_url_of_your_google_sheet_file
+ROOT_PATH=  # Leave empty unless using a reverse proxy
 ```
 
-Replace values as appropriate. The ECharts theme can be customized using the [ECharts Theme Builder](https://echarts.apache.org/en/theme-builder.html)
+> **Note**: `.env.dev.local` is gitignored for security. The app auto-loads `.env.dev` + `.env.dev.local` when you run it.
 
 ### 7. Run the app
 
-Visit http://localhost:6789 to access your dashboard. You can customize the port by using the PORT key in the .env file
+```bash
+uv run main.py
+```
+
+Visit http://localhost:6789 to access your dashboard.
+
+**For Docker deployment**, see [DOCKER.md](./DOCKER.md) for complete instructions.
 
 ## 📂 Structure
 
 ```bash
 kanso/
 │
-├── main.py               # Entry point of the app
-├── requirements.txt      # Python dependencies
-├── .env                  # Environment config
-├── config/credentials    # Google API credentials folder
-└── ...
+├── main.py                  # Entry point
+├── app/                     # Application code
+│   ├── core/               # Core config & constants
+│   ├── logic/              # Business logic
+│   ├── services/           # External services (Google Sheets)
+│   └── ui/                 # UI components
+├── config/credentials/      # Google API credentials (gitignored)
+├── .env.dev                 # Dev config template (committed)
+├── .env.dev.local          # Your dev overrides (gitignored)
+├── .env.prod               # Prod config template (committed)
+├── .env.prod.local         # Your prod overrides (gitignored)
+├── Dockerfile              # Docker build config
+├── docker-compose.yaml     # Docker orchestration
+└── DOCKER.md               # Docker deployment guide
 ```
 
 ## 🧩 Tech Stack

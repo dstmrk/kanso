@@ -14,17 +14,39 @@ from app.services import pages, utils
 from app.services.google_sheets import GoogleSheetService
 from app.ui import home, logout, net_worth, styles, user
 
-# === Configure logging ===
+# === Load environment first ===
+APP_ROOT = Path(__file__).parent
+
+# Auto-load environment-specific files
+# Priority: .env.{env} < .env.{env}.local < explicitly set env vars
+env = os.getenv("APP_ENV", "dev")  # Default to dev for local development
+env_file = APP_ROOT / f".env.{env}"
+env_file_local = APP_ROOT / f".env.{env}.local"
+
+if env_file.exists():
+    load_dotenv(env_file)
+    print(f"✓ Loaded environment from: {env_file.name}")
+else:
+    print(f"⚠ Environment file not found: {env_file.name}")
+    print(f"  Expected: {env_file}")
+    print(f"  Hint: Copy .env.dev to .env.{env} or set APP_ENV=dev")
+
+if env_file_local.exists():
+    load_dotenv(env_file_local, override=True)
+    print(f"✓ Loaded local overrides from: {env_file_local.name}")
+
+# Initialize global configuration
+app_config: AppConfig = AppConfig.from_env(APP_ROOT)
+# Update the module-level config instance
+config_module.config = app_config
+
+# === Configure logging based on environment ===
 logging.basicConfig(
-    level=logging.INFO,
+    level=getattr(logging, app_config.log_level),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
-
-# === Load environment and configure app ===
-load_dotenv()
-APP_ROOT = Path(__file__).parent
 
 # Storage secret management - persist across app restarts
 STORAGE_SECRET_FILE = APP_ROOT / ".storage_secret"
@@ -53,11 +75,6 @@ def get_or_create_storage_secret():
 
     return secret
 
-
-# Initialize global configuration
-app_config: AppConfig = AppConfig.from_env(APP_ROOT)
-# Update the module-level config instance
-config_module.config = app_config
 
 THEME_SCRIPT: str = f"""
 <script>
@@ -121,12 +138,15 @@ except (ValueError, FileNotFoundError) as e:
 app.add_static_files("/themes", app_config.static_path / "themes")
 app.add_static_files("/favicon", app_config.static_path / "favicon")
 
-# Configure NiceGUI with persistent storage secret
+# Configure NiceGUI with persistent storage secret and environment-specific settings
 ui.run(
     port=app_config.app_port,
     favicon=app_config.static_path / "favicon" / "favicon.ico",
     root_path=app_config.root_path,
     storage_secret=get_or_create_storage_secret(),
+    reload=app_config.reload,
+    uvicorn_logging_level=app_config.uvicorn_log_level,
+    show_welcome_message=app_config.debug,
 )
 ui.add_head_html(THEME_SCRIPT + HEAD_HTML, shared=True)
 

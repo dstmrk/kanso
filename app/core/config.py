@@ -27,6 +27,29 @@ from app.core.constants import (
 logger = logging.getLogger(__name__)
 
 
+def _parse_bool(value: str | None, default: bool = False) -> bool:
+    """Parse boolean value from environment variable string.
+
+    Args:
+        value: String value from environment variable
+        default: Default value if None
+
+    Returns:
+        Boolean value
+
+    Example:
+        >>> _parse_bool("true")
+        True
+        >>> _parse_bool("false")
+        False
+        >>> _parse_bool(None, True)
+        True
+    """
+    if value is None:
+        return default
+    return value.lower() in ("true", "1", "yes", "on")
+
+
 @dataclass
 class AppConfig:
     """Centralized application configuration.
@@ -36,6 +59,9 @@ class AppConfig:
 
     Attributes:
         app_root: Root directory of the application
+        environment: Current environment (dev/prod)
+        debug: Enable debug mode (default: False)
+        log_level: Logging level (default: "INFO")
         credentials_folder: Relative path to credentials folder (default: "config/credentials")
         static_files_folder: Relative path to static files (default: "static")
         google_sheet_credentials_filename: Name of credentials JSON file
@@ -48,6 +74,8 @@ class AppConfig:
         root_path: Root path for the application (default: "")
         title: Application title (default: "kanso - your minimal money tracker")
         default_theme: UI theme (default: "light")
+        reload: Enable hot-reload for development (default: False)
+        uvicorn_log_level: Uvicorn logging level (default: "warning")
         storage_secret: Secret for session storage
         cache_ttl_seconds: Cache TTL in seconds (default: 86400 = 24 hours)
 
@@ -62,6 +90,11 @@ class AppConfig:
     credentials_folder: str = "config/credentials"
     static_files_folder: str = "static"
 
+    # Environment settings
+    environment: str = "prod"
+    debug: bool = False
+    log_level: str = "INFO"
+
     # Google Sheets
     google_sheet_credentials_filename: str | None = None
     workbook_url: str | None = None
@@ -75,6 +108,8 @@ class AppConfig:
     root_path: str = ""
     title: str = "kanso - your minimal money tracker"
     default_theme: str = "light"
+    reload: bool = False
+    uvicorn_log_level: str = "warning"
     storage_secret: str | None = None
 
     # Cache settings (for data that updates monthly)
@@ -94,6 +129,9 @@ class AppConfig:
             AppConfig instance with values from environment or defaults
 
         Environment Variables:
+            APP_ENV: Environment (dev/prod, default: "prod")
+            DEBUG: Enable debug mode (true/false, default: false)
+            LOG_LEVEL: Logging level (DEBUG/INFO/WARNING/ERROR, default: "INFO")
             CREDENTIALS_FOLDER: Path to credentials folder (default: "config/credentials")
             STATIC_FILES_FOLDER: Path to static files (default: "static")
             GOOGLE_SHEET_CREDENTIALS_FILENAME: Required - credentials JSON filename
@@ -106,6 +144,8 @@ class AppConfig:
             ROOT_PATH: Root path (default: "")
             APP_TITLE: Application title
             DEFAULT_THEME: UI theme (default: "light")
+            RELOAD: Enable hot-reload (true/false, default: false)
+            UVICORN_LOG_LEVEL: Uvicorn logging level (default: "warning")
             CACHE_TTL_SECONDS: Cache TTL in seconds (default: 86400)
 
         Example:
@@ -116,6 +156,9 @@ class AppConfig:
         """
         config = cls(
             app_root=app_root,
+            environment=os.getenv("APP_ENV", "prod"),
+            debug=_parse_bool(os.getenv("DEBUG"), False),
+            log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
             credentials_folder=os.getenv("CREDENTIALS_FOLDER", "config/credentials"),
             static_files_folder=os.getenv("STATIC_FILES_FOLDER", "static"),
             google_sheet_credentials_filename=os.getenv("GOOGLE_SHEET_CREDENTIALS_FILENAME"),
@@ -128,10 +171,13 @@ class AppConfig:
             root_path=os.getenv("ROOT_PATH", ""),
             title=os.getenv("APP_TITLE", "kanso - your minimal money tracker"),
             default_theme=os.getenv("DEFAULT_THEME", "light"),
+            reload=_parse_bool(os.getenv("RELOAD"), False),
+            uvicorn_log_level=os.getenv("UVICORN_LOG_LEVEL", "warning"),
             cache_ttl_seconds=int(os.getenv("CACHE_TTL_SECONDS", str(CACHE_TTL_SECONDS))),
         )
         logger.info(
-            f"Configuration loaded: port={config.app_port}, theme={config.default_theme}, cache_ttl={config.cache_ttl_seconds}s"
+            f"Configuration loaded: env={config.environment}, debug={config.debug}, "
+            f"port={config.app_port}, reload={config.reload}, cache_ttl={config.cache_ttl_seconds}s"
         )
         return config
 

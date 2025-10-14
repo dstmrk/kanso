@@ -1,0 +1,45 @@
+services:
+  # Production service (default)
+  kanso:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kanso-prod
+    ports:
+      - "6789:6789"
+    volumes:
+      # Mount credentials folder (read-only)
+      - ./config/credentials:/app/config/credentials:ro
+      # Mount .env.prod.local if it exists (for local overrides)
+      - ./.env.prod.local:/app/.env.prod.local:ro
+    restart: unless-stopped
+    profiles: ["prod"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:6789')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  # Development service (with hot-reload)
+  kanso-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kanso-dev
+    ports:
+      - "6789:6789"
+    volumes:
+      # Mount credentials folder (read-only)
+      - ./config/credentials:/app/config/credentials:ro
+      # Mount .env.dev.local if it exists (for local overrides)
+      - ./.env.dev.local:/app/.env.dev.local:ro
+      # Mount source code for hot-reload
+      - ./app:/app/app
+      - ./main.py:/app/main.py
+      - ./static:/app/static
+    command: uv run --env-file .env.dev --env-file .env.dev.local python main.py
+    restart: unless-stopped
+    profiles: ["dev"]
+    environment:
+      - PYTHONUNBUFFERED=1
