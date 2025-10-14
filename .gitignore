@@ -218,3 +218,6 @@ config/credentials
 # App-specific secrets
 .storage_secret
 core
+
+# Performance metrics
+metrics/

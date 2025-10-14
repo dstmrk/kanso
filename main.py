@@ -9,6 +9,7 @@ from nicegui import app, ui
 
 import app.core.config as config_module
 from app.core.config import AppConfig
+from app.core.monitoring import metrics_collector
 from app.core.state_manager import state_manager
 from app.services import pages, utils
 from app.services.google_sheets import GoogleSheetService
@@ -298,3 +299,33 @@ async def clear_cache():
     """Clear cache manually (useful for development)."""
     state_manager.invalidate_cache()
     return {"status": "success", "message": "Cache cleared"}
+
+
+@app.get("/api/metrics")
+async def get_metrics():
+    """Get performance metrics and statistics."""
+    return metrics_collector.get_statistics()
+
+
+@app.post("/api/metrics/save")
+async def save_metrics():
+    """Save current metrics to file."""
+    metrics_file = APP_ROOT / "metrics" / "app_metrics.json"
+    metrics_collector.save_to_file(metrics_file)
+    return {"status": "success", "message": f"Metrics saved to {metrics_file}"}
+
+
+@app.post("/api/metrics/reset")
+async def reset_metrics():
+    """Reset all collected metrics."""
+    metrics_collector.reset()
+    return {"status": "success", "message": "Metrics reset"}
+
+
+# Save metrics on shutdown
+@app.on_shutdown
+async def save_metrics_on_shutdown():
+    """Save metrics to file when the application shuts down."""
+    metrics_file = APP_ROOT / "metrics" / "app_metrics.json"
+    metrics_collector.save_to_file(metrics_file)
+    logger.info("Metrics saved on application shutdown")

@@ -55,6 +55,7 @@ from app.core.constants import (
     MONTHS_LOOKBACK_YEAR,
 )
 from app.core.currency_formats import CURRENCY_FORMATS, get_currency_format
+from app.core.monitoring import track_performance
 
 logger = logging.getLogger(__name__)
 
@@ -551,6 +552,7 @@ class FinanceCalculator:
         """
         return 0.263
 
+    @track_performance("get_monthly_net_worth")
     def get_monthly_net_worth(self) -> dict[str, list]:
         """Get monthly net worth data for charting.
 
@@ -573,6 +575,7 @@ class FinanceCalculator:
             "values": df["net_worth_parsed"].tolist(),
         }
 
+    @track_performance("get_assets_liabilities")
     def get_assets_liabilities(self) -> dict[str, dict[str, Any]]:
         """Get assets and liabilities breakdown from the latest data.
 
@@ -692,6 +695,7 @@ class FinanceCalculator:
 
         return asset_liabilities
 
+    @track_performance("get_cash_flow_last_12_months")
     def get_cash_flow_last_12_months(self) -> dict[str, float]:
         """Get cash flow data for last 12 months.
 
@@ -744,6 +748,7 @@ class FinanceCalculator:
 
         return result
 
+    @track_performance("get_average_expenses_by_category_last_12_months")
     def get_average_expenses_by_category_last_12_months(self) -> dict[str, float]:
         """Get total expenses by category for last 12 months.
 
@@ -768,6 +773,7 @@ class FinanceCalculator:
         ]
         return ef_last_12.groupby(COL_CATEGORY)[COL_AMOUNT_PARSED].sum().to_dict()
 
+    @track_performance("get_incomes_vs_expenses")
     def get_incomes_vs_expenses(self) -> dict[str, list]:
         """Get income vs expenses data for charting last 12 months.
 

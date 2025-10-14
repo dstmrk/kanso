@@ -21,6 +21,7 @@ from pathlib import Path
 import gspread
 import pandas as pd
 
+from app.core.monitoring import track_performance
 from app.core.validators import DataSheetRow, ExpenseRow, validate_dataframe_structure
 
 logger = logging.getLogger(__name__)
@@ -70,6 +71,7 @@ class GoogleSheetService:
         """
         return gspread.service_account(filename=str(self.creds_path))
 
+    @track_performance("google_sheets_fetch")
     def get_worksheet_as_dataframe(
         self,
         worksheet_name: str,

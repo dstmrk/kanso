@@ -29,6 +29,8 @@ from typing import Any, TypeVar
 
 from nicegui import app
 
+from app.core.monitoring import metrics_collector
+
 logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
@@ -140,10 +142,12 @@ class StateManager:
         # Check cache first
         if cache_key in self._cache and self._is_cache_valid(self._cache[cache_key]):
             logger.debug(f"Cache hit for {computation_key}")
+            metrics_collector.record_cache_hit()
             return self._cache[cache_key]["value"]
 
         # Compute new value - run in thread pool to avoid blocking UI
         logger.debug(f"Cache miss for {computation_key}, computing value")
+        metrics_collector.record_cache_miss()
         try:
             loop = asyncio.get_event_loop()
             result = await loop.run_in_executor(None, compute_fn)
