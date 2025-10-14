@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Build stage: Install dependencies
-FROM python:3.13-slim AS builder
+FROM python:3.14-slim AS builder
 
 # Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
@@ -16,7 +16,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
 # Production stage: Minimal runtime image
-FROM python:3.13-slim
+FROM python:3.14-slim
 
 # Install uv in production image
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
