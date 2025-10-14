@@ -1,7 +1,7 @@
 # Kanso – Your Minimal Money Tracker
 
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/marcodestefano/kanso)
-![GitHub](https://img.shields.io/github/license/marcodestefano/kanso)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/marcodestefano/kanso?cache=0)
+![GitHub](https://img.shields.io/github/license/marcodestefano/kanso?cache=0)
 ![Python Version](https://img.shields.io/badge/python-3.13-blue)
 ![Docker](https://img.shields.io/badge/docker-ready-brightgreen)
 
