@@ -1,6 +1,9 @@
-# 🐳 Docker Setup Guide
+# 🐳 Docker Deployment Guide
 
-This guide explains how to run Kanso using Docker for both development and production environments.
+This guide explains how to deploy Kanso using Docker for **production use**.
+
+> **For development**, use local mode with `uv run main.py` (faster, with hot-reload).
+> **For deployment**, use Docker (optimized, production-ready).
 
 ## 📋 Quick Start
 
@@ -13,7 +16,7 @@ This guide explains how to run Kanso using Docker for both development and produ
 
 1. **Configure environment**
 
-   Edit `.env.dev.local` and/or `.env.prod.local` with your data:
+   Edit `.env.prod.local` with your data:
    ```bash
    WORKBOOK_URL=https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/
    ROOT_PATH=/your/proxy/path  # Optional, leave empty if not using reverse proxy
@@ -28,14 +31,8 @@ This guide explains how to run Kanso using Docker for both development and produ
 
 3. **Run the application**
 
-   **Production mode** (default):
    ```bash
-   docker-compose --profile prod up -d
-   ```
-
-   **Development mode** (with hot-reload):
-   ```bash
-   docker-compose --profile dev up
+   docker compose up -d
    ```
 
 4. **Access the app**
@@ -71,59 +68,48 @@ The project uses a `.local` pattern for managing sensitive data:
 | `.env.prod` | Prod template with defaults | ✅ Yes |
 | `.env.prod.local` | Your prod overrides | ❌ No (gitignored) |
 
-### Key Differences: Dev vs Prod
+### Key Differences: Local Dev vs Docker Prod
 
-| Setting | Dev | Prod |
-|---------|-----|------|
+| Setting | Local Dev (`uv run main.py`) | Docker Prod |
+|---------|-------------------------------|-------------|
+| **Environment** | `.env.dev` + `.env.dev.local` | `.env.prod` + `.env.prod.local` |
 | **Hot-reload** | ✅ Enabled | ❌ Disabled |
 | **Logging** | DEBUG | WARNING |
-| **Cache TTL** | 60s | 24h |
-| **Welcome message** | Shown | Hidden |
+| **Cache TTL** | 60s (1 min) | 86400s (24h) |
+| **Deployment** | Native Python | Containerized |
 
 ## 🚀 Usage
 
-### Running Locally (without Docker)
+### Development (Local)
 
-**Development** (default):
+For **active development** with hot-reload:
+
 ```bash
 uv run main.py
 ```
 
-**Production**:
+> **Note**: Auto-loads `.env.dev` + `.env.dev.local`. Hot-reload enabled, debug mode on.
+
+### Production (Docker)
+
+For **deployment** with Docker:
+
 ```bash
-APP_ENV=prod uv run main.py
+# Start
+docker compose up -d
+
+# Stop
+docker compose down
+
+# View logs
+docker compose logs -f kanso
+
+# Rebuild after updates
+docker compose build
+docker compose up -d
 ```
 
-> **Note**: The app auto-loads `.env.{env}` and `.env.{env}.local` files based on the `APP_ENV` environment variable (defaults to `dev`)
-
-### Docker Commands
-
-**Start production** (detached):
-```bash
-docker-compose --profile prod up -d
-```
-
-**Start development** (with logs):
-```bash
-docker-compose --profile dev up
-```
-
-**Stop services**:
-```bash
-docker-compose down
-```
-
-**Rebuild after code changes**:
-```bash
-docker-compose --profile prod build
-docker-compose --profile prod up -d
-```
-
-**View logs**:
-```bash
-docker-compose logs -f kanso       # Production
-docker-compose logs -f kanso-dev   # Development
-```
+> **Note**: Runs in production mode with optimized settings (no reload, minimal logging).
 
 ## 🔐 Security Notes
 
@@ -134,14 +120,9 @@ docker-compose logs -f kanso-dev   # Development
 
 ## 📁 Volume Mounts
 
-### Production
+Docker mounts the following:
 - `./config/credentials:/app/config/credentials:ro` - Credentials (read-only)
-- `./.env.prod.local:/app/.env.prod.local:ro` - Local overrides (read-only)
-
-### Development (additional)
-- `./app:/app/app` - Source code (hot-reload)
-- `./main.py:/app/main.py` - Main file (hot-reload)
-- `./static:/app/static` - Static files
+- `./.env.prod.local:/app/.env.prod.local:ro` - Local config overrides (read-only, optional)
 
 ## 🩺 Health Check
 
@@ -154,17 +135,16 @@ docker ps  # Check HEALTH status
 
 **Container won't start?**
 - Check credentials file exists: `ls config/credentials/`
-- Verify `.env.*.local` files have correct values
-- Check logs: `docker-compose logs kanso`
+- Verify `.env.prod.local` has correct values (WORKBOOK_URL, etc.)
+- Check logs: `docker compose logs kanso`
 
 **Port already in use?**
-- Change `APP_PORT` in `.env.*.local`
+- Change `APP_PORT` in `.env.prod.local`
 - Update port mapping in `docker-compose.yaml`
 
-**Hot-reload not working in dev?**
-- Ensure you're using the `dev` profile
-- Check volumes are mounted correctly
-- Verify `RELOAD=true` in `.env.dev`
+**Need to debug Docker build?**
+- For development, use local mode: `uv run main.py` (faster iteration)
+- To test Docker locally with dev settings: `docker run -e APP_ENV=dev ...`
 
 ## 📊 Environment Variables Reference
 
@@ -185,6 +165,6 @@ Key variables:
 To update to a new version:
 ```bash
 git pull
-docker-compose --profile prod build
-docker-compose --profile prod up -d
+docker compose build
+docker compose up -d
 ```
