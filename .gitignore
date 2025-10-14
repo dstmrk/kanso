@@ -217,7 +217,9 @@ config/credentials
 
 # App-specific secrets
 .storage_secret
-core
+
+# Core dumps (only in root directory)
+/core
 
 # Performance metrics
 metrics/
