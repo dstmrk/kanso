@@ -11,6 +11,7 @@ dependencies = [
     "pydantic==2.10.6",
     "pytest==8.3.4",
     "pytest-asyncio==0.24.0",
+    "pytest-cov==6.0.0",
     "python-dotenv==1.1.1",
     "user-agents==2.2.0",
 ]
