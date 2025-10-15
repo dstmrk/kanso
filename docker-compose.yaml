@@ -1,0 +1,20 @@
+services:
+  kanso:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kanso
+    ports:
+      - "6789:6789"
+    volumes:
+      # Mount credentials folder (read-only)
+      - ./config/credentials:/app/config/credentials:ro
+      # Mount local config overrides (optional)
+      - ./.env.prod.local:/app/.env.prod.local:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:6789')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
