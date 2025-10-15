@@ -14,7 +14,7 @@ If you discover a security vulnerability in Kanso, please report it privately to
 
 ### How to Report
 
-**GitHub Security Advisory**: Use [GitHub's private vulnerability reporting](https://github.com/marcodestefano/kanso/security/advisories/new)
+**GitHub Security Advisory**: Use [GitHub's private vulnerability reporting](https://github.com/dstmrk/kanso/security/advisories/new)
 
 ### What to Include
 

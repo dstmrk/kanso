@@ -1,8 +1,8 @@
 # Kanso – Your Minimal Money Tracker
 
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/marcodestefano/kanso)
-![CI](https://github.com/marcodestefano/kanso/workflows/CI/badge.svg)
-![GitHub](https://img.shields.io/github/license/marcodestefano/kanso)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/dstmrk/kanso)
+![CI](https://github.com/dstmrk/kanso/workflows/CI/badge.svg)
+![GitHub](https://img.shields.io/github/license/dstmrk/kanso)
 ![Python Version](https://img.shields.io/badge/python-3.13-blue)
 ![Docker](https://img.shields.io/badge/docker-ready-brightgreen)
 
@@ -52,7 +52,7 @@ It's for people who want to check in on their finances once a month, track big t
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/marcodestefano/kanso.git
+git clone https://github.com/dstmrk/kanso.git
 cd kanso
 ```
 
