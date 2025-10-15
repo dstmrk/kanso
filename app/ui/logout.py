@@ -30,5 +30,5 @@ def render() -> None:
             .on("click", lambda: ui.navigate.to(pages.HOME_PAGE))
             .classes("btn bg-secondary hover:bg-secondary/80 text-secondary-content gap-2 mt-4")
         ):
-            ui.html(styles.HOME_SVG)
+            ui.html(styles.HOME_SVG, sanitize=False)
             ui.label("Back to Home")

@@ -11,7 +11,7 @@ def render() -> None:
         with ui.element("ul").classes("menu w-full"):
             with ui.element("li"):
                 with ui.element("a").on("click", lambda: ui.navigate.to(pages.HOME_PAGE)):
-                    ui.html(styles.HOME_SVG)
+                    ui.html(styles.HOME_SVG, sanitize=False)
                     ui.label("Dashboard")
             # with ui.element("li"):
             #     with ui.element("a").on("click", lambda: ui.navigate.to(pages.EXPENSES_PAGE)):
@@ -25,7 +25,9 @@ def render() -> None:
                 ui.label("Kanso").classes("font-semibold text-2xl")
             title_left.props('tabindex="0" role="button" aria-label="Toggle menu"')
             title_left.on("click", left_drawer.toggle)
-            profile_picture = ui.html(styles.PROFILE_SVG).classes("avatar cursor-pointer")
+            profile_picture = ui.html(styles.PROFILE_SVG, sanitize=False).classes(
+                "avatar cursor-pointer"
+            )
             profile_picture.on("click", lambda: ui.navigate.to(pages.USER_PAGE))
 
     # Header mobile

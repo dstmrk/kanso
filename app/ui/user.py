@@ -26,7 +26,7 @@ def render_theme_toggle() -> None:
         ui.run_javascript(script)
 
     with ui.element("label").classes("flex cursor-pointer gap-2 items-center"):
-        ui.html(styles.SUN_SVG)
+        ui.html(styles.SUN_SVG, sanitize=False)
         toggle = (
             ui.element("input")
             .props('type="checkbox" value="dark"')
@@ -36,7 +36,7 @@ def render_theme_toggle() -> None:
         current_theme: str = app.storage.user.get("theme", "light")
         if current_theme == "dark":
             toggle.props("checked")
-        ui.html(styles.MOON_SVG)
+        ui.html(styles.MOON_SVG, sanitize=False)
 
 
 def render_currency_selector() -> None:

@@ -123,6 +123,7 @@ def create_asset_vs_liabilities_chart(
                 if hasattr(chart_data[key][subkey], "items"):
                     chart_data[key][subkey] = dict(chart_data[key][subkey])
 
+    # Build data structure without explicit colors (let ECharts handle gradients)
     data: list[dict[str, Any]] = []
     for category_name, items in chart_data.items():
         category: dict[str, Any] = {"name": category_name, "children": []}
@@ -139,10 +140,18 @@ def create_asset_vs_liabilities_chart(
                 category["children"].append({"name": item_name, "value": abs(value)})
         data.append(category)
 
+    # Sort data to ensure consistent color assignment: Assets (green), Liabilities (red)
+    category_order = {"Assets": 0, "Liabilities": 1, "Net Worth": 2}
+    data.sort(key=lambda x: category_order.get(x["name"], 999))
+
     return {
         "tooltip": {"trigger": "item", **ChartOptionsBuilder.get_common_tooltip(currency)},
         "grid": ChartOptionsBuilder.get_common_grid(),
-        "color": ["#777777", "#2b821d", "#c12e34"],
+        "color": [
+            "#2b821d",
+            "#c12e34",
+            "#777777",
+        ],  # Green for Assets, Red for Liabilities, Gray for Net Worth
         "series": {
             "type": "sunburst",
             "data": data,
@@ -245,7 +254,7 @@ def create_income_vs_expenses_options(
     currency: str = "USD",
 ) -> dict[str, Any]:
     return {
-        "legend": {"data": ["Income", "Expenses"]},
+        "legend": {"data": ["Income", "Expenses"], "top": "0%", "left": "center"},
         "tooltip": {"trigger": "axis", **ChartOptionsBuilder.get_common_tooltip(currency)},
         "grid": ChartOptionsBuilder.get_common_grid(),
         "color": ["#2b821d", "#c12e34"],

@@ -21,7 +21,7 @@ def render() -> None:
             btn = ui.element("button").classes(classes)
             buttons.append(btn)
             with btn.on("click", lambda _=None, idx=i, k=key: change_tab(idx, k, buttons)):
-                ui.html(svg)
+                ui.html(svg, sanitize=False)
                 ui.label(label).classes("dock-label")
 
     def change_tab(index, key, buttons):
