@@ -257,7 +257,7 @@ def net_worth_page():
 
 @ui.page(pages.USER_PAGE, title=app_config.title)
 def user_page():
-    """User settings and preferences page."""
+    """Advanced settings page for data management and configuration."""
     ensure_theme_setup()
     user.render()
 

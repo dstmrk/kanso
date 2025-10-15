@@ -6,7 +6,6 @@ from app.ui import styles
 ITEMS = [
     (pages.HOME_PAGE, "Home", styles.HOME_SVG),
     (pages.EXPENSES_PAGE, "Expenses", styles.EXPENSES_SVG),
-    (pages.USER_PAGE, "Profile", styles.PROFILE_SVG),
 ]
 
 
