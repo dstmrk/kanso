@@ -6,6 +6,17 @@
 ![Python Version](https://img.shields.io/badge/python-3.13-blue)
 ![Docker](https://img.shields.io/badge/docker-ready-brightgreen)
 
+<table>
+  <tr>
+    <td><img src="docs/images/dashboard_light.png" alt="Light Mode"/></td>
+    <td><img src="docs/images/dashboard_dark.png" alt="Dark Mode"/></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Light Mode</b></td>
+    <td align="center"><b>Dark Mode</b></td>
+  </tr>
+</table>
+
 **Kanso** is a minimalist, self-hostable web application designed to help you track your personal finances with clarity and calm. It leverages **Google Sheets** as the data source, and builds clean, interactive dashboards using **gspread**, **NiceGUI**, and **ECharts**.
 
 ---
