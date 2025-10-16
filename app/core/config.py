@@ -62,10 +62,7 @@ class AppConfig:
         environment: Current environment (dev/prod)
         debug: Enable debug mode (default: False)
         log_level: Logging level (default: "INFO")
-        credentials_folder: Relative path to credentials folder (default: "config/credentials")
         static_files_folder: Relative path to static files (default: "static")
-        google_sheet_credentials_filename: Name of credentials JSON file
-        workbook_url: URL of Google Sheets workbook
         data_sheet_name: Name of main data worksheet (default: "Data")
         assets_sheet_name: Name of assets worksheet (default: "Assets")
         liabilities_sheet_name: Name of liabilities worksheet (default: "Liabilities")
@@ -82,12 +79,11 @@ class AppConfig:
     Example:
         >>> config = AppConfig.from_env(Path.cwd())
         >>> config.validate()
-        >>> service = GoogleSheetService(config.credentials_path, config.workbook_url)
+        >>> # Google Sheets credentials are configured via onboarding, not here
     """
 
     # File paths
     app_root: Path
-    credentials_folder: str = "config/credentials"
     static_files_folder: str = "static"
 
     # Environment settings
@@ -95,9 +91,7 @@ class AppConfig:
     debug: bool = False
     log_level: str = "INFO"
 
-    # Google Sheets
-    google_sheet_credentials_filename: str | None = None
-    workbook_url: str | None = None
+    # Google Sheets - worksheet names only (credentials managed via onboarding)
     data_sheet_name: str = SHEET_NAME_DATA
     assets_sheet_name: str = SHEET_NAME_ASSETS
     liabilities_sheet_name: str = SHEET_NAME_LIABILITIES
@@ -132,10 +126,7 @@ class AppConfig:
             APP_ENV: Environment (dev/prod, default: "prod")
             DEBUG: Enable debug mode (true/false, default: false)
             LOG_LEVEL: Logging level (DEBUG/INFO/WARNING/ERROR, default: "INFO")
-            CREDENTIALS_FOLDER: Path to credentials folder (default: "config/credentials")
             STATIC_FILES_FOLDER: Path to static files (default: "static")
-            GOOGLE_SHEET_CREDENTIALS_FILENAME: Required - credentials JSON filename
-            WORKBOOK_URL: Required - Google Sheets workbook URL
             DATA_SHEET_NAME: Main data worksheet name (default: "Data")
             ASSETS_SHEET_NAME: Assets worksheet name (default: "Assets")
             LIABILITIES_SHEET_NAME: Liabilities worksheet name (default: "Liabilities")
@@ -148,6 +139,10 @@ class AppConfig:
             UVICORN_LOG_LEVEL: Uvicorn logging level (default: "warning")
             CACHE_TTL_SECONDS: Cache TTL in seconds (default: 86400)
 
+        Note:
+            Google Sheets credentials and workbook URL are configured via the onboarding flow
+            and stored in user storage, not via environment variables.
+
         Example:
             >>> # With .env file containing required variables
             >>> config = AppConfig.from_env(Path(__file__).parent)
@@ -159,10 +154,7 @@ class AppConfig:
             environment=os.getenv("APP_ENV", "prod"),
             debug=_parse_bool(os.getenv("DEBUG"), False),
             log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
-            credentials_folder=os.getenv("CREDENTIALS_FOLDER", "config/credentials"),
             static_files_folder=os.getenv("STATIC_FILES_FOLDER", "static"),
-            google_sheet_credentials_filename=os.getenv("GOOGLE_SHEET_CREDENTIALS_FILENAME"),
-            workbook_url=os.getenv("WORKBOOK_URL"),
             data_sheet_name=os.getenv("DATA_SHEET_NAME", SHEET_NAME_DATA),
             assets_sheet_name=os.getenv("ASSETS_SHEET_NAME", SHEET_NAME_ASSETS),
             liabilities_sheet_name=os.getenv("LIABILITIES_SHEET_NAME", SHEET_NAME_LIABILITIES),
@@ -182,20 +174,6 @@ class AppConfig:
         return config
 
     @property
-    def credentials_path(self) -> Path:
-        """Get full absolute path to credentials file.
-
-        Returns:
-            Path object pointing to the credentials JSON file
-
-        Raises:
-            ValueError: If google_sheet_credentials_filename is not configured
-        """
-        if not self.google_sheet_credentials_filename:
-            raise ValueError("Google Sheet credentials filename not configured")
-        return self.app_root / self.credentials_folder / self.google_sheet_credentials_filename
-
-    @property
     def static_path(self) -> Path:
         """Get full absolute path to static files folder.
 
@@ -208,27 +186,24 @@ class AppConfig:
         """Validate that all required configuration is present and valid.
 
         Checks that:
-        - GOOGLE_SHEET_CREDENTIALS_FILENAME is configured
-        - WORKBOOK_URL is configured
-        - Credentials file exists at the specified path
+        - Static files folder exists
+
+        Note:
+            Google Sheets credentials are configured via the onboarding flow,
+            not through environment variables, so they are not validated here.
 
         Raises:
-            ValueError: If required environment variables are missing
-            FileNotFoundError: If credentials file doesn't exist
+            FileNotFoundError: If static files folder doesn't exist
 
         Example:
             >>> config = AppConfig.from_env(Path.cwd())
             >>> try:
             ...     config.validate()
-            ... except ValueError as e:
+            ... except FileNotFoundError as e:
             ...     print(f"Configuration error: {e}")
         """
-        if not self.google_sheet_credentials_filename:
-            raise ValueError("GOOGLE_SHEET_CREDENTIALS_FILENAME environment variable is required")
-        if not self.workbook_url:
-            raise ValueError("WORKBOOK_URL environment variable is required")
-        if not self.credentials_path.exists():
-            raise FileNotFoundError(f"Credentials file not found at: {self.credentials_path}")
+        if not self.static_path.exists():
+            raise FileNotFoundError(f"Static files folder not found at: {self.static_path}")
         logger.info("Configuration validation successful")
 
 

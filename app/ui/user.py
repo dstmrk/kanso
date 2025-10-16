@@ -114,4 +114,102 @@ def render() -> None:
                                     ui.label(label)
                                 link.on("click", make_click_handler(code, label))
 
+        # Google Sheets Configuration section
+        with ui.column().classes("gap-4 mt-6"):
+            ui.label("Google Sheets Configuration").classes("text-xl font-semibold")
+
+            # Credentials JSON textarea
+            ui.label("Google Service Account Credentials JSON:").classes("text-base mt-2")
+
+            # Get existing credentials if any
+            existing_creds = app.storage.user.get("google_credentials_json", "")
+
+            credentials_textarea = (
+                ui.textarea(
+                    label="Paste your credentials JSON here",
+                    placeholder='{\n  "type": "service_account",\n  "project_id": "...",\n  ...\n}',
+                    value=existing_creds,
+                )
+                .classes("w-full font-mono text-sm")
+                .style("min-height: 200px")
+            )
+
+            # Workbook URL input
+            ui.label("Google Sheet URL:").classes("text-base mt-4")
+            current_url = app.storage.user.get("custom_workbook_url", "")
+
+            url_input = ui.input(
+                label="Workbook URL",
+                placeholder="https://docs.google.com/spreadsheets/d/...",
+                value=current_url,
+            ).classes("w-full max-w-md")
+
+            async def save_and_test_configuration():
+                """Validate, save and test both credentials and URL."""
+                import json
+                import tempfile
+                from pathlib import Path
+
+                # Get values
+                credentials_content = credentials_textarea.value.strip()
+                url_value = url_input.value.strip()
+
+                # Validate both are present
+                if not credentials_content:
+                    ui.notify("✗ Please paste the credentials JSON", type="negative")
+                    return
+
+                if not url_value:
+                    ui.notify("✗ Please enter a Google Sheet URL", type="negative")
+                    return
+
+                # Validate credentials JSON
+                try:
+                    json_data = json.loads(credentials_content)
+                except json.JSONDecodeError:
+                    ui.notify("✗ Invalid JSON! Please check the format.", type="negative")
+                    return
+
+                # Validate it looks like a service account credential
+                if "type" not in json_data or json_data.get("type") != "service_account":
+                    ui.notify(
+                        "✗ This doesn't look like a service account credential", type="negative"
+                    )
+                    return
+
+                # Validate URL format (basic check for Google Sheets URL)
+                if not url_value.startswith("https://docs.google.com/spreadsheets/"):
+                    ui.notify("✗ Invalid Google Sheets URL format", type="negative")
+                    return
+
+                # Data is valid - save to storage
+                app.storage.user["google_credentials_json"] = credentials_content
+                app.storage.user["custom_workbook_url"] = url_value
+
+                # Now test the connection
+                try:
+                    from app.services.google_sheets import GoogleSheetService
+
+                    # Create a temporary file with the credentials
+                    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
+                        json.dump(json_data, tmp, indent=2)
+                        tmp_path = Path(tmp.name)
+
+                    try:
+                        # Try to connect (don't need to store the service)
+                        GoogleSheetService(tmp_path, url_value)
+                        ui.notify("✓ Configuration saved and connection verified!", type="positive")
+                    finally:
+                        # Clean up temp file
+                        tmp_path.unlink(missing_ok=True)
+
+                except Exception as e:
+                    ui.notify(
+                        f"⚠ Configuration saved, but connection failed: {str(e)}", type="warning"
+                    )
+
+            ui.button("Save & Test Configuration", on_click=save_and_test_configuration).classes(
+                "btn bg-secondary hover:bg-secondary/80 text-secondary-content mt-2"
+            )
+
     dock.render()

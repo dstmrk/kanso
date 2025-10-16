@@ -13,7 +13,7 @@ from app.core.monitoring import metrics_collector
 from app.core.state_manager import state_manager
 from app.services import pages, utils
 from app.services.google_sheets import GoogleSheetService
-from app.ui import home, logout, net_worth, styles, user
+from app.ui import home, logout, net_worth, onboarding, styles, user
 
 # === Load environment first ===
 APP_ROOT = Path(__file__).parent
@@ -151,13 +151,42 @@ ui.run(
 )
 ui.add_head_html(THEME_SCRIPT + HEAD_HTML, shared=True)
 
-# Initialize Google Sheets service
+# Google Sheets service - will be initialized from user storage
 sheet_service = None
-try:
-    sheet_service = GoogleSheetService(app_config.credentials_path, app_config.workbook_url)
-except Exception as e:
-    logger.critical(f"Fatal startup error: {e}")
-    ui.label(f"Application failed to start: {str(e)}").classes("text-red-500 font-bold")
+
+
+def get_sheet_service():
+    """Get or create GoogleSheetService with credentials from user storage."""
+    global sheet_service
+    import json
+    import tempfile
+    from pathlib import Path
+
+    # Check for credentials and URL in user storage
+    if hasattr(app, "storage") and hasattr(app.storage, "user"):
+        custom_creds_json = app.storage.user.get("google_credentials_json")
+        custom_url = app.storage.user.get("custom_workbook_url")
+
+        # Use credentials if both are available
+        if custom_creds_json and custom_url:
+            try:
+                # Create a temporary file with the credentials (will be auto-deleted)
+                with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=True) as tmp:
+                    json.dump(json.loads(custom_creds_json), tmp, indent=2)
+                    tmp.flush()  # Ensure data is written
+                    tmp_path = Path(tmp.name)
+
+                    # Initialize with credentials from storage
+                    sheet_service = GoogleSheetService(tmp_path, custom_url)
+                    logger.info("Using credentials and workbook URL from user storage")
+                # File is automatically deleted when exiting the 'with' block
+                return sheet_service
+            except Exception as e:
+                logger.error(f"Failed to use credentials from storage: {e}")
+                raise RuntimeError(f"Failed to initialize Google Sheets service: {e}") from e
+
+    # No credentials configured
+    raise RuntimeError("Google Sheets not configured. Please complete the onboarding setup.")
 
 
 def ensure_theme_setup():
@@ -209,42 +238,38 @@ def ensure_theme_setup():
 
 @ui.page("/", title=app_config.title)
 def root():
-    """Root page that redirects to home after loading necessary data."""
+    """Root page that checks onboarding status and redirects."""
     ensure_theme_setup()
-    if sheet_service is None:
-        ui.label("Sheet service not available.").classes("text-red-500")
+
+    # Check if onboarding is completed
+    if not app.storage.user.get("onboarding_completed"):
+        ui.navigate.to("/onboarding")
         return
-    # Load data sheets into user storage if not already present
-    if not app.storage.user.get("data_sheet"):
-        app.storage.user["data_sheet"] = sheet_service.get_worksheet_as_dataframe(
-            app_config.data_sheet_name
-        ).to_json(orient="split")
-    if not app.storage.user.get("assets_sheet"):
-        app.storage.user["assets_sheet"] = sheet_service.get_worksheet_as_dataframe(
-            app_config.assets_sheet_name, header=[0, 1]
-        ).to_json(orient="split")
-    if not app.storage.user.get("liabilities_sheet"):
-        app.storage.user["liabilities_sheet"] = sheet_service.get_worksheet_as_dataframe(
-            app_config.liabilities_sheet_name, header=[0, 1]
-        ).to_json(orient="split")
-    if not app.storage.user.get("expenses_sheet"):
-        app.storage.user["expenses_sheet"] = sheet_service.get_worksheet_as_dataframe(
-            app_config.expenses_sheet_name
-        ).to_json(orient="split")
+
     # Detect client device type for responsive UI
     client = ui.context.client
-    if not client or not client.request:
-        ui.label("Client request not available.").classes("text-red-500")
-        return
-    user_agent_header = client.request.headers.get("user-agent")
-    app.storage.client["user_agent"] = utils.get_user_agent(user_agent_header)
+    if client and client.request:
+        user_agent_header = client.request.headers.get("user-agent")
+        app.storage.client["user_agent"] = utils.get_user_agent(user_agent_header)
+
+    # Redirect directly to home - data will be loaded lazily
     ui.navigate.to("/home")
+
+
+@ui.page("/onboarding", title=f"{app_config.title} - Setup")
+def onboarding_page():
+    """Onboarding page for first-time setup."""
+    ensure_theme_setup()
+    onboarding.render()
 
 
 @ui.page(pages.HOME_PAGE, title=app_config.title)
 def home_page():
     """Main dashboard page showing financial overview."""
     ensure_theme_setup()
+
+    # Render home immediately with placeholders
+    # Data will be loaded asynchronously in the background
     home.render()
 
 

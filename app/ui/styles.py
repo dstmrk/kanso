@@ -1,4 +1,4 @@
-SKELETON_ANIMATION_SPEED = 10.0
+SKELETON_ANIMATION_SPEED = 1.5  # Slower, smoother animation (lower = slower)
 STAT_CARDS_CLASSES = " stat bg-base-100 shadow-md"
 STAT_CARDS_LABEL_CLASSES = " stat-title text-lg"
 STAT_CARDS_VALUE_CLASSES = " stat-value"
