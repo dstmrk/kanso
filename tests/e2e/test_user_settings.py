@@ -71,9 +71,6 @@ class TestUserSettingsPage:
         currency_dropdown = page.locator(".dropdown .btn-outline")
         expect(currency_dropdown).to_be_visible()
 
-        # Get current currency
-        # initial_currency = currency_dropdown.text_content()
-
         # Click to open dropdown
         currency_dropdown.click()
 

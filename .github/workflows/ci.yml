@@ -5,8 +5,28 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:  # Allow manual trigger for E2E tests
 
 jobs:
+  # Detect which files changed to decide if E2E tests are needed
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      ui: ${{ steps.filter.outputs.ui }}
+    steps:
+    - uses: actions/checkout@v5
+    - uses: dorny/paths-filter@v3
+      id: filter
+      with:
+        filters: |
+          ui:
+            - 'app/ui/**'
+            - 'app/services/**'
+            - 'tests/e2e/**'
+            - 'main.py'
+            - '.env.test'
+            - 'pyproject.toml'
+
   test:
     runs-on: ubuntu-latest
 
@@ -27,9 +47,9 @@ jobs:
       run: |
         uv sync --frozen
 
-    - name: Run tests
+    - name: Run tests (unit tests only, excluding E2E)
       run: |
-        uv run pytest --cov=app --cov-report=term --cov-report=xml
+        uv run pytest -m "not e2e" --cov=app --cov-report=term --cov-report=xml
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v5
@@ -71,6 +91,46 @@ jobs:
     - name: Run black (formatter check)
       run: |
         uv run black --check .
+
+  test-e2e:
+    runs-on: ubuntu-latest
+    needs: [changes]
+    # Smart E2E Strategy:
+    # ✅ Always run on: push to main, manual trigger
+    # ✅ Run on PR when: UI files changed OR [e2e] in commit message
+    # ❌ Skip if: [skip e2e] in commit message
+    if: |
+      !contains(github.event.head_commit.message, '[skip e2e]') && (
+        github.event_name == 'push' ||
+        github.event_name == 'workflow_dispatch' ||
+        needs.changes.outputs.ui == 'true' ||
+        contains(github.event.head_commit.message, '[e2e]')
+      )
+
+    steps:
+    - uses: actions/checkout@v5
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.13'
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v7
+      with:
+        version: "latest"
+
+    - name: Install dependencies
+      run: |
+        uv sync --frozen
+
+    - name: Install Playwright browsers
+      run: |
+        uv run playwright install --with-deps chromium
+
+    - name: Run E2E tests
+      run: |
+        uv run pytest tests/e2e/ -v --browser chromium
 
   docker:
     runs-on: ubuntu-latest
