@@ -139,16 +139,7 @@ except (ValueError, FileNotFoundError) as e:
 app.add_static_files("/themes", app_config.static_path / "themes")
 app.add_static_files("/favicon", app_config.static_path / "favicon")
 
-# Configure NiceGUI with persistent storage secret and environment-specific settings
-ui.run(
-    port=app_config.app_port,
-    favicon=app_config.static_path / "favicon" / "favicon.ico",
-    root_path=app_config.root_path,
-    storage_secret=get_or_create_storage_secret(),
-    reload=app_config.reload,
-    uvicorn_logging_level=app_config.uvicorn_log_level,
-    show_welcome_message=app_config.debug,
-)
+# Add head HTML for theme and styling
 ui.add_head_html(THEME_SCRIPT + HEAD_HTML, shared=True)
 
 # Google Sheets service - will be initialized from user storage
@@ -236,6 +227,10 @@ def ensure_theme_setup():
         )
 
 
+# === Page Definitions ===
+# All pages must be defined before ui.run() is called to ensure they are registered
+
+
 @ui.page("/", title=app_config.title)
 def root():
     """Root page that checks onboarding status and redirects."""
@@ -292,6 +287,9 @@ def logout_page():
     """Logout page for clearing user session."""
     ensure_theme_setup()
     logout.render()
+
+
+# === API Endpoints ===
 
 
 @app.post("/api/sync-theme")
@@ -354,3 +352,18 @@ async def save_metrics_on_shutdown():
     metrics_file = APP_ROOT / "metrics" / "app_metrics.json"
     metrics_collector.save_to_file(metrics_file)
     logger.info("Metrics saved on application shutdown")
+
+
+# === Start Server ===
+# This should be the last code in the file
+# Use __mp_main__ to support multiprocessing (used by NiceGUI's reload feature)
+if __name__ in {"__main__", "__mp_main__"}:
+    ui.run(
+        port=app_config.app_port,
+        favicon=app_config.static_path / "favicon" / "favicon.ico",
+        root_path=app_config.root_path,
+        storage_secret=get_or_create_storage_secret(),
+        reload=app_config.reload,
+        uvicorn_logging_level=app_config.uvicorn_log_level,
+        show_welcome_message=app_config.debug,
+    )

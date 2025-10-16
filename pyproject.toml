@@ -34,6 +34,11 @@ python_functions = ["test_*"]
 addopts = "-v --tb=short"
 asyncio_mode = "auto"
 
+# Playwright configuration
+markers = [
+    "e2e: End-to-end tests using Playwright (deselect with '-m \"not e2e\"')"
+]
+
 [tool.black]
 line-length = 100
 target-version = ['py312']
@@ -108,3 +113,9 @@ add_ignore = [
 ]
 match = ".*\\.py"
 match_dir = "^(?!(tests|venv|\\.venv|build|dist)).*"
+
+[dependency-groups]
+dev = [
+    "playwright>=1.55.0",
+    "pytest-playwright>=0.7.1",
+]
