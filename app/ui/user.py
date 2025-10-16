@@ -40,10 +40,6 @@ def render() -> None:
                     document.documentElement.style.colorScheme = '{new_theme}';
                 """
                 ui.run_javascript(script)
-                ui.notify(
-                    f"Theme changed to {new_theme} mode. Charts will update when you return to the dashboard.",
-                    type="positive",
-                )
 
             with ui.row().classes("items-center gap-4"):
                 ui.label("Theme:").classes("text-base")
