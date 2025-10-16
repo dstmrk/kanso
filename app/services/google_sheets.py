@@ -165,7 +165,7 @@ class GoogleSheetService:
         data_rows = df.to_dict("records")
 
         # Choose appropriate validator based on worksheet name
-        validator = None
+        validator: type[DataSheetRow] | type[ExpenseRow] | None = None
         if "data" in worksheet_name.lower():
             validator = DataSheetRow
         elif "expense" in worksheet_name.lower():
