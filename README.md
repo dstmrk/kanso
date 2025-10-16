@@ -77,31 +77,29 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 uv sync
 ```
 
-### 5. Set up Google Sheets API credentials
-
-- Follow the official guide to create a service account and download the JSON file:
-👉 https://docs.gspread.org/en/latest/oauth2.html#service-account
-- Save the credentials JSON file in config/credentials folder.
-
-### 6. Configure your environment
-
-Edit `.env.dev.local` with your personal data:
-
-```bash
-GOOGLE_SHEET_CREDENTIALS_FILENAME=your_google_sheet_credentials_filename
-WORKBOOK_URL=the_workbook_url_of_your_google_sheet_file
-ROOT_PATH=  # Leave empty unless using a reverse proxy
-```
-
-> **Note**: `.env.dev.local` is gitignored for security. The app auto-loads `.env.dev` + `.env.dev.local` when you run it.
-
-### 7. Run the app
+### 5. Run the app
 
 ```bash
 uv run main.py
 ```
 
 Visit http://localhost:6789 to access your dashboard.
+
+### 6. Complete the onboarding setup
+
+On your first visit, Kanso will guide you through a simple 3-step setup:
+
+1. **Welcome** - Introduction to the setup process
+2. **Credentials** - Paste your Google Service Account JSON credentials
+   - Follow [this guide](https://docs.gspread.org/en/latest/oauth2.html#service-account) to create a service account and get your credentials
+   - Simply copy and paste the JSON content into the provided textarea
+3. **Configuration** - Enter your Google Sheet URL
+   - Provide the URL of your Google Sheet (e.g., `https://docs.google.com/spreadsheets/d/...`)
+   - Click "Save & Test Configuration" to validate and save
+
+Your credentials are stored securely in encrypted user storage - **no files or environment variables needed**!
+
+After onboarding, your dashboard will load with beautiful skeleton placeholders while your financial data is being fetched from Google Sheets.
 
 **For Docker deployment**, see [DOCKER.md](./DOCKER.md) for complete instructions.
 
@@ -114,17 +112,19 @@ kanso/
 ├── app/                     # Application code
 │   ├── core/               # Core config & constants
 │   ├── logic/              # Business logic
-│   ├── services/           # External services (Google Sheets)
-│   └── ui/                 # UI components
-├── config/credentials/      # Google API credentials (gitignored)
+│   ├── services/           # External services (Google Sheets, data loading)
+│   └── ui/                 # UI components (onboarding, home, settings)
 ├── .env.dev                 # Dev config template (committed)
 ├── .env.dev.local          # Your dev overrides (gitignored)
 ├── .env.prod               # Prod config template (committed)
 ├── .env.prod.local         # Your prod overrides (gitignored)
+├── .storage_secret         # Encrypted storage secret (auto-generated, gitignored)
 ├── Dockerfile              # Docker build config
 ├── docker-compose.yaml     # Docker orchestration
 └── DOCKER.md               # Docker deployment guide
 ```
+
+> **Note**: Google Sheets credentials are configured through the web UI and stored in encrypted user storage. No credential files or environment variables are required.
 
 ## 🧩 Tech Stack
 

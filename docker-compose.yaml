@@ -7,10 +7,10 @@ services:
     ports:
       - "6789:6789"
     volumes:
-      # Mount credentials folder (read-only)
-      - ./config/credentials:/app/config/credentials:ro
       # Mount local config overrides (optional)
       - ./.env.prod.local:/app/.env.prod.local:ro
+      # Persist storage secret and user data
+      - kanso_data:/app
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:6789')"]
@@ -18,3 +18,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 5s
+
+volumes:
+  kanso_data:
+    driver: local

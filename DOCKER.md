@@ -9,35 +9,29 @@ This guide explains how to deploy Kanso using Docker for **production use**.
 
 ### Prerequisites
 - Docker and Docker Compose installed
-- Google Sheets credentials JSON file
+- Google Sheets credentials JSON (you'll configure this via the web UI)
 - Your Google Sheets workbook URL
 
 ### Initial Setup
 
-1. **Configure environment**
-
-   Edit `.env.prod.local` with your data:
-   ```bash
-   WORKBOOK_URL=https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/
-   ROOT_PATH=/your/proxy/path  # Optional, leave empty if not using reverse proxy
-   ```
-
-2. **Add credentials**
-
-   Copy your Google Sheets credentials JSON file to:
-   ```
-   config/credentials/gsheet_credentials.json
-   ```
-
-3. **Run the application**
+1. **Run the application**
 
    ```bash
    docker compose up -d
    ```
 
-4. **Access the app**
+2. **Access the app**
 
    Open your browser at: http://localhost:6789
+
+3. **Complete onboarding**
+
+   On your first visit, Kanso will guide you through a 3-step setup:
+   - **Welcome** - Introduction to the setup
+   - **Credentials** - Paste your Google Service Account JSON credentials
+   - **Configuration** - Enter your Google Sheet URL
+
+   Your credentials are stored securely in encrypted user storage - **no files or environment variables needed**!
 
 ## 🔧 Configuration
 
@@ -113,16 +107,17 @@ docker compose up -d
 
 ## 🔐 Security Notes
 
-- Credentials folder is mounted **read-only** in Docker
+- Google Sheets credentials are stored in **encrypted user storage** (not in files)
 - `.env.*.local` files are gitignored (safe for sensitive data)
 - Non-root user (`kanso`) runs the app in Docker
-- Storage secret is auto-generated and persisted
+- Storage secret is auto-generated and persisted for encryption
+- No credential files needed in the container
 
 ## 📁 Volume Mounts
 
 Docker mounts the following:
-- `./config/credentials:/app/config/credentials:ro` - Credentials (read-only)
 - `./.env.prod.local:/app/.env.prod.local:ro` - Local config overrides (read-only, optional)
+- Storage secret and user data are persisted via Docker volumes
 
 ## 🩺 Health Check
 
@@ -134,9 +129,9 @@ docker ps  # Check HEALTH status
 ## 🛠️ Troubleshooting
 
 **Container won't start?**
-- Check credentials file exists: `ls config/credentials/`
-- Verify `.env.prod.local` has correct values (WORKBOOK_URL, etc.)
 - Check logs: `docker compose logs kanso`
+- Verify port is not already in use
+- Ensure Docker has enough resources allocated
 
 **Port already in use?**
 - Change `APP_PORT` in `.env.prod.local`
@@ -157,8 +152,9 @@ Key variables:
 - `RELOAD` - Hot-reload (true/false)
 - `APP_PORT` - Server port (default: 6789)
 - `CACHE_TTL_SECONDS` - Cache time-to-live
-- `WORKBOOK_URL` - Google Sheets URL
 - `ROOT_PATH` - Reverse proxy path prefix
+
+> **Note**: Google Sheets credentials and workbook URL are configured through the web UI during onboarding, not via environment variables.
 
 ## 🔄 Updating
 
