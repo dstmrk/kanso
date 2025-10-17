@@ -4,8 +4,6 @@
 ![CI](https://github.com/dstmrk/kanso/workflows/CI/badge.svg)
 [![codecov](https://codecov.io/gh/dstmrk/kanso/branch/main/graph/badge.svg)](https://codecov.io/gh/dstmrk/kanso)
 ![GitHub](https://img.shields.io/github/license/dstmrk/kanso)
-![Python Version](https://img.shields.io/badge/python-3.13-blue)
-![Docker](https://img.shields.io/badge/docker-ready-brightgreen)
 
 <table>
   <tr>
@@ -22,19 +20,30 @@
 
 ---
 
-## 🌱 Why "Kanso"?
+## 📑 Table of Contents
 
-> *Kanso (簡素)* is a Japanese word meaning **simplicity**, **plainness**, or **elimination of the non-essential**.
-> It comes from traditional Japanese aesthetics, emphasizing clarity, intentionality, and calm.
-> This tool was built with that spirit in mind: a minimalist finance tracker that doesn't overwhelm you.
+- [Why "Kanso"?](#-why-kanso)
+- [Features](#-features)
+- [Quick Start](#-quick-start)
+- [First-Time Setup](#-first-time-setup)
+- [Project Structure](#-project-structure)
+- [Testing](#-testing)
+- [Development](#️-development)
+- [Tech Stack](#-tech-stack)
+- [Documentation](#-documentation)
+- [Security](#-security)
+- [License](#-license)
+- [Support](#-support)
 
 ---
 
-## 🧘 Philosophy
+## 🌱 Why "Kanso"?
 
-This is not a tool for micro-managing finances daily.
+> *Kanso (簡素)* is a Japanese word meaning **simplicity** and **elimination of the non-essential**.
 
-It's for people who want to check in on their finances once a month, track big trends, and stay focused on what matters — without noise, stress, or overcomplication.
+This is not a tool for daily micro-management. It's for people who want to check in on their finances **once a month**, track big trends, and stay focused on what matters — without noise, stress, or overcomplication.
+
+Your data stays in your Google Sheet. Kanso just makes it beautiful and easy to understand.
 
 ---
 
@@ -56,13 +65,13 @@ It's for people who want to check in on their finances once a month, track big t
 
 ### User Experience
 - 🚀 **Zero-Config Onboarding** - 3-step setup wizard for first-time users
-- 🔐 **Secure Storage** - Encrypted credential storage (no environment variables needed)
+- 🔐 **Secure Storage** - Credentials stored safely in encrypted browser storage
 - ⚡ **Skeleton Loading** - Smooth loading experience with placeholders
 - 🎯 **Settings Management** - Update credentials and preferences anytime
 - 📉 **Expense Breakdown** - Detailed category analysis for spending insights
 
 ### Developer Experience
-- 🧪 **Comprehensive Testing** - 148 tests (134 unit + 14 E2E) with Playwright
+- 🧪 **Comprehensive Testing** - Full unit and E2E test suite with Playwright
 - 🤖 **Smart CI/CD** - Intelligent E2E execution based on changed files
 - 🐳 **Docker Ready** - Production-ready containerization
 - 📝 **Type Safety** - Full mypy type checking
@@ -110,7 +119,7 @@ On your first visit, Kanso will guide you through a simple 3-step onboarding:
    - Provide your spreadsheet URL (e.g., `https://docs.google.com/spreadsheets/d/...`)
    - Click "Save & Test Configuration" to validate
 
-**Your credentials are stored securely in encrypted user storage** - no files or environment variables needed!
+Your credentials are stored securely in your browser's encrypted storage.
 
 After onboarding, your dashboard loads with skeleton placeholders while data is fetched from Google Sheets.
 
@@ -154,10 +163,10 @@ kanso/
 │       └── logout.py          # Logout handler
 │
 ├── tests/                       # Test suite
-│   ├── e2e/                    # End-to-end tests (14 tests)
+│   ├── e2e/                    # End-to-end tests
 │   │   ├── test_onboarding.py # Onboarding flow tests
 │   │   └── test_user_settings.py # Settings page tests
-│   ├── test_*.py               # Unit tests (134 tests)
+│   ├── test_*.py               # Unit tests
 │   └── conftest.py             # Pytest configuration & fixtures
 │
 ├── docs/                        # Documentation
@@ -193,13 +202,13 @@ kanso/
 
 ## 🧪 Testing
 
-Kanso has a comprehensive test suite with **148 tests** covering both unit and end-to-end scenarios:
+Kanso has a comprehensive test suite covering both unit and end-to-end scenarios:
 
 ### Test Coverage
 
-- **Unit Tests**: 134 tests covering core logic, services, and utilities
-- **E2E Tests**: 14 Playwright tests covering user flows (onboarding, settings)
-- **Coverage**: 39% code coverage with focus on critical paths
+- **Unit Tests**: Covering core logic, services, and utilities
+- **E2E Tests**: Playwright tests for complete user flows (onboarding, settings)
+- **Coverage**: Focus on critical paths with automated coverage tracking
 
 ### Running Tests
 
@@ -320,21 +329,13 @@ Security is a priority. Please review our [Security Policy](./SECURITY.md) for:
 - Vulnerability reporting process
 - Security best practices
 
-**Never commit credentials or secrets.** Kanso stores credentials in encrypted user storage, not in files or environment variables.
+**Never commit credentials or secrets.** Kanso stores credentials securely in encrypted browser storage.
 
 ---
 
 ## 📄 License
 
 This project is licensed under the **MIT License** - see the [LICENSE](./LICENSE) file for details.
-
----
-
-## 🙏 Acknowledgments
-
-- Inspired by Japanese aesthetics and the principle of *Kanso* (simplicity)
-- Built with modern Python tooling for developer experience
-- Designed for calm, mindful financial tracking
 
 ---
 
