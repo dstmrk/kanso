@@ -133,70 +133,31 @@ kanso/
 ├── main.py                      # Application entry point
 │
 ├── app/                         # Application code
-│   ├── core/                   # Core functionality
-│   │   ├── config.py          # Configuration management
-│   │   ├── constants.py       # App-wide constants
-│   │   ├── currency_formats.py # Currency formatting
-│   │   ├── monitoring.py      # Performance tracking
-│   │   ├── state_manager.py   # State & cache management
-│   │   └── validators.py      # Pydantic data validation
-│   │
-│   ├── logic/                  # Business logic
-│   │   └── finance_calculator.py # Financial calculations
-│   │
-│   ├── services/               # External services
-│   │   ├── data_loader.py     # Data orchestration
-│   │   ├── data_loader_core.py # Core data processing
-│   │   ├── google_sheets.py   # Google Sheets API client
-│   │   ├── pages.py           # Page routing
-│   │   └── utils.py           # Utility functions
-│   │
-│   └── ui/                     # UI components
-│       ├── charts.py          # Chart components
-│       ├── dock.py            # Navigation dock
-│       ├── header.py          # Header component
-│       ├── home.py            # Home/dashboard page
-│       ├── net_worth.py       # Net worth page
-│       ├── onboarding.py      # Onboarding wizard
-│       ├── styles.py          # CSS styles
-│       ├── user.py            # User settings page
-│       └── logout.py          # Logout handler
+│   ├── core/                   # Core utilities (config, validation, caching, monitoring)
+│   ├── logic/                  # Business logic (financial calculations)
+│   ├── services/               # External integrations (Google Sheets, data loading)
+│   └── ui/                     # UI components (pages, charts, navigation)
 │
 ├── tests/                       # Test suite
-│   ├── e2e/                    # End-to-end tests
-│   │   ├── test_onboarding.py # Onboarding flow tests
-│   │   └── test_user_settings.py # Settings page tests
-│   ├── test_*.py               # Unit tests
-│   └── conftest.py             # Pytest configuration & fixtures
+│   ├── unit/                   # Unit tests
+│   ├── e2e/                    # Playwright end-to-end tests
+│   └── conftest.py             # Test fixtures and configuration
 │
-├── docs/                        # Documentation
-│   ├── E2E_TEST_SETUP.md       # E2E testing guide
-│   ├── images/                 # Screenshots
-│   └── ...
+├── docs/                        # Documentation and assets
+├── .github/workflows/           # CI/CD pipelines
 │
-├── .github/workflows/           # CI/CD workflows
-│   ├── ci.yml                  # Main CI pipeline
-│   └── README.md               # Workflow documentation
-│
-├── .env.dev                     # Dev config template (committed)
-├── .env.prod                    # Prod config template (committed)
-├── .env.test                    # Test config template (committed)
-├── .storage_secret             # Encrypted storage key (auto-generated, gitignored)
-├── Dockerfile                   # Docker build configuration
-├── docker-compose.yaml          # Docker orchestration
-├── pyproject.toml              # Python project configuration
-├── DOCKER.md                    # Docker deployment guide
-├── SECURITY.md                  # Security policy
-└── LICENSE                      # MIT License
+├── .env.{dev,prod,test}        # Environment configurations
+├── Dockerfile                   # Container configuration
+└── pyproject.toml              # Python dependencies and tooling
 ```
 
-### Key Design Patterns
+### Architecture
 
 - **Separation of Concerns**: Clean separation between UI, business logic, and data access
 - **Service Layer**: External integrations isolated in `services/`
-- **State Management**: Centralized state with intelligent caching in `state_manager.py`
-- **Validation**: Non-blocking Pydantic validation for graceful error handling
-- **Performance**: Decorator-based performance monitoring for data operations
+- **State Management**: Centralized state with intelligent caching
+- **Data Validation**: Non-blocking Pydantic validation for graceful error handling
+- **Performance Monitoring**: Decorator-based tracking for data operations
 
 ---
 
@@ -315,7 +276,6 @@ For E2E tests, include `[e2e]` in your commit message to trigger E2E CI runs.
 
 ## 📚 Documentation
 
-- **[E2E Test Setup Guide](./docs/E2E_TEST_SETUP.md)** - Comprehensive E2E testing documentation
 - **[Docker Deployment Guide](./DOCKER.md)** - Production deployment with Docker
 - **[CI/CD Workflow Guide](./.github/workflows/README.md)** - GitHub Actions workflow documentation
 - **[Security Policy](./SECURITY.md)** - Security guidelines and vulnerability reporting
