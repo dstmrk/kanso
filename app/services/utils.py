@@ -6,6 +6,7 @@ This module provides utility functions for common operations including:
 - JSON/DataFrame conversion with MultiIndex support
 - Currency and locale handling
 - Number formatting for different currencies
+- Timestamp formatting with relative time
 
 Example:
     >>> from app.services.utils import format_currency, get_user_currency
@@ -15,6 +16,7 @@ Example:
 
 import locale
 from collections.abc import Callable
+from datetime import UTC, datetime
 from io import StringIO
 from typing import Any, Literal
 
@@ -204,3 +206,73 @@ def format_currency(amount: float, currency: str | None = None) -> str:
         return f"{fmt.symbol} {formatted}"
     else:
         return f"{formatted} {fmt.symbol}"
+
+
+def get_current_timestamp() -> str:
+    """Get current UTC timestamp as ISO 8601 string.
+
+    Returns:
+        ISO 8601 formatted timestamp string (e.g., "2025-10-18T14:30:45Z")
+
+    Example:
+        >>> get_current_timestamp()
+        '2025-10-18T14:30:45Z'
+    """
+    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def format_timestamp_relative(timestamp_str: str | None) -> tuple[str, str]:
+    """Format timestamp with both absolute and relative time.
+
+    Args:
+        timestamp_str: ISO 8601 timestamp string, or None
+
+    Returns:
+        Tuple of (formatted_datetime, relative_time)
+        - formatted_datetime: Human-readable format "YYYY-MM-DD HH:MM:SS"
+        - relative_time: Relative time like "2 hours ago", "just now", etc.
+
+    Example:
+        >>> format_timestamp_relative("2025-10-18T14:30:45Z")
+        ('2025-10-18 14:30:45', '2 hours ago')
+        >>> format_timestamp_relative(None)
+        ('Never', '')
+    """
+    if not timestamp_str:
+        return ("Never", "")
+
+    try:
+        # Parse ISO 8601 timestamp
+        timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+        now = datetime.now(UTC)
+
+        # Calculate time difference
+        diff = now - timestamp
+        seconds = int(diff.total_seconds())
+
+        # Format absolute time
+        formatted = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+
+        # Calculate relative time
+        if seconds < 60:
+            relative = "just now"
+        elif seconds < 3600:  # Less than 1 hour
+            minutes = seconds // 60
+            relative = f"{minutes} minute{'s' if minutes != 1 else ''} ago"
+        elif seconds < 86400:  # Less than 1 day
+            hours = seconds // 3600
+            relative = f"{hours} hour{'s' if hours != 1 else ''} ago"
+        elif seconds < 604800:  # Less than 1 week
+            days = seconds // 86400
+            relative = f"{days} day{'s' if days != 1 else ''} ago"
+        elif seconds < 2592000:  # Less than 30 days
+            weeks = seconds // 604800
+            relative = f"{weeks} week{'s' if weeks != 1 else ''} ago"
+        else:
+            months = seconds // 2592000
+            relative = f"{months} month{'s' if months != 1 else ''} ago"
+
+        return (formatted, relative)
+
+    except (ValueError, AttributeError):
+        return ("Invalid timestamp", "")

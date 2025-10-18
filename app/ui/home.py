@@ -14,12 +14,14 @@ class HomeRenderer:
     async def load_kpi_data(self) -> dict[str, Any] | None:
         """Load and cache key performance indicators from financial data."""
         data_sheet_str = app.storage.user.get("data_sheet")
+        incomes_sheet_str = app.storage.user.get("incomes_sheet")
         if not data_sheet_str:
             return None
 
         def compute_kpi_data():
             data_sheet = utils.read_json(data_sheet_str)
-            calculator = FinanceCalculator(data_sheet)
+            incomes_sheet = utils.read_json(incomes_sheet_str) if incomes_sheet_str else None
+            calculator = FinanceCalculator(data_sheet, incomes_df=incomes_sheet)
 
             return {
                 "last_update_date": calculator.get_last_update_date(),
@@ -45,6 +47,7 @@ class HomeRenderer:
         assets_sheet_str = app.storage.user.get("assets_sheet")
         liabilities_sheet_str = app.storage.user.get("liabilities_sheet")
         expenses_sheet_str = app.storage.user.get("expenses_sheet")
+        incomes_sheet_str = app.storage.user.get("incomes_sheet")
 
         if not data_sheet_str or not expenses_sheet_str:
             return None
@@ -54,8 +57,9 @@ class HomeRenderer:
             assets_sheet = utils.read_json(assets_sheet_str)
             liabilities_sheet = utils.read_json(liabilities_sheet_str)
             expenses_sheet = utils.read_json(expenses_sheet_str)
+            incomes_sheet = utils.read_json(incomes_sheet_str) if incomes_sheet_str else None
             calculator = FinanceCalculator(
-                data_sheet, assets_sheet, liabilities_sheet, expenses_sheet
+                data_sheet, assets_sheet, liabilities_sheet, expenses_sheet, incomes_sheet
             )
 
             return {
@@ -283,8 +287,9 @@ def render() -> None:
     # Check if data needs to be loaded
     data_sheet = app.storage.user.get("data_sheet")
     expenses_sheet = app.storage.user.get("expenses_sheet")
+    incomes_sheet = app.storage.user.get("incomes_sheet")
 
-    if not data_sheet or not expenses_sheet:
+    if not data_sheet or not expenses_sheet or not incomes_sheet:
         # Data not loaded yet - start background loading
         async def load_data_in_background():
             """Load data from Google Sheets in background."""

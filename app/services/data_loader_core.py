@@ -1,10 +1,13 @@
 """Core data loading logic separated from NiceGUI for testability."""
 
+import hashlib
 import json
 import logging
 import tempfile
 from pathlib import Path
 from typing import Any, Protocol
+
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +48,7 @@ class DataLoaderCore:
             and self.storage.get("assets_sheet")
             and self.storage.get("liabilities_sheet")
             and self.storage.get("expenses_sheet")
+            and self.storage.get("incomes_sheet")
         )
 
     def get_credentials(self) -> tuple[dict, str] | None:
@@ -80,6 +84,7 @@ class DataLoaderCore:
                 logger.info("Loading Data sheet...")
                 df = service.get_worksheet_as_dataframe(self.app_config.data_sheet_name)
                 self.storage["data_sheet"] = df.to_json(orient="split")
+                self.storage["data_sheet_hash"] = self.calculate_dataframe_hash(df)
 
             if not self.storage.get("assets_sheet"):
                 logger.info("Loading Assets sheet...")
@@ -87,6 +92,7 @@ class DataLoaderCore:
                     self.app_config.assets_sheet_name, header=[0, 1]
                 )
                 self.storage["assets_sheet"] = df.to_json(orient="split")
+                self.storage["assets_sheet_hash"] = self.calculate_dataframe_hash(df)
 
             if not self.storage.get("liabilities_sheet"):
                 logger.info("Loading Liabilities sheet...")
@@ -94,11 +100,25 @@ class DataLoaderCore:
                     self.app_config.liabilities_sheet_name, header=[0, 1]
                 )
                 self.storage["liabilities_sheet"] = df.to_json(orient="split")
+                self.storage["liabilities_sheet_hash"] = self.calculate_dataframe_hash(df)
 
             if not self.storage.get("expenses_sheet"):
                 logger.info("Loading Expenses sheet...")
                 df = service.get_worksheet_as_dataframe(self.app_config.expenses_sheet_name)
                 self.storage["expenses_sheet"] = df.to_json(orient="split")
+                self.storage["expenses_sheet_hash"] = self.calculate_dataframe_hash(df)
+
+            if not self.storage.get("incomes_sheet"):
+                logger.info("Loading Incomes sheet...")
+                # Load with multi-index header like Assets/Liabilities
+                df = service.get_worksheet_as_dataframe(
+                    self.app_config.incomes_sheet_name, header=[0, 1]
+                )
+                logger.info(
+                    f"Incomes sheet loaded with {len(df)} rows and columns: {df.columns.tolist()[:5]}"
+                )
+                self.storage["incomes_sheet"] = df.to_json(orient="split")
+                self.storage["incomes_sheet_hash"] = self.calculate_dataframe_hash(df)
 
             logger.info("All data sheets loaded successfully")
             return True
@@ -123,3 +143,105 @@ class DataLoaderCore:
             json.dump(credentials_dict, tmp, indent=2)
             tmp.flush()
             return GoogleSheetService(Path(tmp.name), url)
+
+    @staticmethod
+    def calculate_dataframe_hash(df: pd.DataFrame) -> str:
+        """Calculate MD5 hash of a DataFrame for change detection.
+
+        Args:
+            df: DataFrame to hash
+
+        Returns:
+            MD5 hash string of the DataFrame content
+        """
+        # Convert DataFrame to JSON string for consistent hashing
+        df_json = df.to_json(orient="split", date_format="iso")
+        return hashlib.md5(df_json.encode()).hexdigest()
+
+    def refresh_sheet(
+        self, service, sheet_name: str, storage_key: str, header: list[int] | int | None = None
+    ) -> tuple[bool, str]:
+        """Force refresh a single sheet from Google Sheets.
+
+        Loads fresh data from Google Sheets, calculates hash, and updates storage
+        only if data has changed.
+
+        Args:
+            service: GoogleSheetService instance
+            sheet_name: Name of the worksheet to refresh
+            storage_key: Key in storage (e.g., 'data_sheet')
+            header: Header row(s) for multi-index sheets (None, int, or list[int])
+
+        Returns:
+            Tuple of (changed: bool, message: str) indicating if data was updated
+        """
+        try:
+            # Load fresh data from Google Sheets
+            logger.info(f"Refreshing {sheet_name} sheet from Google Sheets...")
+            df = service.get_worksheet_as_dataframe(sheet_name, header=header)
+
+            # Calculate hash of new data
+            new_hash = self.calculate_dataframe_hash(df)
+            hash_key = f"{storage_key}_hash"
+
+            # Get existing hash
+            existing_hash = self.storage.get(hash_key)
+
+            # Compare hashes
+            if existing_hash == new_hash:
+                logger.info(f"No changes detected in {sheet_name} sheet")
+                return False, f"No changes in {sheet_name}"
+
+            # Data has changed - update storage
+            self.storage[storage_key] = df.to_json(orient="split")
+            self.storage[hash_key] = new_hash
+            logger.info(f"Updated {sheet_name} sheet (hash changed)")
+
+            return True, f"Updated {sheet_name}"
+
+        except Exception as e:
+            error_msg = f"Failed to refresh {sheet_name}: {str(e)}"
+            logger.error(error_msg)
+            return False, error_msg
+
+    def refresh_all_sheets(self, service) -> dict[str, Any]:
+        """Refresh all sheets from Google Sheets with change detection.
+
+        Args:
+            service: GoogleSheetService instance
+
+        Returns:
+            Dictionary with refresh results:
+                - updated_count: Number of sheets that changed
+                - unchanged_count: Number of sheets unchanged
+                - failed_count: Number of sheets that failed
+                - details: List of (sheet_name, changed, message) tuples
+        """
+        sheets_to_refresh = [
+            (self.app_config.data_sheet_name, "data_sheet", None),
+            (self.app_config.assets_sheet_name, "assets_sheet", [0, 1]),
+            (self.app_config.liabilities_sheet_name, "liabilities_sheet", [0, 1]),
+            (self.app_config.expenses_sheet_name, "expenses_sheet", None),
+            (self.app_config.incomes_sheet_name, "incomes_sheet", [0, 1]),
+        ]
+
+        results: dict[str, Any] = {
+            "updated_count": 0,
+            "unchanged_count": 0,
+            "failed_count": 0,
+            "details": [],
+        }
+
+        for sheet_name, storage_key, header in sheets_to_refresh:
+            changed, message = self.refresh_sheet(service, sheet_name, storage_key, header)
+
+            if "Failed" in message:
+                results["failed_count"] += 1
+            elif changed:
+                results["updated_count"] += 1
+            else:
+                results["unchanged_count"] += 1
+
+            results["details"].append((sheet_name, changed, message))
+
+        return results

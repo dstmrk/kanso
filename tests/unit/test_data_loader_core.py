@@ -3,6 +3,8 @@
 import json
 from unittest.mock import MagicMock, patch
 
+import pandas as pd
+
 from app.services.data_loader_core import DataLoaderCore
 
 
@@ -27,6 +29,7 @@ class MockConfig:
         self.assets_sheet_name = "Assets"
         self.liabilities_sheet_name = "Liabilities"
         self.expenses_sheet_name = "Expenses"
+        self.incomes_sheet_name = "Incomes"
 
 
 class TestDataLoaderCore:
@@ -40,6 +43,7 @@ class TestDataLoaderCore:
                 "assets_sheet": "mock_assets",
                 "liabilities_sheet": "mock_liabilities",
                 "expenses_sheet": "mock_expenses",
+                "incomes_sheet": "mock_incomes",
             }
         )
         config = MockConfig()
@@ -143,8 +147,9 @@ class TestDataLoaderCore:
         assert "assets_sheet" in storage.data
         assert "liabilities_sheet" in storage.data
         assert "expenses_sheet" in storage.data
-        # Should have called for all 4 sheets
-        assert mock_service.get_worksheet_as_dataframe.call_count == 4
+        assert "incomes_sheet" in storage.data
+        # Should have called for all 5 sheets
+        assert mock_service.get_worksheet_as_dataframe.call_count == 5
 
     def test_load_missing_sheets_loads_only_missing(self):
         """Test that load_missing_sheets loads only missing sheets."""
@@ -152,7 +157,7 @@ class TestDataLoaderCore:
             {
                 "data_sheet": "existing_data",
                 "assets_sheet": "existing_assets",
-                # Missing liabilities and expenses
+                # Missing liabilities, expenses, and incomes
             }
         )
         config = MockConfig()
@@ -169,8 +174,9 @@ class TestDataLoaderCore:
         assert result is True
         assert "liabilities_sheet" in storage.data
         assert "expenses_sheet" in storage.data
-        # Should have called for only 2 missing sheets
-        assert mock_service.get_worksheet_as_dataframe.call_count == 2
+        assert "incomes_sheet" in storage.data
+        # Should have called for only 3 missing sheets
+        assert mock_service.get_worksheet_as_dataframe.call_count == 3
 
     def test_load_missing_sheets_returns_false_on_error(self):
         """Test that load_missing_sheets returns False when an error occurs."""
@@ -216,6 +222,7 @@ class TestDataLoaderCore:
         config.assets_sheet_name = "CustomAssets"
         config.liabilities_sheet_name = "CustomLiabilities"
         config.expenses_sheet_name = "CustomExpenses"
+        config.incomes_sheet_name = "CustomIncomes"
         loader = DataLoaderCore(storage, config)
 
         mock_service = MagicMock()
@@ -231,3 +238,118 @@ class TestDataLoaderCore:
         assert any("CustomAssets" in str(call) for call in calls)
         assert any("CustomLiabilities" in str(call) for call in calls)
         assert any("CustomExpenses" in str(call) for call in calls)
+        assert any("CustomIncomes" in str(call) for call in calls)
+
+    def test_calculate_dataframe_hash_returns_consistent_hash(self):
+        """Test that calculate_dataframe_hash returns consistent hash for same data."""
+        df = pd.DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
+
+        hash1 = DataLoaderCore.calculate_dataframe_hash(df)
+        hash2 = DataLoaderCore.calculate_dataframe_hash(df)
+
+        assert hash1 == hash2
+        assert isinstance(hash1, str)
+        assert len(hash1) == 32  # MD5 hash length
+
+    def test_calculate_dataframe_hash_different_for_different_data(self):
+        """Test that different DataFrames produce different hashes."""
+        df1 = pd.DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
+        df2 = pd.DataFrame({"A": [1, 2, 3], "B": [4, 5, 7]})  # Different data
+
+        hash1 = DataLoaderCore.calculate_dataframe_hash(df1)
+        hash2 = DataLoaderCore.calculate_dataframe_hash(df2)
+
+        assert hash1 != hash2
+
+    def test_refresh_sheet_updates_when_data_changed(self):
+        """Test that refresh_sheet updates storage when data has changed."""
+        storage = MockStorage({"data_sheet": '{"old": "data"}', "data_sheet_hash": "old_hash"})
+        config = MockConfig()
+        loader = DataLoaderCore(storage, config)
+
+        # Mock service returning new data
+        mock_service = MagicMock()
+        mock_df = pd.DataFrame({"A": [1, 2, 3]})
+        mock_service.get_worksheet_as_dataframe.return_value = mock_df
+
+        changed, message = loader.refresh_sheet(mock_service, "Data", "data_sheet")
+
+        assert changed is True
+        assert "Updated Data" in message
+        assert storage.data["data_sheet"] is not None
+        assert storage.data["data_sheet_hash"] is not None
+
+    def test_refresh_sheet_no_update_when_data_unchanged(self):
+        """Test that refresh_sheet doesn't update storage when data hasn't changed."""
+        # Create a DataFrame and calculate its hash
+        mock_df = pd.DataFrame({"A": [1, 2, 3]})
+        existing_hash = DataLoaderCore.calculate_dataframe_hash(mock_df)
+        existing_data = mock_df.to_json(orient="split")
+
+        storage = MockStorage({"data_sheet": existing_data, "data_sheet_hash": existing_hash})
+        config = MockConfig()
+        loader = DataLoaderCore(storage, config)
+
+        # Mock service returning same data
+        mock_service = MagicMock()
+        mock_service.get_worksheet_as_dataframe.return_value = mock_df
+
+        changed, message = loader.refresh_sheet(mock_service, "Data", "data_sheet")
+
+        assert changed is False
+        assert "No changes" in message
+
+    def test_refresh_sheet_handles_errors_gracefully(self):
+        """Test that refresh_sheet handles errors gracefully."""
+        storage = MockStorage()
+        config = MockConfig()
+        loader = DataLoaderCore(storage, config)
+
+        # Mock service that raises exception
+        mock_service = MagicMock()
+        mock_service.get_worksheet_as_dataframe.side_effect = Exception("Network error")
+
+        changed, message = loader.refresh_sheet(mock_service, "Data", "data_sheet")
+
+        assert changed is False
+        assert "Failed" in message
+
+    def test_refresh_all_sheets_returns_detailed_results(self):
+        """Test that refresh_all_sheets returns detailed results."""
+        storage = MockStorage()
+        config = MockConfig()
+        loader = DataLoaderCore(storage, config)
+
+        # Mock service
+        mock_service = MagicMock()
+        mock_df = pd.DataFrame({"A": [1, 2, 3]})
+        mock_service.get_worksheet_as_dataframe.return_value = mock_df
+
+        results = loader.refresh_all_sheets(mock_service)
+
+        assert "updated_count" in results
+        assert "unchanged_count" in results
+        assert "failed_count" in results
+        assert "details" in results
+        assert len(results["details"]) == 5  # All 5 sheets
+
+    def test_load_missing_sheets_saves_hashes(self):
+        """Test that load_missing_sheets saves hashes for loaded sheets."""
+        storage = MockStorage()
+        config = MockConfig()
+        loader = DataLoaderCore(storage, config)
+
+        # Mock service - use MagicMock for DataFrame
+        mock_service = MagicMock()
+        mock_df = MagicMock()
+        mock_df.to_json.return_value = '{"data": "mocked"}'
+        mock_service.get_worksheet_as_dataframe.return_value = mock_df
+
+        loader.load_missing_sheets(mock_service)
+
+        # Verify hashes were saved for all sheets
+        assert "data_sheet_hash" in storage.data
+        assert "assets_sheet_hash" in storage.data
+        assert "liabilities_sheet_hash" in storage.data
+        assert "expenses_sheet_hash" in storage.data
+        assert "incomes_sheet_hash" in storage.data

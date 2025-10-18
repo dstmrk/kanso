@@ -41,12 +41,50 @@ app_config: AppConfig = AppConfig.from_env(APP_ROOT)
 # Update the module-level config instance
 config_module.config = app_config
 
-# === Configure logging based on environment ===
-logging.basicConfig(
-    level=getattr(logging, app_config.log_level),
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
+
+# === Configure logging with colors ===
+class ColoredFormatter(logging.Formatter):
+    """Custom formatter with colors for different log levels."""
+
+    # ANSI color codes
+    COLORS = {
+        "DEBUG": "\033[36m",  # Cyan
+        "INFO": "\033[32m",  # Green
+        "WARNING": "\033[33m",  # Yellow
+        "ERROR": "\033[31m",  # Red
+        "CRITICAL": "\033[35m",  # Magenta
+    }
+    RESET = "\033[0m"
+
+    def format(self, record):
+        """Format log record with color-coded log levels.
+
+        Args:
+            record: LogRecord instance containing log information
+
+        Returns:
+            Formatted log message string with color codes
+        """
+        # Add color to levelname
+        levelname = record.levelname
+        if levelname in self.COLORS:
+            record.levelname = f"{self.COLORS[levelname]}{levelname}{self.RESET}"
+        return super().format(record)
+
+
+# Set up root logger with colored formatter
+handler = logging.StreamHandler()
+handler.setFormatter(
+    ColoredFormatter(
+        fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
 )
+
+root_logger = logging.getLogger()
+root_logger.setLevel(getattr(logging, app_config.log_level))
+root_logger.addHandler(handler)
+
 logger = logging.getLogger(__name__)
 
 # Storage secret management - persist across app restarts

@@ -184,3 +184,28 @@ class TestUserSettingsPage:
 
         # Should show error
         expect(page.locator("text=Invalid Google Sheets URL")).to_be_visible(timeout=2000)
+
+    def test_refresh_data_button_exists_in_header_sidebar(self, page: Page):
+        """Test that Refresh Data button exists in the header sidebar."""
+        # Mock Google Sheets API to handle refresh request
+        page.route(
+            "**/sheets.googleapis.com/**", lambda route: route.fulfill(status=200, body="{}")
+        )
+
+        page.goto("/home")
+
+        # Open the right drawer (user settings sidebar) by clicking profile icon
+        # The profile icon has class "avatar cursor-pointer" on desktop
+        profile_icon = page.locator(".avatar.cursor-pointer").first
+        expect(profile_icon).to_be_visible()
+        profile_icon.click()
+
+        # Wait for sidebar to open
+        page.wait_for_timeout(500)
+
+        # Verify Refresh Data button is visible in sidebar
+        refresh_button = page.locator('button:has-text("Refresh Data")').first
+        expect(refresh_button).to_be_visible()
+
+        # Verify button is clickable (just check it exists and is enabled)
+        expect(refresh_button).to_be_enabled()

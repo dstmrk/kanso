@@ -1,7 +1,8 @@
-from nicegui import ui
+from nicegui import app, ui
 
 from app.core.state_manager import state_manager
 from app.services import pages
+from app.services.utils import format_timestamp_relative
 from app.ui import styles
 
 
@@ -41,6 +42,67 @@ def render_logout_button() -> None:
         ui.label("Logout")
 
 
+def render_last_refresh_timestamp() -> None:
+    """Render last data refresh timestamp at the bottom of sidebar with auto-refresh.
+
+    Only shows the timestamp section when data has been loaded at least once.
+    """
+    # Container that will hold the timestamp UI (or stay empty)
+    container = ui.column().classes("w-full mt-auto pt-4")
+
+    # Track if UI has been rendered
+    ui_rendered = {"value": False}
+
+    def check_and_render():
+        """Check if timestamp exists and render/update UI accordingly."""
+        last_refresh = app.storage.user.get("last_data_refresh")
+
+        if not last_refresh:
+            # No timestamp yet - keep container empty
+            container.clear()
+            ui_rendered["value"] = False
+            return
+
+        # Timestamp exists - render or update UI
+        if not ui_rendered["value"]:
+            # First time rendering - create UI structure
+            with container:
+                ui.separator()
+                # Title with clock icon
+                with ui.row().classes("items-center gap-1 mt-2"):
+                    ui.html(styles.CLOCK_SVG, sanitize=False).classes("text-base-content/70")
+                    ui.label("Last Data Refresh").classes(
+                        "text-xs font-semibold text-base-content/70"
+                    )
+
+                # Single label showing relative time
+                container.timestamp_label = ui.label().classes(
+                    "text-xs text-base-content/60 italic"
+                )
+
+            ui_rendered["value"] = True
+
+        # Update timestamp values
+        formatted, relative = format_timestamp_relative(last_refresh)
+
+        # Show relative time, with full datetime in tooltip
+        if relative:
+            container.timestamp_label.set_text(relative)
+            container.timestamp_label.tooltip(formatted)
+        else:
+            # Fallback if no relative time
+            container.timestamp_label.set_text(formatted)
+            container.timestamp_label.tooltip("")
+
+    # Initial check
+    check_and_render()
+
+    # Auto-refresh every 5 seconds to:
+    # 1. Detect when timestamp becomes available (first load)
+    # 2. Keep relative time updated ("2 minutes ago" -> "3 minutes ago")
+    ui.timer(5.0, check_and_render)
+
+
 def render() -> None:
     """Render the navigation header with hamburger menu and user settings sidebar."""
     # Left drawer for navigation
@@ -57,7 +119,7 @@ def render() -> None:
 
     # Right drawer for user settings
     with ui.right_drawer(elevated=True, value=False).classes("bg-base-100") as right_drawer:
-        with ui.column().classes("w-full p-4 gap-6"):
+        with ui.column().classes("w-full h-full p-4 gap-6"):
             # Header
             ui.label("User Settings").classes("text-2xl font-bold")
             ui.separator()
@@ -66,6 +128,9 @@ def render() -> None:
             render_refresh_button()
             render_advanced_settings_button()
             render_logout_button()
+
+            # Last refresh timestamp at bottom
+            render_last_refresh_timestamp()
 
     # Header desktop
     with ui.header().classes("bg-secondary p-2 mobile-hide"):

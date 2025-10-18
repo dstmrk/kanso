@@ -76,6 +76,7 @@ SHEET_NAME_DATA = "Data"
 SHEET_NAME_ASSETS = "Assets"
 SHEET_NAME_LIABILITIES = "Liabilities"
 SHEET_NAME_EXPENSES = "Expenses"
+SHEET_NAME_INCOMES = "Incomes"
 
 # === Time Periods ===
 

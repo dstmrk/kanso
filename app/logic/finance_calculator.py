@@ -204,6 +204,7 @@ class FinanceCalculator:
         assets_df: pd.DataFrame | None = None,
         liabilities_df: pd.DataFrame | None = None,
         expenses_df: pd.DataFrame | None = None,
+        incomes_df: pd.DataFrame | None = None,
     ) -> None:
         """Initialize the calculator with financial data.
 
@@ -212,6 +213,7 @@ class FinanceCalculator:
             assets_df: Optional DataFrame with detailed asset breakdown (supports MultiIndex)
             liabilities_df: Optional DataFrame with detailed liability breakdown (supports MultiIndex)
             expenses_df: Optional DataFrame with Month, Category, and Amount columns
+            incomes_df: Optional DataFrame with detailed income breakdown (supports MultiIndex)
 
         Note:
             DataFrames are not processed immediately. Processing happens lazily when
@@ -221,10 +223,12 @@ class FinanceCalculator:
         self.expenses_df = expenses_df
         self.assets_df = assets_df
         self.liabilities_df = liabilities_df
+        self.incomes_df = incomes_df
         self._processed_df = None
         self._processed_expenses_df = None
         self._processed_assets_df = None
         self._processed_liabilities_df = None
+        self._processed_incomes_df = None
 
     @property
     def processed_df(self) -> pd.DataFrame:
@@ -253,6 +257,13 @@ class FinanceCalculator:
         if self.liabilities_df is not None and self._processed_liabilities_df is None:
             self._processed_liabilities_df = self._preprocess_liabilities_df()
         return self._processed_liabilities_df
+
+    @property
+    def processed_incomes_df(self) -> pd.DataFrame | None:
+        """Lazily processed and cached incomes DataFrame."""
+        if self.incomes_df is not None and self._processed_incomes_df is None:
+            self._processed_incomes_df = self._preprocess_incomes_df()
+        return self._processed_incomes_df
 
     def _preprocess_main_df(self) -> pd.DataFrame:
         """Preprocess main DataFrame once with all required transformations.
@@ -372,6 +383,41 @@ class FinanceCalculator:
 
         return df
 
+    def _preprocess_incomes_df(self) -> pd.DataFrame | None:
+        """Preprocess incomes DataFrame once with date parsing and sorting.
+
+        Handles both single-level and MultiIndex column structures. Locates the Date
+        column dynamically and converts it to datetime for sorting.
+
+        Returns:
+            Preprocessed incomes DataFrame with date_dt column, or None if no
+            incomes DataFrame was provided
+        """
+        if self.incomes_df is None or self.incomes_df.empty:
+            return None
+
+        df = self.incomes_df.copy()
+
+        # Find Date column (handles MultiIndex)
+        date_col = None
+        for col in df.columns:
+            if isinstance(col, tuple):
+                if COL_DATE in col[0] or COL_DATE in col[1]:
+                    date_col = col
+                    break
+            else:
+                if COL_DATE in col:
+                    date_col = col
+                    break
+
+        if date_col is not None:
+            df[COL_DATE_DT] = pd.to_datetime(
+                df[date_col], format=DATE_FORMAT_STORAGE, errors="coerce"
+            )
+            df = df.sort_values(by=COL_DATE_DT)
+
+        return df
+
     def _validate_columns(self, required_columns: list[str]) -> bool:
         """Validate that required columns exist in the original DataFrame.
 
@@ -389,6 +435,82 @@ class FinanceCalculator:
             logger.error(f"DataFrame missing required columns: {missing_cols}")
             return False
         return True
+
+    def _get_total_income_for_period(
+        self, start_date: pd.Timestamp | None = None, end_date: pd.Timestamp | None = None
+    ) -> float:
+        """Calculate total income from incomes_df for a specific period.
+
+        Supports both single-index and multi-index Incomes DataFrames. If incomes_df
+        is not available, falls back to using the Income column from main DataFrame.
+
+        Args:
+            start_date: Optional start date for filtering (inclusive)
+            end_date: Optional end date for filtering (inclusive)
+
+        Returns:
+            Total income for the specified period as float
+
+        Note:
+            If no incomes_df is provided, this method falls back to the Income column
+            from the main DataFrame for backward compatibility.
+        """
+        # Fallback to main DataFrame Income column if no incomes_df
+        if self.processed_incomes_df is None:
+            if COL_INCOME not in self.original_df.columns:
+                return 0.0
+
+            df = self.processed_df
+            if start_date is not None:
+                df = df[df[COL_DATE_DT] >= start_date]
+            if end_date is not None:
+                df = df[df[COL_DATE_DT] <= end_date]
+
+            return df[COL_INCOME_PARSED].sum()
+
+        # Use incomes_df
+        df = self.processed_incomes_df
+
+        # Check if date_dt column exists (preprocessing might have failed)
+        if COL_DATE_DT not in df.columns:
+            logger.warning("date_dt column not found in incomes_df, using all data")
+        else:
+            # Filter by date range if specified
+            if start_date is not None:
+                df = df[df[COL_DATE_DT] >= start_date]
+            if end_date is not None:
+                df = df[df[COL_DATE_DT] <= end_date]
+
+        # Calculate total income by summing all monetary columns
+        total = 0.0
+        for col in df.columns:
+            # Skip date_dt column (exact match for both single and tuple)
+            if col == COL_DATE_DT or col == "date_dt":
+                continue
+
+            # Skip tuple columns that contain date_dt (like ('date_dt', ''))
+            if isinstance(col, tuple) and any("date_dt" in str(c).lower() for c in col):
+                continue
+
+            # Skip Date columns (handle both tuple and string)
+            # IMPORTANT: Only check for "Date" (capital D), not "data" (which might be a valid category)
+            if isinstance(col, tuple):
+                # MultiIndex: check if any level contains "Date" exactly
+                if any("Date" in str(c) for c in col):
+                    continue
+            else:
+                # Single-level: check if column name contains "Date"
+                if "Date" in str(col):
+                    continue
+
+            # Sum all monetary columns
+            try:
+                total += df[col].apply(parse_monetary_value).sum()
+            except Exception as e:
+                logger.warning(f"Failed to parse income column '{col}': {e}")
+                continue
+
+        return total
 
     def get_current_net_worth(self) -> float:
         """Get the most recent net worth value.
@@ -502,20 +624,30 @@ class FinanceCalculator:
         """Get average saving ratio for last 12 months as percentage.
 
         Calculates (total income - total expenses) / total income for the last 12 months.
+        Uses incomes_df if available, otherwise falls back to Income column from main DataFrame.
 
         Returns:
             Saving ratio as decimal (e.g., 0.33 for 33% savings rate),
-            or 0.0 if Income or Expenses columns are missing
+            or 0.0 if expenses data is missing
 
         Example:
             If income is €36,000 and expenses are €24,000, returns 0.33 (33% savings rate)
         """
-        if not self._validate_columns([COL_INCOME, COL_EXPENSES]):
+        if not self._validate_columns([COL_EXPENSES]):
             return 0.0
 
         df = self.processed_df
-        income: float = df[COL_INCOME_PARSED].iloc[-MONTHS_IN_YEAR:].sum()
-        expenses: float = df[COL_EXPENSES_PARSED].iloc[-MONTHS_IN_YEAR:].sum()
+
+        # Get date range for last 12 months
+        latest_date = df[COL_DATE_DT].max()
+        start_date = (latest_date - pd.DateOffset(months=MONTHS_IN_YEAR - 1)).replace(day=1)
+
+        # Calculate income using helper method
+        income: float = self._get_total_income_for_period(start_date, latest_date)
+
+        # Calculate expenses from main DataFrame
+        df_last_12 = df[df[COL_DATE_DT] >= start_date]
+        expenses: float = df_last_12[COL_EXPENSES_PARSED].sum()
 
         return (income - expenses) / income if income != 0 else 0.0
 
@@ -523,20 +655,30 @@ class FinanceCalculator:
         """Get average monthly savings for last 12 months.
 
         Calculates (total income - total expenses) / 12 for the last 12 months.
+        Uses incomes_df if available, otherwise falls back to Income column from main DataFrame.
 
         Returns:
             Average monthly savings in currency units (e.g., 1000.0 for €1,000/month),
-            or 0.0 if Income or Expenses columns are missing
+            or 0.0 if expenses data is missing
 
         Example:
             If total savings over 12 months is €12,000, returns 1000.0 (€1,000/month average)
         """
-        if not self._validate_columns([COL_INCOME, COL_EXPENSES]):
+        if not self._validate_columns([COL_EXPENSES]):
             return 0.0
 
         df = self.processed_df
-        income: float = df[COL_INCOME_PARSED].iloc[-MONTHS_IN_YEAR:].sum()
-        expenses: float = df[COL_EXPENSES_PARSED].iloc[-MONTHS_IN_YEAR:].sum()
+
+        # Get date range for last 12 months
+        latest_date = df[COL_DATE_DT].max()
+        start_date = (latest_date - pd.DateOffset(months=MONTHS_IN_YEAR - 1)).replace(day=1)
+
+        # Calculate income using helper method
+        income: float = self._get_total_income_for_period(start_date, latest_date)
+
+        # Calculate expenses from main DataFrame
+        df_last_12 = df[df[COL_DATE_DT] >= start_date]
+        expenses: float = df_last_12[COL_EXPENSES_PARSED].sum()
 
         return (income - expenses) / MONTHS_IN_YEAR if income != 0 else 0.0
 
@@ -701,6 +843,7 @@ class FinanceCalculator:
 
         Calculates total income, total expenses, and savings for the last 12 months.
         Also includes breakdown by expense categories if expenses_df is available.
+        Uses incomes_df if available, otherwise falls back to Income column from main DataFrame.
 
         Returns:
             Dictionary with 'Savings', 'Expenses', and category keys mapping to float values
@@ -714,14 +857,8 @@ class FinanceCalculator:
                 'Housing': 15000.0
             }
         """
-        if not self._validate_columns([COL_INCOME]):
-            return {CATEGORY_SAVINGS: 0.0, CATEGORY_EXPENSES: 0.0}
-
         if self.processed_expenses_df is None:
             return {CATEGORY_SAVINGS: 0.0, CATEGORY_EXPENSES: 0.0}
-
-        # Income from main df
-        income = self.processed_df[COL_INCOME_PARSED].iloc[-MONTHS_IN_YEAR:].sum()
 
         # Expenses from expenses df (last 12 months)
         ef: pd.DataFrame = self.processed_expenses_df
@@ -734,6 +871,9 @@ class FinanceCalculator:
             (ef[COL_DATE_DT] >= start_date) & (ef[COL_DATE_DT] <= latest_date)
         ]
         total_expenses: float = ef_last_12[COL_AMOUNT_PARSED].sum()
+
+        # Income using helper method
+        income = self._get_total_income_for_period(start_date, latest_date)
 
         # Expenses by category
         expenses_by_category: dict[str, float] = (
@@ -777,6 +917,8 @@ class FinanceCalculator:
     def get_incomes_vs_expenses(self) -> dict[str, list]:
         """Get income vs expenses data for charting last 12 months.
 
+        Uses incomes_df if available, otherwise falls back to Income column from main DataFrame.
+
         Returns:
             Dictionary with 'dates' (YYYY-MM strings), 'incomes' (positive floats),
             and 'expenses' (negative floats for chart display),
@@ -792,13 +934,21 @@ class FinanceCalculator:
         Note:
             Expenses are returned as negative values for waterfall chart visualization.
         """
-        if not self._validate_columns([COL_DATE, COL_INCOME, COL_EXPENSES]):
+        if not self._validate_columns([COL_DATE, COL_EXPENSES]):
             return {"dates": [], "incomes": [], "expenses": []}
 
         df = self.processed_df.dropna(subset=[COL_DATE_DT]).iloc[-MONTHS_IN_YEAR:]
 
+        # Calculate monthly incomes
+        incomes = []
+        for _idx, row in df.iterrows():
+            month_start = row[COL_DATE_DT]
+            month_end = month_start
+            income = self._get_total_income_for_period(month_start, month_end)
+            incomes.append(income)
+
         return {
             "dates": df[COL_DATE_DT].dt.strftime(DATE_FORMAT_STORAGE).tolist(),
-            "incomes": df[COL_INCOME_PARSED].tolist(),
+            "incomes": incomes,
             "expenses": [-x for x in df[COL_EXPENSES_PARSED].tolist()],  # Negative for chart
         }

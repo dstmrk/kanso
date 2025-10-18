@@ -23,6 +23,7 @@ async def ensure_data_loaded():
     def load_data_sync():
         """Synchronous data loading function that runs in background thread."""
         from app.core.config import config as app_config
+        from app.services.utils import get_current_timestamp
 
         try:
             # Create core loader with NiceGUI storage
@@ -31,6 +32,10 @@ async def ensure_data_loaded():
             # Check if data already loaded
             if loader.all_data_loaded():
                 logger.info("All data sheets already loaded")
+                # Save timestamp if this is the first time we check (e.g., after onboarding)
+                if "last_data_refresh" not in app.storage.user:
+                    app.storage.user["last_data_refresh"] = get_current_timestamp()
+                    logger.info("First data load timestamp saved (data already present)")
                 return True
 
             # Get credentials
@@ -44,7 +49,14 @@ async def ensure_data_loaded():
 
             # Create service and load sheets
             service = loader.create_google_sheet_service(creds_dict, url)
-            return loader.load_missing_sheets(service)
+            success = loader.load_missing_sheets(service)
+
+            # Save timestamp of first data load
+            if success and "last_data_refresh" not in app.storage.user:
+                app.storage.user["last_data_refresh"] = get_current_timestamp()
+                logger.info("First data load timestamp saved")
+
+            return success
 
         except Exception as e:
             logger.error(f"Failed to load data: {e}")
