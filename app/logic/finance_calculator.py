@@ -41,11 +41,8 @@ from app.core.constants import (
     COL_CATEGORY,
     COL_DATE,
     COL_DATE_DT,
-    COL_EXPENSES,
-    COL_EXPENSES_PARSED,
     COL_INCOME,
     COL_INCOME_PARSED,
-    COL_MONTH,
     COL_NET_WORTH,
     COL_NET_WORTH_PARSED,
     DATE_FORMAT_DISPLAY,
@@ -265,6 +262,41 @@ class FinanceCalculator:
             self._processed_incomes_df = self._preprocess_incomes_df()
         return self._processed_incomes_df
 
+    def _get_monthly_expenses_totals(self) -> pd.DataFrame | None:
+        """Calculate monthly expense totals from detailed Expenses sheet.
+
+        Aggregates all expense transactions by month, summing amounts to get
+        monthly totals. This replaces the Expenses column from the Data sheet.
+
+        Returns:
+            DataFrame with columns [Month, total_expenses] indexed by month datetime,
+            or None if expenses_df is not available
+
+        Example:
+            Month       total_expenses
+            2024-01     2000.0
+            2024-02     2100.0
+        """
+        if self.processed_expenses_df is None:
+            return None
+
+        ef = self.processed_expenses_df
+
+        # Check required columns exist
+        if COL_DATE_DT not in ef.columns or COL_AMOUNT_PARSED not in ef.columns:
+            logger.error("Expenses sheet missing required parsed columns")
+            return None
+
+        # Group by month and sum amounts
+        monthly_totals = (
+            ef.groupby(COL_DATE_DT)[COL_AMOUNT_PARSED]
+            .sum()
+            .reset_index()
+            .rename(columns={COL_AMOUNT_PARSED: "total_expenses"})
+        )
+
+        return monthly_totals
+
     def _preprocess_main_df(self) -> pd.DataFrame:
         """Preprocess main DataFrame once with all required transformations.
 
@@ -294,7 +326,7 @@ class FinanceCalculator:
     def _preprocess_expenses_df(self) -> pd.DataFrame | None:
         """Preprocess expenses DataFrame once.
 
-        Converts Month column to datetime, parses Amount column to float, and sorts by date.
+        Converts Date column to datetime, parses Amount column to float, and sorts by date.
 
         Returns:
             Preprocessed expenses DataFrame with date_dt and amount_parsed columns,
@@ -304,10 +336,38 @@ class FinanceCalculator:
             return None
 
         df = self.expenses_df.copy()
-        df[COL_DATE_DT] = pd.to_datetime(
-            df[COL_MONTH].astype(str).str.strip(), format=DATE_FORMAT_STORAGE, errors="coerce"
-        )
+
+        # Check if Date column exists
+        if COL_DATE not in df.columns:
+            logger.error(
+                f"Expenses sheet missing '{COL_DATE}' column! Available: {df.columns.tolist()}"
+            )
+            return None
+
+        # Check if dates are already datetime objects (from Google Sheets)
+        if pd.api.types.is_datetime64_any_dtype(df[COL_DATE]):
+            # Dates are already datetime objects - just normalize to first day of month
+            df[COL_DATE_DT] = pd.to_datetime(df[COL_DATE]).dt.to_period("M").dt.to_timestamp()
+        else:
+            # Dates are strings - parse them
+            df[COL_DATE_DT] = pd.to_datetime(
+                df[COL_DATE].astype(str).str.strip(), format=DATE_FORMAT_STORAGE, errors="coerce"
+            )
+
+        # Warn if too many dates failed to parse
+        nat_count = df[COL_DATE_DT].isna().sum()
+        if nat_count > 0:
+            logger.warning(f"Failed to parse {nat_count} dates in Expenses sheet")
+
+        # Check if Amount column exists
+        if COL_AMOUNT not in df.columns:
+            logger.error(
+                f"Expenses sheet missing '{COL_AMOUNT}' column! Available: {df.columns.tolist()}"
+            )
+            return None
+
         df[COL_AMOUNT_PARSED] = df[COL_AMOUNT].apply(parse_monetary_value)
+
         return df.sort_values(by=COL_DATE_DT)
 
     def _preprocess_assets_df(self) -> pd.DataFrame | None:
@@ -625,6 +685,7 @@ class FinanceCalculator:
 
         Calculates (total income - total expenses) / total income for the last 12 months.
         Uses incomes_df if available, otherwise falls back to Income column from main DataFrame.
+        Expenses are calculated from the detailed Expenses sheet.
 
         Returns:
             Saving ratio as decimal (e.g., 0.33 for 33% savings rate),
@@ -633,29 +694,45 @@ class FinanceCalculator:
         Example:
             If income is €36,000 and expenses are €24,000, returns 0.33 (33% savings rate)
         """
-        if not self._validate_columns([COL_EXPENSES]):
+        # Get monthly expense totals from Expenses sheet
+        monthly_expenses = self._get_monthly_expenses_totals()
+        if monthly_expenses is None or monthly_expenses.empty:
+            logger.warning("No expenses data available for saving ratio calculation")
             return 0.0
 
-        df = self.processed_df
-
         # Get date range for last 12 months
-        latest_date = df[COL_DATE_DT].max()
+        latest_date = monthly_expenses[COL_DATE_DT].max()
         start_date = (latest_date - pd.DateOffset(months=MONTHS_IN_YEAR - 1)).replace(day=1)
+
+        logger.debug(
+            f"Saving ratio calculation period: {start_date.strftime(DATE_FORMAT_STORAGE)} to {latest_date.strftime(DATE_FORMAT_STORAGE)}"
+        )
 
         # Calculate income using helper method
         income: float = self._get_total_income_for_period(start_date, latest_date)
 
-        # Calculate expenses from main DataFrame
-        df_last_12 = df[df[COL_DATE_DT] >= start_date]
-        expenses: float = df_last_12[COL_EXPENSES_PARSED].sum()
+        # Calculate expenses from aggregated monthly totals
+        expenses_last_12 = monthly_expenses[monthly_expenses[COL_DATE_DT] >= start_date]
+        expenses: float = expenses_last_12["total_expenses"].sum()
 
-        return (income - expenses) / income if income != 0 else 0.0
+        logger.debug(
+            f"Saving ratio: income={income}, expenses={expenses}, months={len(expenses_last_12)}"
+        )
+
+        if income == 0:
+            logger.warning("Income is 0, cannot calculate saving ratio")
+            return 0.0
+
+        ratio = (income - expenses) / income
+        logger.debug(f"Calculated saving ratio: {ratio:.2%}")
+        return ratio
 
     def get_average_saving_ratio_last_12_months_absolute(self) -> float:
         """Get average monthly savings for last 12 months.
 
         Calculates (total income - total expenses) / 12 for the last 12 months.
         Uses incomes_df if available, otherwise falls back to Income column from main DataFrame.
+        Expenses are calculated from the detailed Expenses sheet.
 
         Returns:
             Average monthly savings in currency units (e.g., 1000.0 for €1,000/month),
@@ -664,21 +741,21 @@ class FinanceCalculator:
         Example:
             If total savings over 12 months is €12,000, returns 1000.0 (€1,000/month average)
         """
-        if not self._validate_columns([COL_EXPENSES]):
+        # Get monthly expense totals from Expenses sheet
+        monthly_expenses = self._get_monthly_expenses_totals()
+        if monthly_expenses is None or monthly_expenses.empty:
             return 0.0
 
-        df = self.processed_df
-
         # Get date range for last 12 months
-        latest_date = df[COL_DATE_DT].max()
+        latest_date = monthly_expenses[COL_DATE_DT].max()
         start_date = (latest_date - pd.DateOffset(months=MONTHS_IN_YEAR - 1)).replace(day=1)
 
         # Calculate income using helper method
         income: float = self._get_total_income_for_period(start_date, latest_date)
 
-        # Calculate expenses from main DataFrame
-        df_last_12 = df[df[COL_DATE_DT] >= start_date]
-        expenses: float = df_last_12[COL_EXPENSES_PARSED].sum()
+        # Calculate expenses from aggregated monthly totals
+        expenses_last_12 = monthly_expenses[monthly_expenses[COL_DATE_DT] >= start_date]
+        expenses: float = expenses_last_12["total_expenses"].sum()
 
         return (income - expenses) / MONTHS_IN_YEAR if income != 0 else 0.0
 
@@ -918,6 +995,7 @@ class FinanceCalculator:
         """Get income vs expenses data for charting last 12 months.
 
         Uses incomes_df if available, otherwise falls back to Income column from main DataFrame.
+        Expenses are calculated from the detailed Expenses sheet.
 
         Returns:
             Dictionary with 'dates' (YYYY-MM strings), 'incomes' (positive floats),
@@ -934,21 +1012,24 @@ class FinanceCalculator:
         Note:
             Expenses are returned as negative values for waterfall chart visualization.
         """
-        if not self._validate_columns([COL_DATE, COL_EXPENSES]):
+        # Get monthly expense totals from Expenses sheet
+        monthly_expenses = self._get_monthly_expenses_totals()
+        if monthly_expenses is None or monthly_expenses.empty:
             return {"dates": [], "incomes": [], "expenses": []}
 
-        df = self.processed_df.dropna(subset=[COL_DATE_DT]).iloc[-MONTHS_IN_YEAR:]
+        # Get last 12 months of expense data
+        expense_data = monthly_expenses.dropna(subset=[COL_DATE_DT]).iloc[-MONTHS_IN_YEAR:]
 
-        # Calculate monthly incomes
+        # Calculate monthly incomes for the same months
         incomes = []
-        for _idx, row in df.iterrows():
+        for _idx, row in expense_data.iterrows():
             month_start = row[COL_DATE_DT]
             month_end = month_start
             income = self._get_total_income_for_period(month_start, month_end)
             incomes.append(income)
 
         return {
-            "dates": df[COL_DATE_DT].dt.strftime(DATE_FORMAT_STORAGE).tolist(),
+            "dates": expense_data[COL_DATE_DT].dt.strftime(DATE_FORMAT_STORAGE).tolist(),
             "incomes": incomes,
-            "expenses": [-x for x in df[COL_EXPENSES_PARSED].tolist()],  # Negative for chart
+            "expenses": [-x for x in expense_data["total_expenses"].tolist()],  # Negative for chart
         }

@@ -21,9 +21,11 @@ COL_MORTGAGE = "Mortgage"
 COL_LOANS = "Loans"
 
 # Expenses sheet columns
-COL_MONTH = "Month"
+# Note: Uses COL_DATE for consistency with other sheets
+COL_MERCHANT = "Merchant"
 COL_AMOUNT = "Amount"
 COL_CATEGORY = "Category"
+COL_TYPE = "Type"
 
 # Computed/internal columns
 COL_DATE_DT = "date_dt"
@@ -33,10 +35,10 @@ COL_EXPENSES_PARSED = "expenses_parsed"
 COL_AMOUNT_PARSED = "amount_parsed"
 
 # All monetary columns for main data sheet
+# Note: Expenses column is deprecated - use detailed Expenses sheet instead
 MONETARY_COLUMNS = [
     COL_NET_WORTH,
     COL_INCOME,
-    COL_EXPENSES,
     COL_CASH,
     COL_PENSION_FUND,
     COL_STOCKS,

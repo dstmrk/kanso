@@ -13,7 +13,7 @@ from app.core.monitoring import metrics_collector
 from app.core.state_manager import state_manager
 from app.services import pages, utils
 from app.services.google_sheets import GoogleSheetService
-from app.ui import home, logout, net_worth, onboarding, styles, user
+from app.ui import expenses, home, logout, net_worth, onboarding, styles, user
 
 # === Load environment first ===
 APP_ROOT = Path(__file__).parent
@@ -314,6 +314,13 @@ def home_page():
     # Render home immediately with placeholders
     # Data will be loaded asynchronously in the background
     home.render()
+
+
+@ui.page(pages.EXPENSES_PAGE, title=app_config.title)
+def expenses_page():
+    """Expenses page showing transaction details and category breakdown."""
+    ensure_theme_setup()
+    expenses.render()
 
 
 @ui.page(pages.NET_WORTH_PAGE, title=app_config.title)

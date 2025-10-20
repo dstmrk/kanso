@@ -91,55 +91,159 @@ class TestExpenseRow:
 
     def test_valid_expense_row(self):
         """Test valid expense row."""
-        row = ExpenseRow(Month="2024-01", Category="Food", Amount="€ 500")
-        assert row.Month == "2024-01"
+        row = ExpenseRow(
+            Date="2024-01", Merchant="Amazon", Amount="€ 500", Category="Food", Type="Variable"
+        )
+        assert row.Date == "2024-01"
+        assert row.Merchant == "Amazon"
         assert row.Category == "Food"
         assert row.Amount == "€ 500"
+        assert row.Type == "Variable"
 
-    def test_invalid_month_format(self):
-        """Test invalid month format."""
+    def test_invalid_date_format(self):
+        """Test invalid date format."""
         with pytest.raises(ValidationError) as exc_info:
-            ExpenseRow(Month="01-2024", Category="Food", Amount="€ 500")
-        assert "Month must be in YYYY-MM format" in str(exc_info.value)
+            ExpenseRow(
+                Date="01-2024",
+                Merchant="Amazon",
+                Category="Food",
+                Amount="€ 500",
+                Type="Variable",
+            )
+        assert "Date must be in YYYY-MM format" in str(exc_info.value)
 
-    def test_empty_month(self):
-        """Test empty month raises error."""
+    def test_empty_date(self):
+        """Test empty date raises error."""
         with pytest.raises(ValidationError) as exc_info:
-            ExpenseRow(Month="", Category="Food", Amount="€ 500")
-        assert "Month cannot be empty" in str(exc_info.value)
+            ExpenseRow(Date="", Merchant="Amazon", Category="Food", Amount="€ 500", Type="Variable")
+        assert "Date cannot be empty" in str(exc_info.value)
 
-    def test_month_with_whitespace(self):
-        """Test month with whitespace is stripped."""
-        row = ExpenseRow(Month="  2024-01  ", Category="Food", Amount="€ 500")
-        assert row.Month == "2024-01"
+    def test_date_with_whitespace(self):
+        """Test date with whitespace is stripped."""
+        row = ExpenseRow(
+            Date="  2024-01  ",
+            Merchant="Amazon",
+            Category="Food",
+            Amount="€ 500",
+            Type="Variable",
+        )
+        assert row.Date == "2024-01"
+
+    def test_valid_merchant(self):
+        """Test valid merchant."""
+        row = ExpenseRow(
+            Date="2024-01",
+            Merchant="Local Grocery",
+            Category="Food",
+            Amount="€ 500",
+            Type="Variable",
+        )
+        assert row.Merchant == "Local Grocery"
+
+    def test_empty_merchant(self):
+        """Test empty merchant raises error."""
+        with pytest.raises(ValidationError) as exc_info:
+            ExpenseRow(
+                Date="2024-01", Merchant="", Category="Food", Amount="€ 500", Type="Variable"
+            )
+        assert "Merchant cannot be empty" in str(exc_info.value)
+
+    def test_merchant_with_whitespace(self):
+        """Test merchant with whitespace is stripped."""
+        row = ExpenseRow(
+            Date="2024-01",
+            Merchant="  Amazon  ",
+            Category="Food",
+            Amount="€ 500",
+            Type="Variable",
+        )
+        assert row.Merchant == "Amazon"
 
     def test_valid_category(self):
         """Test valid category."""
-        row = ExpenseRow(Month="2024-01", Category="Entertainment", Amount="€ 200")
+        row = ExpenseRow(
+            Date="2024-01",
+            Merchant="Netflix",
+            Category="Entertainment",
+            Amount="€ 200",
+            Type="Fixed",
+        )
         assert row.Category == "Entertainment"
 
     def test_empty_category(self):
         """Test empty category raises error."""
         with pytest.raises(ValidationError) as exc_info:
-            ExpenseRow(Month="2024-01", Category="", Amount="€ 500")
+            ExpenseRow(
+                Date="2024-01", Merchant="Amazon", Category="", Amount="€ 500", Type="Variable"
+            )
         assert "Category cannot be empty" in str(exc_info.value)
 
     def test_whitespace_only_category(self):
         """Test whitespace-only category raises error."""
         with pytest.raises(ValidationError) as exc_info:
-            ExpenseRow(Month="2024-01", Category="   ", Amount="€ 500")
+            ExpenseRow(
+                Date="2024-01", Merchant="Amazon", Category="   ", Amount="€ 500", Type="Variable"
+            )
         assert "Category cannot be empty" in str(exc_info.value)
 
     def test_category_with_whitespace(self):
         """Test category with whitespace is stripped."""
-        row = ExpenseRow(Month="2024-01", Category="  Food  ", Amount="€ 500")
+        row = ExpenseRow(
+            Date="2024-01",
+            Merchant="Amazon",
+            Category="  Food  ",
+            Amount="€ 500",
+            Type="Variable",
+        )
         assert row.Category == "Food"
+
+    def test_valid_type(self):
+        """Test valid type."""
+        row = ExpenseRow(
+            Date="2024-01",
+            Merchant="Netflix",
+            Category="Entertainment",
+            Amount="€ 200",
+            Type="Fixed",
+        )
+        assert row.Type == "Fixed"
+
+    def test_empty_type(self):
+        """Test empty type raises error."""
+        with pytest.raises(ValidationError) as exc_info:
+            ExpenseRow(Date="2024-01", Merchant="Amazon", Category="Food", Amount="€ 500", Type="")
+        assert "Type cannot be empty" in str(exc_info.value)
+
+    def test_type_with_whitespace(self):
+        """Test type with whitespace is stripped."""
+        row = ExpenseRow(
+            Date="2024-01",
+            Merchant="Amazon",
+            Category="Food",
+            Amount="€ 500",
+            Type="  Variable  ",
+        )
+        assert row.Type == "Variable"
 
     def test_valid_amount_formats(self):
         """Test various valid amount formats."""
-        row1 = ExpenseRow(Month="2024-01", Category="Food", Amount="€ 1.234,56")
-        row2 = ExpenseRow(Month="2024-01", Category="Food", Amount="$ 1,234.56")
-        row3 = ExpenseRow(Month="2024-01", Category="Food", Amount="1000")
+        row1 = ExpenseRow(
+            Date="2024-01",
+            Merchant="Amazon",
+            Category="Food",
+            Amount="€ 1.234,56",
+            Type="Variable",
+        )
+        row2 = ExpenseRow(
+            Date="2024-01",
+            Merchant="Amazon",
+            Category="Food",
+            Amount="$ 1,234.56",
+            Type="Variable",
+        )
+        row3 = ExpenseRow(
+            Date="2024-01", Merchant="Amazon", Category="Food", Amount="1000", Type="Variable"
+        )
 
         assert row1.Amount == "€ 1.234,56"
         assert row2.Amount == "$ 1,234.56"
@@ -148,13 +252,17 @@ class TestExpenseRow:
     def test_empty_amount(self):
         """Test empty amount raises error."""
         with pytest.raises(ValidationError) as exc_info:
-            ExpenseRow(Month="2024-01", Category="Food", Amount="")
+            ExpenseRow(
+                Date="2024-01", Merchant="Amazon", Category="Food", Amount="", Type="Variable"
+            )
         assert "Amount cannot be empty" in str(exc_info.value)
 
     def test_amount_without_digits(self):
         """Test amount without digits raises error."""
         with pytest.raises(ValidationError) as exc_info:
-            ExpenseRow(Month="2024-01", Category="Food", Amount="€€€")
+            ExpenseRow(
+                Date="2024-01", Merchant="Amazon", Category="Food", Amount="€€€", Type="Variable"
+            )
         assert "Amount must contain numbers" in str(exc_info.value)
 
 
@@ -192,9 +300,27 @@ class TestValidateDataframeStructure:
     def test_valid_expense_data(self):
         """Test validation with valid expense rows."""
         data = [
-            {"Month": "2024-01", "Category": "Food", "Amount": "€ 500"},
-            {"Month": "2024-01", "Category": "Transport", "Amount": "€ 300"},
-            {"Month": "2024-01", "Category": "Housing", "Amount": "€ 800"},
+            {
+                "Date": "2024-01",
+                "Merchant": "Grocery Store",
+                "Amount": "€ 500",
+                "Category": "Food",
+                "Type": "Variable",
+            },
+            {
+                "Date": "2024-01",
+                "Merchant": "Gas Station",
+                "Amount": "€ 300",
+                "Category": "Transport",
+                "Type": "Variable",
+            },
+            {
+                "Date": "2024-01",
+                "Merchant": "Landlord",
+                "Amount": "€ 800",
+                "Category": "Housing",
+                "Type": "Fixed",
+            },
         ]
 
         is_valid, errors = validate_dataframe_structure(data, ExpenseRow)
@@ -205,9 +331,21 @@ class TestValidateDataframeStructure:
     def test_invalid_expense_data(self):
         """Test validation with invalid expense rows."""
         data = [
-            {"Month": "2024-01", "Category": "Food", "Amount": "€ 500"},
-            {"Month": "invalid", "Category": "", "Amount": ""},
-            {"Month": "2024-02", "Category": "Transport", "Amount": "€€€"},
+            {
+                "Date": "2024-01",
+                "Merchant": "Store",
+                "Amount": "€ 500",
+                "Category": "Food",
+                "Type": "Variable",
+            },
+            {"Date": "invalid", "Merchant": "", "Category": "", "Amount": "", "Type": ""},
+            {
+                "Date": "2024-02",
+                "Merchant": "Store",
+                "Amount": "€€€",
+                "Category": "Transport",
+                "Type": "Variable",
+            },
         ]
 
         is_valid, errors = validate_dataframe_structure(data, ExpenseRow)

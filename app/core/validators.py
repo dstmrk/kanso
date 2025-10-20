@@ -156,50 +156,56 @@ class DataSheetRow(BaseModel):
 class ExpenseRow(BaseModel):
     """Validation model for a row in the Expenses sheet.
 
-    Validates expense transactions with month, category, and amount.
+    Validates expense transactions with date, merchant, amount, category, and type.
     All fields are required and must be properly formatted.
 
     Attributes:
-        Month: Expense month in YYYY-MM format (e.g., "2024-01")
-        Category: Expense category name (e.g., "Food", "Transport", "Housing")
+        Date: Expense date in YYYY-MM format (e.g., "2024-01")
+        Merchant: Merchant/store name (e.g., "Amazon", "Local Grocery", "Netflix")
         Amount: Expense amount with currency symbol (e.g., "€ 500", "$500")
+        Category: Expense category name (e.g., "Food", "Transport", "Housing")
+        Type: Expense type (e.g., "Fixed", "Variable", "One-time")
 
     Example:
         >>> expense = ExpenseRow(
-        ...     Month='2024-01',
-        ...     Category='Food',
-        ...     Amount='€ 500'
+        ...     Date='2024-01',
+        ...     Merchant='Amazon',
+        ...     Amount='€ 50',
+        ...     Category='Shopping',
+        ...     Type='Variable'
         ... )
     """
 
     model_config = ConfigDict(str_strip_whitespace=True)
 
-    Month: str
-    Category: str
+    Date: str
+    Merchant: str
     Amount: str
+    Category: str
+    Type: str
 
-    @field_validator("Month")
+    @field_validator("Date")
     @classmethod
-    def validate_month_format(cls, v: str) -> str:
-        """Validate that Month is in YYYY-MM format.
+    def validate_date_format(cls, v: str) -> str:
+        """Validate that Date is in YYYY-MM format.
 
         Args:
-            v: Month string to validate
+            v: Date string to validate
 
         Returns:
-            Stripped month string if valid
+            Stripped date string if valid
 
         Raises:
-            ValueError: If month is empty or not in YYYY-MM format
+            ValueError: If date is empty or not in YYYY-MM format
         """
         if not v:
-            raise ValueError("Month cannot be empty")
+            raise ValueError("Date cannot be empty")
 
         try:
             datetime.strptime(v.strip(), DATE_FORMAT_STORAGE)
             return v.strip()
         except ValueError as e:
-            raise ValueError(f"Month must be in YYYY-MM format, got: {v}") from e
+            raise ValueError(f"Date must be in YYYY-MM format, got: {v}") from e
 
     @field_validator("Category")
     @classmethod
@@ -217,6 +223,42 @@ class ExpenseRow(BaseModel):
         """
         if not v or not v.strip():
             raise ValueError("Category cannot be empty")
+        return v.strip()
+
+    @field_validator("Merchant")
+    @classmethod
+    def validate_merchant(cls, v: str) -> str:
+        """Validate that Merchant is not empty.
+
+        Args:
+            v: Merchant string to validate
+
+        Returns:
+            Stripped merchant string if valid
+
+        Raises:
+            ValueError: If merchant is empty or contains only whitespace
+        """
+        if not v or not v.strip():
+            raise ValueError("Merchant cannot be empty")
+        return v.strip()
+
+    @field_validator("Type")
+    @classmethod
+    def validate_type(cls, v: str) -> str:
+        """Validate that Type is not empty.
+
+        Args:
+            v: Type string to validate
+
+        Returns:
+            Stripped type string if valid
+
+        Raises:
+            ValueError: If type is empty or contains only whitespace
+        """
+        if not v or not v.strip():
+            raise ValueError("Type cannot be empty")
         return v.strip()
 
     @field_validator("Amount")

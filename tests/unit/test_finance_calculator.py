@@ -13,8 +13,9 @@ from app.core.constants import (
     COL_DATE,
     COL_EXPENSES,
     COL_INCOME,
-    COL_MONTH,
+    COL_MERCHANT,
     COL_NET_WORTH,
+    COL_TYPE,
 )
 from app.logic.finance_calculator import FinanceCalculator, detect_currency, parse_monetary_value
 
@@ -184,18 +185,56 @@ class TestFinanceCalculator:
 
     @pytest.fixture
     def sample_expenses(self):
-        """Create sample expenses data for testing."""
+        """Create sample detailed expenses data for testing (last month only)."""
         data = {
-            COL_MONTH: ["2025-01"] * 5,
-            COL_CATEGORY: ["Food", "Transport", "Housing", "Entertainment", "Other"],
+            COL_DATE: ["2025-01"] * 5,
+            COL_MERCHANT: ["Grocery Store", "Gas Station", "Landlord", "Cinema", "Other Store"],
             COL_AMOUNT: ["€ 500", "€ 300", "€ 800", "€ 200", "€ 200"],
+            COL_CATEGORY: ["Food", "Transport", "Housing", "Entertainment", "Other"],
+            COL_TYPE: ["Variable", "Variable", "Fixed", "Variable", "Variable"],
         }
         return pd.DataFrame(data)
 
     @pytest.fixture
-    def calculator(self, sample_data):
-        """Create FinanceCalculator instance."""
-        return FinanceCalculator(sample_data)
+    def sample_detailed_expenses(self):
+        """Create detailed expenses data for all 13 months (€2000 per month total)."""
+        # Create 13 months of detailed expense transactions
+        # Each month has 2 transactions totaling €2000
+        months = [
+            "2024-01",
+            "2024-02",
+            "2024-03",
+            "2024-04",
+            "2024-05",
+            "2024-06",
+            "2024-07",
+            "2024-08",
+            "2024-09",
+            "2024-10",
+            "2024-11",
+            "2024-12",
+            "2025-01",
+        ]
+        data = {
+            COL_DATE: [],
+            COL_MERCHANT: [],
+            COL_AMOUNT: [],
+            COL_CATEGORY: [],
+            COL_TYPE: [],
+        }
+        for month in months:
+            # Two transactions per month totaling €2000
+            data[COL_DATE].extend([month, month])
+            data[COL_MERCHANT].extend(["Store A", "Store B"])
+            data[COL_AMOUNT].extend(["€ 1.200", "€ 800"])
+            data[COL_CATEGORY].extend(["Food", "Housing"])
+            data[COL_TYPE].extend(["Variable", "Fixed"])
+        return pd.DataFrame(data)
+
+    @pytest.fixture
+    def calculator(self, sample_data, sample_detailed_expenses):
+        """Create FinanceCalculator instance with detailed expenses."""
+        return FinanceCalculator(sample_data, expenses_df=sample_detailed_expenses)
 
     @pytest.fixture
     def calculator_with_expenses(self, sample_data, sample_expenses):
