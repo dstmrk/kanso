@@ -76,7 +76,10 @@ class ColoredFormatter(logging.Formatter):
 handler = logging.StreamHandler()
 handler.setFormatter(
     ColoredFormatter(
-        fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        # Format: LEVEL: timestamp - logger_name - message (uniform with Uvicorn)
+        # -8s adds padding to align log levels (max 8 chars for "CRITICAL")
+        # Colon followed by 4 spaces matches Uvicorn's format
+        fmt="%(levelname)-8s: %(asctime)s - %(name)s - %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 )
@@ -84,6 +87,13 @@ handler.setFormatter(
 root_logger = logging.getLogger()
 root_logger.setLevel(getattr(logging, app_config.log_level))
 root_logger.addHandler(handler)
+
+# Configure Uvicorn loggers to use our formatter
+for uvicorn_logger_name in ["uvicorn", "uvicorn.error", "uvicorn.access"]:
+    uvicorn_logger = logging.getLogger(uvicorn_logger_name)
+    uvicorn_logger.handlers = []  # Remove default handlers
+    uvicorn_logger.addHandler(handler)  # Use our colored handler
+    uvicorn_logger.propagate = False  # Don't propagate to root
 
 logger = logging.getLogger(__name__)
 
@@ -404,4 +414,7 @@ if __name__ in {"__main__", "__mp_main__"}:
         reload=app_config.reload,
         uvicorn_logging_level=app_config.uvicorn_log_level,
         show_welcome_message=app_config.debug,
+        # Disable HTTP access logs for cleaner output (they use different format)
+        # If needed, can be re-enabled with: access_log=True
+        access_log=False,
     )
