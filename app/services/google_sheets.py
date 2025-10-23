@@ -22,7 +22,7 @@ import gspread
 import pandas as pd
 
 from app.core.monitoring import track_performance
-from app.core.validators import DataSheetRow, ExpenseRow, validate_dataframe_structure
+from app.core.validators import ExpenseRow, validate_dataframe_structure
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +86,7 @@ class GoogleSheetService:
         data structure using Pydantic models (non-blocking).
 
         Args:
-            worksheet_name: Name of the worksheet to fetch (e.g., "Data", "Expenses")
+            worksheet_name: Name of the worksheet to fetch (e.g., "Assets", "Expenses")
             header: Row index or list of indices to use as column names.
                    Use [0, 1] for two-level MultiIndex headers.
             index_col: Column index to use as DataFrame index, or None for default index
@@ -99,7 +99,7 @@ class GoogleSheetService:
 
         Example:
             >>> # Single header row
-            >>> df = service.get_worksheet_as_dataframe('Data', header=0)
+            >>> df = service.get_worksheet_as_dataframe('Expenses', header=0)
             >>> # Two-level MultiIndex header
             >>> df = service.get_worksheet_as_dataframe('Assets', header=[0, 1])
 
@@ -156,7 +156,6 @@ class GoogleSheetService:
             df: DataFrame to validate
 
         Note:
-            - Automatically selects DataSheetRow validator for "data" worksheets
             - Automatically selects ExpenseRow validator for "expense" worksheets
             - Logs only first 3 errors as examples to avoid log spam
             - Validation is skipped for worksheets with MultiIndex columns
@@ -165,10 +164,8 @@ class GoogleSheetService:
         data_rows = df.to_dict("records")
 
         # Choose appropriate validator based on worksheet name
-        validator: type[DataSheetRow] | type[ExpenseRow] | None = None
-        if "data" in worksheet_name.lower():
-            validator = DataSheetRow
-        elif "expense" in worksheet_name.lower():
+        validator: type[ExpenseRow] | None = None
+        if "expense" in worksheet_name.lower():
             validator = ExpenseRow
 
         if validator:

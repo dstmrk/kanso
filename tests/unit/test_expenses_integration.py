@@ -15,16 +15,15 @@ class TestExpensesIntegration:
 
     def test_expenses_sheet_required_for_calculations(self):
         """Test that Expenses sheet is required for all expense calculations."""
-        # Main data sheet WITHOUT expenses column (deprecated)
-        data_df = pd.DataFrame(
+        # Incomes data
+        incomes_df = pd.DataFrame(
             {
                 "Date": ["2024-01", "2024-02", "2024-03"],
-                "Net_Worth": ["€ 10.000", "€ 11.000", "€ 12.000"],
-                "Income": ["€ 3.000", "€ 3.000", "€ 3.000"],
+                "Salary": ["€ 3.000", "€ 3.000", "€ 3.000"],
             }
         )
 
-        calculator = FinanceCalculator(data_df)
+        calculator = FinanceCalculator(incomes_df=incomes_df)
 
         # Without Expenses sheet, all expense calculations should return 0 or empty
         saving_ratio = calculator.get_average_saving_ratio_last_12_months_percentage()
@@ -36,14 +35,6 @@ class TestExpensesIntegration:
 
     def test_expenses_sheet_for_category_breakdown(self):
         """Test that Expenses sheet is used for category breakdown."""
-        # Main data sheet (required but not used for category breakdown)
-        data_df = pd.DataFrame(
-            {
-                "Date": ["2024-01", "2024-02"],
-                "Net_Worth": ["€ 10.000", "€ 11.000"],
-            }
-        )
-
         # Detailed expenses sheet with transactions
         expenses_df = pd.DataFrame(
             {
@@ -55,7 +46,7 @@ class TestExpensesIntegration:
             }
         )
 
-        calculator = FinanceCalculator(data_df, expenses_df=expenses_df)
+        calculator = FinanceCalculator(expenses_df=expenses_df)
 
         # Should be able to get category breakdown from detailed expenses
         category_totals = calculator.get_average_expenses_by_category_last_12_months()
@@ -73,12 +64,11 @@ class TestExpensesIntegration:
 
     def test_expenses_sheet_used_for_all_calculations(self):
         """Test that Expenses sheet is used for all expense-related calculations."""
-        # Main data sheet (for income only, no Expenses column)
-        data_df = pd.DataFrame(
+        # Incomes data
+        incomes_df = pd.DataFrame(
             {
                 "Date": ["2024-01", "2024-02"],
-                "Net_Worth": ["€ 10.000", "€ 11.000"],
-                "Income": ["€ 3.000", "€ 3.000"],
+                "Salary": ["€ 3.000", "€ 3.000"],
             }
         )
 
@@ -93,7 +83,7 @@ class TestExpensesIntegration:
             }
         )
 
-        calculator = FinanceCalculator(data_df, expenses_df=expenses_df)
+        calculator = FinanceCalculator(expenses_df=expenses_df, incomes_df=incomes_df)
 
         # All calculations should work using Expenses sheet
         saving_ratio = calculator.get_average_saving_ratio_last_12_months_percentage()
@@ -114,8 +104,6 @@ class TestExpensesIntegration:
 
     def test_expenses_sheet_new_columns_dont_break_calculations(self):
         """Test that new Merchant and Type columns in Expenses sheet don't break existing calculations."""
-        data_df = pd.DataFrame({"Date": ["2024-01"], "Net_Worth": ["€ 10.000"]})
-
         # New 5-column format
         expenses_df = pd.DataFrame(
             {
@@ -127,7 +115,7 @@ class TestExpensesIntegration:
             }
         )
 
-        calculator = FinanceCalculator(data_df, expenses_df=expenses_df)
+        calculator = FinanceCalculator(expenses_df=expenses_df)
 
         # Should still work with new columns
         category_totals = calculator.get_average_expenses_by_category_last_12_months()

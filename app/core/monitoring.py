@@ -74,7 +74,7 @@ class MetricsCollector:
             ...     "load_sheet",
             ...     duration=2.5,
             ...     success=True,
-            ...     worksheet="Data"
+            ...     worksheet="Assets"
             ... )
         """
         entry = {

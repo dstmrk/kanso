@@ -186,7 +186,6 @@ def render() -> None:
                 from app.core.state_manager import state_manager
 
                 for sheet_key in [
-                    "data_sheet",
                     "assets_sheet",
                     "liabilities_sheet",
                     "expenses_sheet",
@@ -278,7 +277,6 @@ def render() -> None:
                         if changed:
                             # Map sheet names to storage keys
                             storage_key_map = {
-                                app_config.data_sheet_name: "data_sheet",
                                 app_config.assets_sheet_name: "assets_sheet",
                                 app_config.liabilities_sheet_name: "liabilities_sheet",
                                 app_config.expenses_sheet_name: "expenses_sheet",

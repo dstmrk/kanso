@@ -44,8 +44,7 @@ class DataLoaderCore:
     def all_data_loaded(self) -> bool:
         """Check if all required data sheets are already loaded."""
         return bool(
-            self.storage.get("data_sheet")
-            and self.storage.get("assets_sheet")
+            self.storage.get("assets_sheet")
             and self.storage.get("liabilities_sheet")
             and self.storage.get("expenses_sheet")
             and self.storage.get("incomes_sheet")
@@ -80,12 +79,6 @@ class DataLoaderCore:
             True if all sheets loaded successfully, False otherwise
         """
         try:
-            if not self.storage.get("data_sheet"):
-                logger.info("Loading Data sheet...")
-                df = service.get_worksheet_as_dataframe(self.app_config.data_sheet_name)
-                self.storage["data_sheet"] = df.to_json(orient="split")
-                self.storage["data_sheet_hash"] = self.calculate_dataframe_hash(df)
-
             if not self.storage.get("assets_sheet"):
                 logger.info("Loading Assets sheet...")
                 df = service.get_worksheet_as_dataframe(
@@ -159,7 +152,7 @@ class DataLoaderCore:
         return hashlib.md5(df_json.encode()).hexdigest()
 
     def refresh_sheet(
-        self, service, sheet_name: str, storage_key: str, header: list[int] | int | None = None
+        self, service, sheet_name: str, storage_key: str, header: list[int] | int = 0
     ) -> tuple[bool, str]:
         """Force refresh a single sheet from Google Sheets.
 
@@ -170,7 +163,7 @@ class DataLoaderCore:
             service: GoogleSheetService instance
             sheet_name: Name of the worksheet to refresh
             storage_key: Key in storage (e.g., 'data_sheet')
-            header: Header row(s) for multi-index sheets (None, int, or list[int])
+            header: Header row(s) - 0 for single header, [0, 1] for multi-index (default: 0)
 
         Returns:
             Tuple of (changed: bool, message: str) indicating if data was updated
@@ -218,10 +211,9 @@ class DataLoaderCore:
                 - details: List of (sheet_name, changed, message) tuples
         """
         sheets_to_refresh = [
-            (self.app_config.data_sheet_name, "data_sheet", None),
             (self.app_config.assets_sheet_name, "assets_sheet", [0, 1]),
             (self.app_config.liabilities_sheet_name, "liabilities_sheet", [0, 1]),
-            (self.app_config.expenses_sheet_name, "expenses_sheet", None),
+            (self.app_config.expenses_sheet_name, "expenses_sheet", 0),
             (self.app_config.incomes_sheet_name, "incomes_sheet", [0, 1]),
         ]
 
@@ -233,7 +225,9 @@ class DataLoaderCore:
         }
 
         for sheet_name, storage_key, header in sheets_to_refresh:
-            changed, message = self.refresh_sheet(service, sheet_name, storage_key, header)
+            # Type cast header to satisfy mypy (it's always int or list[int] from our tuple)
+            header_typed: int | list[int] = header  # type: ignore[assignment]
+            changed, message = self.refresh_sheet(service, sheet_name, storage_key, header_typed)
 
             if "Failed" in message:
                 results["failed_count"] += 1

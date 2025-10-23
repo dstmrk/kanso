@@ -111,17 +111,7 @@ class TestAssetsDataFrameStructure:
 
     def test_assets_single_index_with_calculator(self, assets_single_index_data):
         """Test FinanceCalculator with single-index Assets DataFrame."""
-        # Create a minimal main dataframe
-        main_df = pd.DataFrame(
-            {
-                "Date": ["2024-01", "2024-02", "2024-03"],
-                "Net Worth": ["€ 215.000", "€ 217.000", "€ 219.000"],
-                "Income": ["€ 3.000"] * 3,
-                "Expenses": ["€ 2.000"] * 3,
-            }
-        )
-
-        calc = FinanceCalculator(main_df, assets_df=assets_single_index_data)
+        calc = FinanceCalculator(assets_df=assets_single_index_data)
         assets_liabilities = calc.get_assets_liabilities()
 
         # Verify Assets category exists
@@ -130,17 +120,7 @@ class TestAssetsDataFrameStructure:
 
     def test_assets_multi_index_with_calculator(self, assets_multi_index_data):
         """Test FinanceCalculator with multi-index Assets DataFrame."""
-        # Create a minimal main dataframe
-        main_df = pd.DataFrame(
-            {
-                "Date": ["2024-01", "2024-02", "2024-03"],
-                "Net Worth": ["€ 435.000", "€ 443.000", "€ 451.000"],
-                "Income": ["€ 3.000"] * 3,
-                "Expenses": ["€ 2.000"] * 3,
-            }
-        )
-
-        calc = FinanceCalculator(main_df, assets_df=assets_multi_index_data)
+        calc = FinanceCalculator(assets_df=assets_multi_index_data)
         assets_liabilities = calc.get_assets_liabilities()
 
         # Verify Assets category exists

@@ -64,3 +64,62 @@ async def ensure_data_loaded():
 
     # Run the blocking I/O operation in a separate thread using asyncio.to_thread
     return await asyncio.to_thread(load_data_sync)
+
+
+async def refresh_all_data():
+    """Force refresh all data sheets from Google Sheets.
+
+    This function:
+    1. Loads fresh data from Google Sheets
+    2. Compares with existing data using hashes
+    3. Updates storage only for changed sheets
+    4. Updates the last refresh timestamp
+    5. Returns detailed results about what was updated
+
+    Returns:
+        dict: Results with updated_count, unchanged_count, failed_count, and details
+    """
+
+    def refresh_data_sync():
+        """Synchronous data refresh function that runs in background thread."""
+        from app.core.config import config as app_config
+        from app.services.utils import get_current_timestamp
+
+        try:
+            # Create core loader with NiceGUI storage
+            loader = DataLoaderCore(app.storage.user, app_config)
+
+            # Get credentials
+            credentials = loader.get_credentials()
+            if not credentials:
+                raise RuntimeError(
+                    "Google Sheets not configured. Please complete the onboarding setup."
+                )
+
+            creds_dict, url = credentials
+
+            # Create service
+            service = loader.create_google_sheet_service(creds_dict, url)
+
+            # Refresh all sheets with change detection
+            results = loader.refresh_all_sheets(service)
+
+            # Update timestamp if any sheet was updated or this is first refresh
+            if results["updated_count"] > 0 or "last_data_refresh" not in app.storage.user:
+                app.storage.user["last_data_refresh"] = get_current_timestamp()
+                logger.info(f"Data refresh completed: {results['updated_count']} updated")
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Failed to refresh data: {e}")
+            return {
+                "updated_count": 0,
+                "unchanged_count": 0,
+                "failed_count": 4,  # All sheets failed (Assets, Liabilities, Expenses, Incomes)
+                "details": [("All sheets", False, f"Error: {str(e)}")],
+                "error": str(e),
+            }
+
+    # Run the blocking I/O operation in a separate thread
+    return await asyncio.to_thread(refresh_data_sync)

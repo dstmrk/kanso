@@ -19,7 +19,6 @@ from pathlib import Path
 from app.core.constants import (
     CACHE_TTL_SECONDS,
     SHEET_NAME_ASSETS,
-    SHEET_NAME_DATA,
     SHEET_NAME_EXPENSES,
     SHEET_NAME_INCOMES,
     SHEET_NAME_LIABILITIES,
@@ -64,7 +63,6 @@ class AppConfig:
         debug: Enable debug mode (default: False)
         log_level: Logging level (default: "INFO")
         static_files_folder: Relative path to static files (default: "static")
-        data_sheet_name: Name of main data worksheet (default: "Data")
         assets_sheet_name: Name of assets worksheet (default: "Assets")
         liabilities_sheet_name: Name of liabilities worksheet (default: "Liabilities")
         expenses_sheet_name: Name of expenses worksheet (default: "Expenses")
@@ -94,7 +92,6 @@ class AppConfig:
     log_level: str = "INFO"
 
     # Google Sheets - worksheet names only (credentials managed via onboarding)
-    data_sheet_name: str = SHEET_NAME_DATA
     assets_sheet_name: str = SHEET_NAME_ASSETS
     liabilities_sheet_name: str = SHEET_NAME_LIABILITIES
     expenses_sheet_name: str = SHEET_NAME_EXPENSES
@@ -130,7 +127,6 @@ class AppConfig:
             DEBUG: Enable debug mode (true/false, default: false)
             LOG_LEVEL: Logging level (DEBUG/INFO/WARNING/ERROR, default: "INFO")
             STATIC_FILES_FOLDER: Path to static files (default: "static")
-            DATA_SHEET_NAME: Main data worksheet name (default: "Data")
             ASSETS_SHEET_NAME: Assets worksheet name (default: "Assets")
             LIABILITIES_SHEET_NAME: Liabilities worksheet name (default: "Liabilities")
             EXPENSES_SHEET_NAME: Expenses worksheet name (default: "Expenses")
@@ -159,7 +155,6 @@ class AppConfig:
             debug=_parse_bool(os.getenv("DEBUG"), False),
             log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
             static_files_folder=os.getenv("STATIC_FILES_FOLDER", "static"),
-            data_sheet_name=os.getenv("DATA_SHEET_NAME", SHEET_NAME_DATA),
             assets_sheet_name=os.getenv("ASSETS_SHEET_NAME", SHEET_NAME_ASSETS),
             liabilities_sheet_name=os.getenv("LIABILITIES_SHEET_NAME", SHEET_NAME_LIABILITIES),
             expenses_sheet_name=os.getenv("EXPENSES_SHEET_NAME", SHEET_NAME_EXPENSES),

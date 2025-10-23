@@ -10,14 +10,6 @@ from app.logic.finance_calculator import FinanceCalculator
 
 def test_saving_ratio_with_minimal_data():
     """Test saving ratio with minimal but realistic data."""
-    # Data sheet with just 3 months
-    data_df = pd.DataFrame(
-        {
-            "Date": ["2024-10", "2024-11", "2024-12"],
-            "Net_Worth": ["€ 10.000", "€ 11.000", "€ 12.000"],
-        }
-    )
-
     # Expenses sheet with detailed transactions for 3 months
     expenses_df = pd.DataFrame(
         {
@@ -37,7 +29,7 @@ def test_saving_ratio_with_minimal_data():
         }
     )
 
-    calculator = FinanceCalculator(data_df, expenses_df=expenses_df, incomes_df=incomes_df)
+    calculator = FinanceCalculator(expenses_df=expenses_df, incomes_df=incomes_df)
 
     # Test saving ratio
     ratio = calculator.get_average_saving_ratio_last_12_months_percentage()
@@ -51,13 +43,12 @@ def test_saving_ratio_with_minimal_data():
 
 
 def test_saving_ratio_with_single_income_column():
-    """Test saving ratio when incomes are in single column (fallback mode)."""
-    # Data sheet with Income column (old format)
-    data_df = pd.DataFrame(
+    """Test saving ratio when incomes are in single column."""
+    # Incomes sheet with single column
+    incomes_df = pd.DataFrame(
         {
             "Date": ["2024-10", "2024-11", "2024-12"],
-            "Net_Worth": ["€ 10.000", "€ 11.000", "€ 12.000"],
-            "Income": ["€ 2.000", "€ 2.000", "€ 2.000"],
+            "Salary": ["€ 2.000", "€ 2.000", "€ 2.000"],
         }
     )
 
@@ -72,11 +63,11 @@ def test_saving_ratio_with_single_income_column():
         }
     )
 
-    calculator = FinanceCalculator(data_df, expenses_df=expenses_df)
+    calculator = FinanceCalculator(expenses_df=expenses_df, incomes_df=incomes_df)
 
     ratio = calculator.get_average_saving_ratio_last_12_months_percentage()
 
-    print(f"\nSaving ratio (fallback mode): {ratio:.2%}")
+    print(f"\nSaving ratio (single income): {ratio:.2%}")
     print("Expected: 25.0%")
 
     assert ratio > 0, f"Saving ratio should be > 0, got {ratio}"
@@ -85,16 +76,15 @@ def test_saving_ratio_with_single_income_column():
 
 def test_saving_ratio_with_no_expenses():
     """Test saving ratio when Expenses sheet is empty."""
-    data_df = pd.DataFrame(
+    incomes_df = pd.DataFrame(
         {
             "Date": ["2024-10", "2024-11", "2024-12"],
-            "Net_Worth": ["€ 10.000", "€ 11.000", "€ 12.000"],
-            "Income": ["€ 2.000", "€ 2.000", "€ 2.000"],
+            "Salary": ["€ 2.000", "€ 2.000", "€ 2.000"],
         }
     )
 
     # No expenses sheet
-    calculator = FinanceCalculator(data_df, expenses_df=None)
+    calculator = FinanceCalculator(incomes_df=incomes_df, expenses_df=None)
 
     ratio = calculator.get_average_saving_ratio_last_12_months_percentage()
 
@@ -104,14 +94,6 @@ def test_saving_ratio_with_no_expenses():
 
 def test_saving_ratio_with_no_income():
     """Test saving ratio when there's no income data."""
-    data_df = pd.DataFrame(
-        {
-            "Date": ["2024-10", "2024-11", "2024-12"],
-            "Net_Worth": ["€ 10.000", "€ 11.000", "€ 12.000"],
-            # No Income column
-        }
-    )
-
     expenses_df = pd.DataFrame(
         {
             "Date": ["2024-10", "2024-11", "2024-12"],
@@ -122,7 +104,8 @@ def test_saving_ratio_with_no_income():
         }
     )
 
-    calculator = FinanceCalculator(data_df, expenses_df=expenses_df)
+    # No incomes sheet
+    calculator = FinanceCalculator(expenses_df=expenses_df, incomes_df=None)
 
     ratio = calculator.get_average_saving_ratio_last_12_months_percentage()
 
@@ -132,13 +115,6 @@ def test_saving_ratio_with_no_income():
 
 def test_income_calculation_debug():
     """Debug income calculation to see what's happening."""
-    data_df = pd.DataFrame(
-        {
-            "Date": ["2024-10", "2024-11", "2024-12"],
-            "Net_Worth": ["€ 10.000", "€ 11.000", "€ 12.000"],
-        }
-    )
-
     expenses_df = pd.DataFrame(
         {
             "Date": ["2024-10", "2024-11", "2024-12"],
@@ -157,7 +133,7 @@ def test_income_calculation_debug():
         }
     )
 
-    calculator = FinanceCalculator(data_df, expenses_df=expenses_df, incomes_df=incomes_df)
+    calculator = FinanceCalculator(expenses_df=expenses_df, incomes_df=incomes_df)
 
     # Check processed DataFrames
     print("\n=== DEBUG INFO ===")

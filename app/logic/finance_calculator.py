@@ -41,13 +41,9 @@ from app.core.constants import (
     COL_CATEGORY,
     COL_DATE,
     COL_DATE_DT,
-    COL_INCOME,
-    COL_INCOME_PARSED,
-    COL_NET_WORTH,
     COL_NET_WORTH_PARSED,
     DATE_FORMAT_DISPLAY,
     DATE_FORMAT_STORAGE,
-    MONETARY_COLUMNS,
     MONTHS_IN_YEAR,
     MONTHS_LOOKBACK_YEAR,
 )
@@ -176,28 +172,31 @@ class FinanceCalculator:
     supports multiple currency formats for monetary values.
 
     Attributes:
-        original_df: The raw main DataFrame with Date, Net Worth, Income, Expenses columns
+        assets_df: Optional assets breakdown DataFrame (supports MultiIndex)
+        liabilities_df: Optional liabilities breakdown DataFrame (supports MultiIndex)
         expenses_df: Optional expenses breakdown DataFrame
-        assets_df: Optional assets breakdown DataFrame
-        liabilities_df: Optional liabilities breakdown DataFrame
+        incomes_df: Optional incomes breakdown DataFrame (supports MultiIndex)
+
+    Note:
+        Net Worth is calculated dynamically from Assets and Liabilities sheets.
 
     Example:
-        >>> df = pd.DataFrame({
+        >>> assets_df = pd.DataFrame({
         ...     'Date': ['2024-01', '2024-02'],
-        ...     'Net Worth': ['€ 10.000', '€ 11.000'],
-        ...     'Income': ['€ 3.000', '€ 3.000'],
-        ...     'Expenses': ['€ 2.000', '€ 2.000']
+        ...     'Cash': ['€ 5.000', '€ 6.000'],
+        ...     'Stocks': ['€ 10.000', '€ 11.000']
         ... })
-        >>> calc = FinanceCalculator(df)
-        >>> calc.get_current_net_worth()
-        11000.0
-        >>> calc.get_month_over_month_net_worth_variation_percentage()
-        0.1
+        >>> liabilities_df = pd.DataFrame({
+        ...     'Date': ['2024-01', '2024-02'],
+        ...     'Mortgage': ['€ 100.000', '€ 99.000']
+        ... })
+        >>> calc = FinanceCalculator(assets_df=assets_df, liabilities_df=liabilities_df)
+        >>> calc.get_current_net_worth()  # (6000 + 11000) - 99000 = -82000
+        -82000.0
     """
 
     def __init__(
         self,
-        df: pd.DataFrame,
         assets_df: pd.DataFrame | None = None,
         liabilities_df: pd.DataFrame | None = None,
         expenses_df: pd.DataFrame | None = None,
@@ -206,33 +205,25 @@ class FinanceCalculator:
         """Initialize the calculator with financial data.
 
         Args:
-            df: Main DataFrame containing Date, Net Worth, Income, and Expenses columns
-            assets_df: Optional DataFrame with detailed asset breakdown (supports MultiIndex)
-            liabilities_df: Optional DataFrame with detailed liability breakdown (supports MultiIndex)
-            expenses_df: Optional DataFrame with Month, Category, and Amount columns
-            incomes_df: Optional DataFrame with detailed income breakdown (supports MultiIndex)
+            assets_df: DataFrame with detailed asset breakdown (supports MultiIndex)
+            liabilities_df: DataFrame with detailed liability breakdown (supports MultiIndex)
+            expenses_df: DataFrame with Month, Category, and Amount columns
+            incomes_df: DataFrame with detailed income breakdown (supports MultiIndex)
 
         Note:
+            Net Worth is calculated from Assets and Liabilities sheets.
             DataFrames are not processed immediately. Processing happens lazily when
-            data is first accessed through properties like `processed_df`.
+            data is first accessed through properties.
         """
-        self.original_df = df
         self.expenses_df = expenses_df
         self.assets_df = assets_df
         self.liabilities_df = liabilities_df
         self.incomes_df = incomes_df
-        self._processed_df = None
         self._processed_expenses_df = None
         self._processed_assets_df = None
         self._processed_liabilities_df = None
         self._processed_incomes_df = None
-
-    @property
-    def processed_df(self) -> pd.DataFrame:
-        """Lazily processed and cached main DataFrame."""
-        if self._processed_df is None:
-            self._processed_df = self._preprocess_main_df()
-        return self._processed_df
+        self._net_worth_df = None
 
     @property
     def processed_expenses_df(self) -> pd.DataFrame | None:
@@ -262,11 +253,27 @@ class FinanceCalculator:
             self._processed_incomes_df = self._preprocess_incomes_df()
         return self._processed_incomes_df
 
+    @property
+    def net_worth_df(self) -> pd.DataFrame:
+        """Lazily calculated and cached Net Worth DataFrame.
+
+        Calculates monthly Net Worth from Assets and Liabilities sheets.
+
+        Returns:
+            DataFrame with columns: date_dt, net_worth_parsed
+            Returns empty DataFrame if Assets and Liabilities are not available
+        """
+        if self._net_worth_df is None:
+            # Calculate from Assets and Liabilities
+            self._net_worth_df = self._calculate_net_worth_from_assets_liabilities()
+
+        return self._net_worth_df
+
     def _get_monthly_expenses_totals(self) -> pd.DataFrame | None:
         """Calculate monthly expense totals from detailed Expenses sheet.
 
         Aggregates all expense transactions by month, summing amounts to get
-        monthly totals. This replaces the Expenses column from the Data sheet.
+        monthly totals from the Expenses sheet.
 
         Returns:
             DataFrame with columns [Month, total_expenses] indexed by month datetime,
@@ -296,32 +303,6 @@ class FinanceCalculator:
         )
 
         return monthly_totals
-
-    def _preprocess_main_df(self) -> pd.DataFrame:
-        """Preprocess main DataFrame once with all required transformations.
-
-        Performs the following operations:
-        - Converts Date column to datetime objects
-        - Sorts by date
-        - Parses all monetary columns (Net Worth, Income, Expenses, etc.) to float
-
-        Returns:
-            Preprocessed DataFrame with additional parsed columns and date_dt column
-
-        Note:
-            This method is called lazily only once when `processed_df` is first accessed.
-            The result is cached to avoid redundant processing.
-        """
-        df = self.original_df.copy()
-        df[COL_DATE_DT] = pd.to_datetime(df[COL_DATE], errors="coerce")
-        df = df.sort_values(by=COL_DATE_DT)
-
-        # Parse monetary columns once
-        for col in MONETARY_COLUMNS:
-            if col in df.columns:
-                df[f'{col.lower().replace(" ", "_")}_parsed'] = df[col].apply(parse_monetary_value)
-
-        return df
 
     def _preprocess_expenses_df(self) -> pd.DataFrame | None:
         """Preprocess expenses DataFrame once.
@@ -386,14 +367,15 @@ class FinanceCalculator:
         df = self.assets_df.copy()
 
         # Find Date column (handles MultiIndex)
+        # Only accepts columns named exactly "Date"
         date_col = None
         for col in df.columns:
             if isinstance(col, tuple):
-                if COL_DATE in col[0] or COL_DATE in col[1]:
+                if COL_DATE == col[0] or COL_DATE == col[1]:
                     date_col = col
                     break
             else:
-                if COL_DATE in col:
+                if COL_DATE == col:
                     date_col = col
                     break
 
@@ -424,14 +406,11 @@ class FinanceCalculator:
         date_col = None
         for col in df.columns:
             if isinstance(col, tuple):
-                if any(
-                    keyword in col[0] or keyword in col[1]
-                    for keyword in [COL_DATE, "Data", COL_CATEGORY]
-                ):
+                if COL_DATE == col[0] or COL_DATE == col[1]:
                     date_col = col
                     break
             else:
-                if any(keyword in col for keyword in [COL_DATE, "Data", COL_CATEGORY]):
+                if COL_DATE == col:
                     date_col = col
                     break
 
@@ -459,14 +438,15 @@ class FinanceCalculator:
         df = self.incomes_df.copy()
 
         # Find Date column (handles MultiIndex)
+        # Only accepts columns named exactly "Date"
         date_col = None
         for col in df.columns:
             if isinstance(col, tuple):
-                if COL_DATE in col[0] or COL_DATE in col[1]:
+                if COL_DATE == col[0] or COL_DATE == col[1]:
                     date_col = col
                     break
             else:
-                if COL_DATE in col:
+                if COL_DATE == col:
                     date_col = col
                     break
 
@@ -478,23 +458,132 @@ class FinanceCalculator:
 
         return df
 
-    def _validate_columns(self, required_columns: list[str]) -> bool:
-        """Validate that required columns exist in the original DataFrame.
+    def _calculate_net_worth_from_assets_liabilities(self) -> pd.DataFrame:
+        """Calculate monthly Net Worth from Assets and Liabilities sheets.
 
-        Args:
-            required_columns: List of column names that must be present
-
-        Returns:
-            True if all required columns exist, False otherwise
+        Combines Assets and Liabilities data to compute Net Worth for each month:
+        Net Worth = Total Assets - |Total Liabilities|
 
         Note:
-            Logs an error message listing missing columns if validation fails.
+            - Liabilities are always subtracted using their absolute value, regardless
+              of whether they're stored as positive or negative in the sheet
+            - Net worth is only calculated for dates present in the Incomes sheet
+              (if Incomes sheet is available). This ensures we only show financial
+              data for periods where we have complete income information.
+
+        Returns:
+            DataFrame with columns: date_dt (datetime), net_worth_parsed (float)
+            Returns empty DataFrame if neither assets_df nor liabilities_df are available
+
+        Example:
+            >>> calc = FinanceCalculator(None, assets_df=assets, liabilities_df=liabilities)
+            >>> nw_df = calc._calculate_net_worth_from_assets_liabilities()
+            >>> nw_df.columns
+            Index(['date_dt', 'net_worth_parsed'], dtype='object')
         """
-        missing_cols = [col for col in required_columns if col not in self.original_df.columns]
-        if missing_cols:
-            logger.error(f"DataFrame missing required columns: {missing_cols}")
-            return False
-        return True
+        assets_df = self.processed_assets_df
+        liabilities_df = self.processed_liabilities_df
+        incomes_df = self.processed_incomes_df
+
+        # If neither sheet is available, return empty DataFrame
+        if (assets_df is None or assets_df.empty) and (
+            liabilities_df is None or liabilities_df.empty
+        ):
+            return pd.DataFrame(columns=[COL_DATE_DT, COL_NET_WORTH_PARSED])
+
+        # Get max date from Incomes sheet to limit net worth calculation
+        max_income_date = None
+        if incomes_df is not None and not incomes_df.empty and COL_DATE_DT in incomes_df.columns:
+            max_income_date = incomes_df[COL_DATE_DT].max()
+
+        all_dates = set()
+        assets_by_date: dict[pd.Timestamp, float] = {}
+        liabilities_by_date: dict[pd.Timestamp, float] = {}
+
+        # Process Assets
+        if assets_df is not None and not assets_df.empty:
+            for _, row in assets_df.iterrows():
+                date = row[COL_DATE_DT]
+                # Ensure date is a scalar, not a Series (can happen with multi-index columns)
+                if isinstance(date, pd.Series):
+                    date = date.iloc[0]
+                all_dates.add(date)
+
+                # Sum all asset columns (skip Date and date_dt columns)
+                total_assets = 0.0
+                for col in assets_df.columns:
+                    # Skip date columns
+                    if col == COL_DATE_DT or col == "date_dt":
+                        continue
+                    if isinstance(col, tuple):
+                        # Skip if Date or date_dt appears in tuple
+                        if (
+                            COL_DATE in (col[0], col[1])
+                            or "date_dt" in str(col[0])
+                            or "date_dt" in str(col[1])
+                        ):
+                            continue
+                    else:
+                        if col == COL_DATE or col == "date_dt":
+                            continue
+
+                    # Parse and add value
+                    value = parse_monetary_value(row[col])
+                    if value is not None:
+                        total_assets += value
+
+                assets_by_date[date] = total_assets
+
+        # Process Liabilities
+        if liabilities_df is not None and not liabilities_df.empty:
+            for _, row in liabilities_df.iterrows():
+                date = row[COL_DATE_DT]
+                # Ensure date is a scalar, not a Series (can happen with multi-index columns)
+                if isinstance(date, pd.Series):
+                    date = date.iloc[0]
+                all_dates.add(date)
+
+                # Sum all liability columns (skip Date, date_dt, and Category columns)
+                total_liabilities = 0.0
+                for col in liabilities_df.columns:
+                    # Skip date and category columns
+                    if col == COL_DATE_DT or col == "date_dt":
+                        continue
+                    if isinstance(col, tuple):
+                        if (
+                            COL_DATE in (col[0], col[1])
+                            or "date_dt" in str(col[0])
+                            or "date_dt" in str(col[1])
+                            or COL_CATEGORY in (col[0], col[1])
+                        ):
+                            continue
+                    else:
+                        if col in (COL_DATE, "date_dt", COL_CATEGORY):
+                            continue
+
+                    # Parse and add value
+                    value = parse_monetary_value(row[col])
+                    if value is not None:
+                        total_liabilities += value
+
+                liabilities_by_date[date] = total_liabilities
+
+        # Filter dates to only include those up to max income date
+        if max_income_date is not None:
+            valid_dates = {date for date in all_dates if date <= max_income_date}
+        else:
+            valid_dates = all_dates
+
+        # Calculate Net Worth for each valid date
+        net_worth_data = []
+        for date in sorted(valid_dates):
+            assets_total = assets_by_date.get(date, 0.0)
+            liabilities_total = liabilities_by_date.get(date, 0.0)
+            # Use abs() to handle both positive and negative liability formats
+            net_worth = assets_total - abs(liabilities_total)
+            net_worth_data.append({COL_DATE_DT: date, COL_NET_WORTH_PARSED: net_worth})
+
+        return pd.DataFrame(net_worth_data)
 
     def _get_total_income_for_period(
         self, start_date: pd.Timestamp | None = None, end_date: pd.Timestamp | None = None
@@ -512,21 +601,11 @@ class FinanceCalculator:
             Total income for the specified period as float
 
         Note:
-            If no incomes_df is provided, this method falls back to the Income column
-            from the main DataFrame for backward compatibility.
+            If no incomes_df is provided, this method returns 0.0.
         """
-        # Fallback to main DataFrame Income column if no incomes_df
+        # Return 0 if no incomes_df available
         if self.processed_incomes_df is None:
-            if COL_INCOME not in self.original_df.columns:
-                return 0.0
-
-            df = self.processed_df
-            if start_date is not None:
-                df = df[df[COL_DATE_DT] >= start_date]
-            if end_date is not None:
-                df = df[df[COL_DATE_DT] <= end_date]
-
-            return df[COL_INCOME_PARSED].sum()
+            return 0.0
 
         # Use incomes_df
         df = self.processed_incomes_df
@@ -565,120 +644,226 @@ class FinanceCalculator:
 
             # Sum all monetary columns
             try:
-                total += df[col].apply(parse_monetary_value).sum()
+                total += float(df[col].apply(parse_monetary_value).sum())
             except Exception as e:
                 logger.warning(f"Failed to parse income column '{col}': {e}")
                 continue
 
         return total
 
+    def _get_income_sources_for_period(
+        self, start_date: pd.Timestamp | None = None, end_date: pd.Timestamp | None = None
+    ) -> dict[str, float]:
+        """Get breakdown of income by source for a specific period.
+
+        Returns a dictionary with income sources as keys and their totals as values.
+        If incomes_df has multiple sources (multi-index), each source is separated.
+        If there's only one source or using fallback Income column, returns single "Income" entry.
+
+        Args:
+            start_date: Optional start date for filtering (inclusive)
+            end_date: Optional end date for filtering (inclusive)
+
+        Returns:
+            Dictionary mapping income source names to their total amounts
+
+        Example:
+            {'Salary': 30000.0, 'Freelance': 5000.0, 'Investments': 2000.0}
+            or
+            {'Income': 37000.0}  # Single source or fallback
+        """
+        # Return empty dict if no incomes_df available
+        if self.processed_incomes_df is None:
+            return {}
+
+        # Use incomes_df - get income sources separately
+        df = self.processed_incomes_df
+
+        # Filter by date range if specified
+        if COL_DATE_DT in df.columns:
+            if start_date is not None:
+                df = df[df[COL_DATE_DT] >= start_date]
+            if end_date is not None:
+                df = df[df[COL_DATE_DT] <= end_date]
+
+        # Calculate income by source
+        income_sources: dict[str, float] = {}
+
+        for col in df.columns:
+            # Skip date_dt column
+            if col == COL_DATE_DT or col == "date_dt":
+                continue
+
+            # Skip tuple columns that contain date_dt
+            if isinstance(col, tuple) and any("date_dt" in str(c).lower() for c in col):
+                continue
+
+            # Skip Date columns
+            if isinstance(col, tuple):
+                if any("Date" in str(c) for c in col):
+                    continue
+            else:
+                if "Date" in str(col):
+                    continue
+
+            # Get income source name and amount
+            try:
+                if isinstance(col, tuple):
+                    # MultiIndex: use the LAST (most specific) non-empty part as source name
+                    # BUT skip parts that look like monetary values or dates
+                    # Example: ('Income', 'Salary') → 'Salary'
+                    # Example: ('Salary', 'Company Name') → 'Company Name'
+                    # Example: ('Salary', '€ 3.000') → 'Salary' (skip monetary value)
+                    # Example: ('Date', '2024-01') → skip entirely
+
+                    # Filter out parts that are actual monetary values or dates
+                    meaningful_parts = []
+                    for part in col:
+                        part_str = str(part).strip()
+                        if not part_str:
+                            continue
+
+                        # Try to parse as monetary value - if successful, it's a value not a name
+                        try:
+                            parsed_value = parse_monetary_value(part_str)
+                            if parsed_value is not None and parsed_value != 0:
+                                # Successfully parsed as monetary value, skip it
+                                continue
+                        except Exception:
+                            pass
+
+                        # Skip if it's a pure number or date-like (YYYY-MM format)
+                        test_str = part_str.replace(".", "").replace(",", "").replace("-", "")
+                        if test_str.isdigit():
+                            continue
+
+                        meaningful_parts.append(part_str)
+
+                    # Use the last meaningful part, or fallback to "Income"
+                    source_name = meaningful_parts[-1] if meaningful_parts else "Income"
+                else:
+                    source_name = str(col)
+
+                amount = float(df[col].apply(parse_monetary_value).sum())
+
+                # Add to existing source or create new entry
+                if source_name in income_sources:
+                    income_sources[source_name] += amount
+                else:
+                    income_sources[source_name] = amount
+
+            except Exception as e:
+                logger.warning(f"Failed to parse income source column '{col}': {e}")
+                continue
+
+        return income_sources
+
     def get_current_net_worth(self) -> float:
         """Get the most recent net worth value.
 
+        Calculates Net Worth from Assets and Liabilities sheets.
+
         Returns:
-            Current net worth as float, or 0.0 if Net Worth column is missing
+            Current net worth as float, or 0.0 if no data available
         """
-        if not self._validate_columns([COL_NET_WORTH]):
+        nw_df = self.net_worth_df
+        if nw_df.empty:
             return 0.0
-        return self.processed_df[COL_NET_WORTH_PARSED].iloc[-1]
+        return float(nw_df[COL_NET_WORTH_PARSED].iloc[-1])
 
     def get_last_update_date(self) -> str:
         """Get the date of the last update.
 
+        Returns latest date from any available sheet (Assets, Liabilities, Incomes, Expenses).
+
         Returns:
-            Date string in MM-YYYY format (e.g., "01-2025")
+            Date string in MM-YYYY format (e.g., "01-2025"), or empty string if no data
         """
-        return self.processed_df[COL_DATE_DT].iloc[-1].strftime(DATE_FORMAT_DISPLAY)
+        nw_df = self.net_worth_df
+        if nw_df.empty:
+            return ""
+        return nw_df[COL_DATE_DT].iloc[-1].strftime(DATE_FORMAT_DISPLAY)
 
     def get_month_over_month_net_worth_variation_percentage(self) -> float:
         """Get month-over-month net worth percentage change.
 
-        Calculates the relative change between the last two months.
+        Calculates the relative change between the last two months from Assets/Liabilities.
 
         Returns:
             Percentage change as decimal (e.g., 0.05 for 5% increase),
-            or 0.0 if insufficient data or Net Worth column is missing
+            or 0.0 if insufficient data
 
         Example:
             If net worth went from €20,000 to €21,000, returns 0.05 (5% increase)
         """
-        if not self._validate_columns([COL_NET_WORTH]):
+        nw_df = self.net_worth_df
+        if len(nw_df) < 2:
             return 0.0
 
-        df = self.processed_df
-        if len(df) < 2:
-            return 0.0
-
-        current: float = df["net_worth_parsed"].iloc[-1]
-        previous: float = df["net_worth_parsed"].iloc[-2]
+        current: float = float(nw_df[COL_NET_WORTH_PARSED].iloc[-1])
+        previous: float = float(nw_df[COL_NET_WORTH_PARSED].iloc[-2])
 
         return (current - previous) / previous if previous != 0 else 0.0
 
     def get_month_over_month_net_worth_variation_absolute(self) -> float:
         """Get month-over-month net worth absolute change.
 
-        Calculates the absolute difference between the last two months.
+        Calculates the absolute difference between the last two months from Assets/Liabilities.
 
         Returns:
             Absolute change in currency units (e.g., 1000.0 for €1,000 increase),
-            or 0.0 if insufficient data or Net Worth column is missing
+            or 0.0 if insufficient data
 
         Example:
             If net worth went from €20,000 to €21,000, returns 1000.0
         """
-        if not self._validate_columns([COL_NET_WORTH]):
+        nw_df = self.net_worth_df
+        if len(nw_df) < 2:
             return 0.0
 
-        df = self.processed_df
-        if len(df) < 2:
-            return 0.0
-
-        return df["net_worth_parsed"].iloc[-1] - df["net_worth_parsed"].iloc[-2]
+        return float(nw_df[COL_NET_WORTH_PARSED].iloc[-1] - nw_df[COL_NET_WORTH_PARSED].iloc[-2])
 
     def get_year_over_year_net_worth_variation_percentage(self) -> float:
         """Get year-over-year net worth percentage change.
 
-        Compares current net worth with the value from 13 months ago.
+        Compares current net worth with the value from 13 months ago (calculated from Assets/Liabilities).
 
         Returns:
             Percentage change as decimal (e.g., 1.2 for 120% increase),
-            or 0.0 if insufficient data (less than 13 months) or Net Worth column is missing
+            or 0.0 if insufficient data (less than 13 months)
 
         Example:
             If net worth went from €10,000 to €22,000, returns 1.2 (120% increase)
         """
-        if not self._validate_columns([COL_NET_WORTH]):
+        nw_df = self.net_worth_df
+        if len(nw_df) < MONTHS_LOOKBACK_YEAR:
             return 0.0
 
-        df = self.processed_df
-        if len(df) < MONTHS_LOOKBACK_YEAR:
-            return 0.0
-
-        current: float = df["net_worth_parsed"].iloc[-1]
-        previous_year: float = df["net_worth_parsed"].iloc[-MONTHS_LOOKBACK_YEAR]
+        current: float = float(nw_df[COL_NET_WORTH_PARSED].iloc[-1])
+        previous_year: float = float(nw_df[COL_NET_WORTH_PARSED].iloc[-MONTHS_LOOKBACK_YEAR])
 
         return (current - previous_year) / previous_year if previous_year != 0 else 0.0
 
     def get_year_over_year_net_worth_variation_absolute(self) -> float:
         """Get year-over-year net worth absolute change.
 
-        Compares current net worth with the value from 13 months ago.
+        Compares current net worth with the value from 13 months ago (calculated from Assets/Liabilities).
 
         Returns:
             Absolute change in currency units (e.g., 12000.0 for €12,000 increase),
-            or 0.0 if insufficient data (less than 13 months) or Net Worth column is missing
+            or 0.0 if insufficient data (less than 13 months)
 
         Example:
             If net worth went from €10,000 to €22,000, returns 12000.0
         """
-        if not self._validate_columns([COL_NET_WORTH]):
+        nw_df = self.net_worth_df
+        if len(nw_df) < MONTHS_LOOKBACK_YEAR:
             return 0.0
 
-        df = self.processed_df
-        if len(df) < MONTHS_LOOKBACK_YEAR:
-            return 0.0
-
-        return df["net_worth_parsed"].iloc[-1] - df["net_worth_parsed"].iloc[-MONTHS_LOOKBACK_YEAR]
+        return float(
+            nw_df[COL_NET_WORTH_PARSED].iloc[-1]
+            - nw_df[COL_NET_WORTH_PARSED].iloc[-MONTHS_LOOKBACK_YEAR]
+        )
 
     def get_average_saving_ratio_last_12_months_percentage(self) -> float:
         """Get average saving ratio for last 12 months as percentage.
@@ -713,7 +898,7 @@ class FinanceCalculator:
 
         # Calculate expenses from aggregated monthly totals
         expenses_last_12 = monthly_expenses[monthly_expenses[COL_DATE_DT] >= start_date]
-        expenses: float = expenses_last_12["total_expenses"].sum()
+        expenses: float = float(expenses_last_12["total_expenses"].sum())
 
         logger.debug(
             f"Saving ratio: income={income}, expenses={expenses}, months={len(expenses_last_12)}"
@@ -755,7 +940,7 @@ class FinanceCalculator:
 
         # Calculate expenses from aggregated monthly totals
         expenses_last_12 = monthly_expenses[monthly_expenses[COL_DATE_DT] >= start_date]
-        expenses: float = expenses_last_12["total_expenses"].sum()
+        expenses: float = float(expenses_last_12["total_expenses"].sum())
 
         return (income - expenses) / MONTHS_IN_YEAR if income != 0 else 0.0
 
@@ -775,9 +960,11 @@ class FinanceCalculator:
     def get_monthly_net_worth(self) -> dict[str, list]:
         """Get monthly net worth data for charting.
 
+        Calculates Net Worth from Assets and Liabilities sheets.
+
         Returns:
             Dictionary with 'dates' (list of YYYY-MM strings) and 'values' (list of floats),
-            or empty lists if Date or Net Worth columns are missing
+            or empty lists if no data available
 
         Example:
             {
@@ -785,13 +972,14 @@ class FinanceCalculator:
                 'values': [10000.0, 11000.0, 12000.0]
             }
         """
-        if not self._validate_columns([COL_DATE, COL_NET_WORTH]):
+        nw_df = self.net_worth_df
+        if nw_df.empty:
             return {"dates": [], "values": []}
 
-        df = self.processed_df.dropna(subset=[COL_DATE_DT])
+        df = nw_df.dropna(subset=[COL_DATE_DT])
         return {
             "dates": df[COL_DATE_DT].dt.strftime(DATE_FORMAT_STORAGE).tolist(),
-            "values": df["net_worth_parsed"].tolist(),
+            "values": [float(v) for v in df[COL_NET_WORTH_PARSED].tolist()],
         }
 
     @track_performance("get_assets_liabilities")
@@ -884,15 +1072,12 @@ class FinanceCalculator:
                 # Skip if column name contains 'date_dt' (handles both tuple and string columns)
                 if isinstance(col, tuple) and "date_dt" in col:
                     continue
-                # Skip Date column
+                # Skip Date column (exact match only)
                 if isinstance(col, tuple):
-                    if any(
-                        keyword in col[0] or keyword in col[1]
-                        for keyword in ["Date", "Data", COL_CATEGORY]
-                    ):
+                    if COL_DATE in (col[0], col[1]) or COL_CATEGORY in (col[0], col[1]):
                         continue
                 else:
-                    if any(keyword in col for keyword in ["Date", "Data", COL_CATEGORY]):
+                    if col in (COL_DATE, COL_CATEGORY):
                         continue
 
                 if isinstance(col, tuple) and len(col) == 2:
@@ -916,22 +1101,34 @@ class FinanceCalculator:
 
     @track_performance("get_cash_flow_last_12_months")
     def get_cash_flow_last_12_months(self) -> dict[str, float]:
-        """Get cash flow data for last 12 months.
+        """Get cash flow data for last 12 months with income source breakdown.
 
-        Calculates total income, total expenses, and savings for the last 12 months.
+        Calculates total income (by source), total expenses, and savings for the last 12 months.
         Also includes breakdown by expense categories if expenses_df is available.
         Uses incomes_df if available, otherwise falls back to Income column from main DataFrame.
 
         Returns:
-            Dictionary with 'Savings', 'Expenses', and category keys mapping to float values
+            Dictionary with income sources, 'Savings', 'Expenses', and category keys
 
-        Example:
+        Example with multiple income sources:
             {
+                'Salary': 30000.0,
+                'Freelance': 5000.0,
+                'Investments': 2000.0,
                 'Savings': 12000.0,
                 'Expenses': 24000.0,
                 'Food': 6000.0,
                 'Transport': 3000.0,
                 'Housing': 15000.0
+            }
+
+        Example with single income source:
+            {
+                'Income': 36000.0,
+                'Savings': 12000.0,
+                'Expenses': 24000.0,
+                'Food': 6000.0,
+                ...
             }
         """
         if self.processed_expenses_df is None:
@@ -947,21 +1144,24 @@ class FinanceCalculator:
         ef_last_12: pd.DataFrame = ef[
             (ef[COL_DATE_DT] >= start_date) & (ef[COL_DATE_DT] <= latest_date)
         ]
-        total_expenses: float = ef_last_12[COL_AMOUNT_PARSED].sum()
+        total_expenses: float = float(ef_last_12[COL_AMOUNT_PARSED].sum())
 
-        # Income using helper method
-        income = self._get_total_income_for_period(start_date, latest_date)
+        # Income by source (multiple sources or single)
+        income_sources = self._get_income_sources_for_period(start_date, latest_date)
+        total_income = sum(income_sources.values())
 
-        # Expenses by category
-        expenses_by_category: dict[str, float] = (
-            ef_last_12.groupby(COL_CATEGORY)[COL_AMOUNT_PARSED].sum().to_dict()
-        )
-
-        result: dict[str, float] = {
-            CATEGORY_EXPENSES: total_expenses,
-            CATEGORY_SAVINGS: income - total_expenses,
+        # Expenses by category - convert numpy scalars to float
+        expenses_by_category: dict[str, float] = {
+            k: float(v)
+            for k, v in ef_last_12.groupby(COL_CATEGORY)[COL_AMOUNT_PARSED].sum().to_dict().items()
         }
-        result.update(expenses_by_category)
+
+        # Build result with income sources first
+        result: dict[str, float] = {}
+        result.update(income_sources)  # Add all income sources
+        result[CATEGORY_EXPENSES] = total_expenses
+        result[CATEGORY_SAVINGS] = total_income - total_expenses
+        result.update(expenses_by_category)  # Add expense categories
 
         return result
 
@@ -988,7 +1188,11 @@ class FinanceCalculator:
         ef_last_12: pd.DataFrame = ef[
             (ef[COL_DATE_DT] >= start_date) & (ef[COL_DATE_DT] <= latest_date)
         ]
-        return ef_last_12.groupby(COL_CATEGORY)[COL_AMOUNT_PARSED].sum().to_dict()
+        # Convert numpy scalars to float
+        return {
+            k: float(v)
+            for k, v in ef_last_12.groupby(COL_CATEGORY)[COL_AMOUNT_PARSED].sum().to_dict().items()
+        }
 
     @track_performance("get_incomes_vs_expenses")
     def get_incomes_vs_expenses(self) -> dict[str, list]:

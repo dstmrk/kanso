@@ -13,12 +13,11 @@ from app.logic.finance_calculator import FinanceCalculator
 
 def test_expenses_with_datetime_dates():
     """Test that expenses work when Date column contains datetime objects."""
-    # Main data sheet
-    data_df = pd.DataFrame(
+    # Incomes sheet
+    incomes_df = pd.DataFrame(
         {
             "Date": ["2024-01", "2024-02", "2024-03"],
-            "Net_Worth": ["€ 10.000", "€ 11.000", "€ 12.000"],
-            "Income": ["€ 3.000", "€ 3.000", "€ 3.000"],
+            "Salary": ["€ 3.000", "€ 3.000", "€ 3.000"],
         }
     )
 
@@ -38,7 +37,7 @@ def test_expenses_with_datetime_dates():
     # Verify Date column is datetime dtype
     assert pd.api.types.is_datetime64_any_dtype(expenses_df["Date"])
 
-    calculator = FinanceCalculator(data_df, expenses_df=expenses_df)
+    calculator = FinanceCalculator(expenses_df=expenses_df, incomes_df=incomes_df)
 
     # Test saving ratio
     ratio = calculator.get_average_saving_ratio_last_12_months_percentage()
@@ -65,12 +64,11 @@ def test_expenses_with_datetime_dates():
 
 def test_expenses_with_mixed_date_formats():
     """Test that calculator handles both string and datetime dates."""
-    # Main data with string dates
-    data_df = pd.DataFrame(
+    # Incomes with string dates
+    incomes_df = pd.DataFrame(
         {
             "Date": ["2024-01", "2024-02"],
-            "Net_Worth": ["€ 10.000", "€ 11.000"],
-            "Income": ["€ 3.000", "€ 3.000"],
+            "Salary": ["€ 3.000", "€ 3.000"],
         }
     )
 
@@ -85,7 +83,7 @@ def test_expenses_with_mixed_date_formats():
         }
     )
 
-    calculator = FinanceCalculator(data_df, expenses_df=expenses_df_datetime)
+    calculator = FinanceCalculator(expenses_df=expenses_df_datetime, incomes_df=incomes_df)
     ratio = calculator.get_average_saving_ratio_last_12_months_percentage()
 
     # (3000*2 - 1500*2) / (3000*2) = 3000/6000 = 0.5 (50%)
@@ -94,13 +92,6 @@ def test_expenses_with_mixed_date_formats():
 
 def test_expenses_datetime_dates_are_normalized_to_month():
     """Test that datetime dates on different days of month are normalized correctly."""
-    data_df = pd.DataFrame(
-        {
-            "Date": ["2024-01", "2024-02"],
-            "Net_Worth": ["€ 10.000", "€ 11.000"],
-        }
-    )
-
     # Expenses on different days of the same month should be grouped together
     expenses_df = pd.DataFrame(
         {
@@ -112,7 +103,7 @@ def test_expenses_datetime_dates_are_normalized_to_month():
         }
     )
 
-    calculator = FinanceCalculator(data_df, expenses_df=expenses_df)
+    calculator = FinanceCalculator(expenses_df=expenses_df)
 
     # Get monthly totals
     income_vs_expenses = calculator.get_incomes_vs_expenses()

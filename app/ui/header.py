@@ -2,6 +2,7 @@ from nicegui import app, ui
 
 from app.core.state_manager import state_manager
 from app.services import pages
+from app.services.data_loader import refresh_all_data
 from app.services.utils import format_timestamp_relative
 from app.ui import styles
 
@@ -9,10 +10,59 @@ from app.ui import styles
 def render_refresh_button() -> None:
     """Render data refresh button."""
 
-    def refresh_data() -> None:
-        """Force refresh of all cached data by clearing the cache."""
-        state_manager.invalidate_cache()
-        ui.notify("Data cache cleared! Data will be refreshed on next page visit.", type="positive")
+    async def refresh_data() -> None:
+        """Force refresh all data from Google Sheets and clear cache."""
+        # Show loading state
+        with ui.dialog() as loading_dialog, ui.card():
+            ui.label("Refreshing data from Google Sheets...")
+            ui.spinner(size="lg")
+
+        loading_dialog.open()
+
+        try:
+            # Refresh data from Google Sheets
+            results = await refresh_all_data()
+
+            # Close loading dialog
+            loading_dialog.close()
+
+            # Clear cache after successful refresh
+            state_manager.invalidate_cache()
+
+            # Show results dialog
+            with ui.dialog() as result_dialog, ui.card().classes("gap-4"):
+                ui.label("Data Refresh Complete").classes("text-xl font-bold")
+
+                # Check if there was an error
+                if "error" in results:
+                    ui.label(f"Error: {results['error']}").classes("text-error")
+                else:
+                    # Show summary
+                    summary = f"✓ {results['updated_count']} sheet(s) updated"
+                    if results["unchanged_count"] > 0:
+                        summary += f"\n• {results['unchanged_count']} sheet(s) unchanged"
+                    if results["failed_count"] > 0:
+                        summary += f"\n✗ {results['failed_count']} sheet(s) failed"
+
+                    ui.label(summary).classes("whitespace-pre-line")
+
+                    # Show details in expandable section
+                    if results["details"]:
+                        with ui.expansion("Details", icon="info").classes("w-full"):
+                            for _sheet_name, changed, message in results["details"]:
+                                status_icon = (
+                                    "✓" if changed else "•" if "No changes" in message else "✗"
+                                )
+                                ui.label(f"{status_icon} {message}").classes("text-sm")
+
+                # Close button
+                ui.button("Close", on_click=result_dialog.close).props("flat")
+
+            result_dialog.open()
+
+        except Exception as e:
+            loading_dialog.close()
+            ui.notify(f"Failed to refresh data: {str(e)}", type="negative")
 
     with (
         ui.element("button")

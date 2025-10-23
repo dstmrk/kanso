@@ -1,89 +1,13 @@
 """
 Tests for validators module.
 
-Tests Pydantic validation models for data sheet and expenses sheet.
+Tests Pydantic validation models for expenses sheet.
 """
 
 import pytest
 from pydantic import ValidationError
 
-from app.core.validators import DataSheetRow, ExpenseRow, validate_dataframe_structure
-
-
-class TestDataSheetRow:
-    """Tests for DataSheetRow validation model."""
-
-    def test_valid_date_format(self):
-        """Test valid YYYY-MM date format."""
-        row = DataSheetRow(Date="2024-01", Net_Worth="€ 1.000")
-        assert row.Date == "2024-01"
-
-    def test_invalid_date_format_day(self):
-        """Test invalid date with day included."""
-        with pytest.raises(ValidationError) as exc_info:
-            DataSheetRow(Date="2024-01-15")
-        assert "Date must be in YYYY-MM format" in str(exc_info.value)
-
-    def test_invalid_date_format_text(self):
-        """Test invalid date with text."""
-        with pytest.raises(ValidationError) as exc_info:
-            DataSheetRow(Date="January 2024")
-        assert "Date must be in YYYY-MM format" in str(exc_info.value)
-
-    def test_empty_date(self):
-        """Test empty date raises error."""
-        with pytest.raises(ValidationError) as exc_info:
-            DataSheetRow(Date="")
-        assert "Date cannot be empty" in str(exc_info.value)
-
-    def test_date_with_whitespace(self):
-        """Test date with whitespace is stripped."""
-        row = DataSheetRow(Date="  2024-01  ")
-        assert row.Date == "2024-01"
-
-    def test_valid_monetary_fields(self):
-        """Test valid monetary field formats."""
-        row = DataSheetRow(
-            Date="2024-01", Net_Worth="€ 10.000", Income="$ 5,000.00", Expenses="3000"
-        )
-        assert row.Net_Worth == "€ 10.000"
-        assert row.Income == "$ 5,000.00"
-        assert row.Expenses == "3000"
-
-    def test_empty_monetary_fields(self):
-        """Test empty monetary fields are allowed."""
-        row = DataSheetRow(Date="2024-01", Net_Worth="", Income=None)
-        assert row.Net_Worth is None
-        assert row.Income is None
-
-    def test_monetary_field_without_digits(self):
-        """Test monetary field without digits returns None."""
-        row = DataSheetRow(Date="2024-01", Net_Worth="€€€")
-        # Should log warning but not raise error, returns None
-        assert row.Net_Worth is None
-
-    def test_all_monetary_columns(self):
-        """Test all monetary columns are accepted."""
-        row = DataSheetRow(
-            Date="2024-01",
-            Cash="€ 1.000",
-            Pension_Fund="€ 2.000",
-            Stocks="€ 3.000",
-            Real_Estate="€ 4.000",
-            Crypto="€ 500",
-            Other="€ 100",
-            Mortgage="€ 10.000",
-            Loans="€ 5.000",
-        )
-        assert row.Cash == "€ 1.000"
-        assert row.Pension_Fund == "€ 2.000"
-        assert row.Loans == "€ 5.000"
-
-    def test_extra_fields_allowed(self):
-        """Test extra fields are allowed with extra='allow' config."""
-        row = DataSheetRow(Date="2024-01", Extra_Field="Some value", Another_Field="123")
-        # Should not raise error due to extra='allow'
-        assert row.Date == "2024-01"
+from app.core.validators import ExpenseRow, validate_dataframe_structure
 
 
 class TestExpenseRow:
@@ -269,34 +193,6 @@ class TestExpenseRow:
 class TestValidateDataframeStructure:
     """Tests for validate_dataframe_structure helper function."""
 
-    def test_valid_data_sheet_data(self):
-        """Test validation with valid data sheet rows."""
-        data = [
-            {"Date": "2024-01", "Net_Worth": "€ 10.000", "Income": "€ 3.000"},
-            {"Date": "2024-02", "Net_Worth": "€ 11.000", "Income": "€ 3.000"},
-            {"Date": "2024-03", "Net_Worth": "€ 12.000", "Income": "€ 3.000"},
-        ]
-
-        is_valid, errors = validate_dataframe_structure(data, DataSheetRow)
-
-        assert is_valid is True
-        assert len(errors) == 0
-
-    def test_invalid_data_sheet_data(self):
-        """Test validation with invalid data sheet rows."""
-        data = [
-            {"Date": "invalid-date", "Net_Worth": "€ 10.000"},
-            {"Date": "2024-02", "Net_Worth": "€ 11.000"},
-            {"Date": "", "Net_Worth": "€ 12.000"},
-        ]
-
-        is_valid, errors = validate_dataframe_structure(data, DataSheetRow)
-
-        assert is_valid is False
-        assert len(errors) == 2  # Row 1 and Row 3 have invalid dates
-        assert "Row 1:" in errors[0]
-        assert "Row 3:" in errors[1]
-
     def test_valid_expense_data(self):
         """Test validation with valid expense rows."""
         data = [
@@ -356,16 +252,46 @@ class TestValidateDataframeStructure:
         assert "Row 3:" in errors[1]
 
     def test_mixed_valid_and_invalid_rows(self):
-        """Test validation with mix of valid and invalid rows."""
+        """Test validation with mix of valid and invalid expense rows."""
         data = [
-            {"Date": "2024-01", "Net_Worth": "€ 10.000"},  # Valid
-            {"Date": "bad-date", "Net_Worth": "€ 11.000"},  # Invalid date
-            {"Date": "2024-03", "Net_Worth": "€ 12.000"},  # Valid
-            {"Date": "", "Net_Worth": "€ 13.000"},  # Empty date
-            {"Date": "2024-05", "Net_Worth": "€ 14.000"},  # Valid
+            {
+                "Date": "2024-01",
+                "Merchant": "Store",
+                "Amount": "€ 100",
+                "Category": "Food",
+                "Type": "Variable",
+            },  # Valid
+            {
+                "Date": "bad-date",
+                "Merchant": "Store",
+                "Amount": "€ 100",
+                "Category": "Food",
+                "Type": "Variable",
+            },  # Invalid date
+            {
+                "Date": "2024-03",
+                "Merchant": "Store",
+                "Amount": "€ 100",
+                "Category": "Food",
+                "Type": "Variable",
+            },  # Valid
+            {
+                "Date": "",
+                "Merchant": "Store",
+                "Amount": "€ 100",
+                "Category": "Food",
+                "Type": "Variable",
+            },  # Empty date
+            {
+                "Date": "2024-05",
+                "Merchant": "Store",
+                "Amount": "€ 100",
+                "Category": "Food",
+                "Type": "Variable",
+            },  # Valid
         ]
 
-        is_valid, errors = validate_dataframe_structure(data, DataSheetRow)
+        is_valid, errors = validate_dataframe_structure(data, ExpenseRow)
 
         assert is_valid is False
         assert len(errors) == 2
@@ -376,7 +302,7 @@ class TestValidateDataframeStructure:
         """Test validation with empty data."""
         data = []
 
-        is_valid, errors = validate_dataframe_structure(data, DataSheetRow)
+        is_valid, errors = validate_dataframe_structure(data, ExpenseRow)
 
         assert is_valid is True
         assert len(errors) == 0
@@ -384,9 +310,18 @@ class TestValidateDataframeStructure:
     def test_many_errors(self):
         """Test validation with many errors (tests error limiting)."""
         # Create 20 rows with invalid dates
-        data = [{"Date": f"invalid-{i}", "Net_Worth": f"€ {i}.000"} for i in range(20)]
+        data = [
+            {
+                "Date": f"invalid-{i}",
+                "Merchant": "Store",
+                "Amount": f"€ {i}.000",
+                "Category": "Food",
+                "Type": "Variable",
+            }
+            for i in range(20)
+        ]
 
-        is_valid, errors = validate_dataframe_structure(data, DataSheetRow)
+        is_valid, errors = validate_dataframe_structure(data, ExpenseRow)
 
         assert is_valid is False
         assert len(errors) == 20  # All rows have errors

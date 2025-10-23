@@ -25,7 +25,6 @@ class MockConfig:
     """Mock configuration for testing."""
 
     def __init__(self):
-        self.data_sheet_name = "Data"
         self.assets_sheet_name = "Assets"
         self.liabilities_sheet_name = "Liabilities"
         self.expenses_sheet_name = "Expenses"
@@ -39,7 +38,6 @@ class TestDataLoaderCore:
         """Test that all_data_loaded returns True when all sheets are in storage."""
         storage = MockStorage(
             {
-                "data_sheet": "mock_data",
                 "assets_sheet": "mock_assets",
                 "liabilities_sheet": "mock_liabilities",
                 "expenses_sheet": "mock_expenses",
@@ -55,9 +53,8 @@ class TestDataLoaderCore:
         """Test that all_data_loaded returns False when any sheet is missing."""
         storage = MockStorage(
             {
-                "data_sheet": "mock_data",
                 "assets_sheet": "mock_assets",
-                # Missing liabilities and expenses
+                # Missing liabilities, expenses, and incomes
             }
         )
         config = MockConfig()
@@ -143,19 +140,17 @@ class TestDataLoaderCore:
         result = loader.load_missing_sheets(mock_service)
 
         assert result is True
-        assert "data_sheet" in storage.data
         assert "assets_sheet" in storage.data
         assert "liabilities_sheet" in storage.data
         assert "expenses_sheet" in storage.data
         assert "incomes_sheet" in storage.data
-        # Should have called for all 5 sheets
-        assert mock_service.get_worksheet_as_dataframe.call_count == 5
+        # Should have called for all 4 sheets
+        assert mock_service.get_worksheet_as_dataframe.call_count == 4
 
     def test_load_missing_sheets_loads_only_missing(self):
         """Test that load_missing_sheets loads only missing sheets."""
         storage = MockStorage(
             {
-                "data_sheet": "existing_data",
                 "assets_sheet": "existing_assets",
                 # Missing liabilities, expenses, and incomes
             }
@@ -218,7 +213,6 @@ class TestDataLoaderCore:
         """Test that load_missing_sheets uses sheet names from config."""
         storage = MockStorage()
         config = MockConfig()
-        config.data_sheet_name = "CustomData"
         config.assets_sheet_name = "CustomAssets"
         config.liabilities_sheet_name = "CustomLiabilities"
         config.expenses_sheet_name = "CustomExpenses"
@@ -234,7 +228,6 @@ class TestDataLoaderCore:
 
         # Verify correct sheet names were used
         calls = mock_service.get_worksheet_as_dataframe.call_args_list
-        assert any("CustomData" in str(call) for call in calls)
         assert any("CustomAssets" in str(call) for call in calls)
         assert any("CustomLiabilities" in str(call) for call in calls)
         assert any("CustomExpenses" in str(call) for call in calls)
@@ -331,7 +324,7 @@ class TestDataLoaderCore:
         assert "unchanged_count" in results
         assert "failed_count" in results
         assert "details" in results
-        assert len(results["details"]) == 5  # All 5 sheets
+        assert len(results["details"]) == 4  # All 4 sheets
 
     def test_load_missing_sheets_saves_hashes(self):
         """Test that load_missing_sheets saves hashes for loaded sheets."""
@@ -348,7 +341,6 @@ class TestDataLoaderCore:
         loader.load_missing_sheets(mock_service)
 
         # Verify hashes were saved for all sheets
-        assert "data_sheet_hash" in storage.data
         assert "assets_sheet_hash" in storage.data
         assert "liabilities_sheet_hash" in storage.data
         assert "expenses_sheet_hash" in storage.data

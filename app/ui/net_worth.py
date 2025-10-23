@@ -6,7 +6,9 @@ from app.ui import dock, header, styles
 
 
 def render() -> None:
-    data_sheet_str = app.storage.user.get("data_sheet")
+    # Load required sheets
+    assets_sheet_str = app.storage.user.get("assets_sheet")
+    liabilities_sheet_str = app.storage.user.get("liabilities_sheet")
 
     header.render()
 
@@ -16,9 +18,12 @@ def render() -> None:
                 "text-center text-2xl md:text-4xl font-bold my-2 text-primary"
             )
 
-            if data_sheet_str:
-                data_sheet = utils.read_json(data_sheet_str)
-                calculator = FinanceCalculator(data_sheet)
+            if assets_sheet_str and liabilities_sheet_str:
+                assets_sheet = utils.read_json(assets_sheet_str)
+                liabilities_sheet = utils.read_json(liabilities_sheet_str)
+                calculator = FinanceCalculator(
+                    assets_df=assets_sheet, liabilities_df=liabilities_sheet
+                )
                 fi_progress = calculator.get_fi_progress()
 
                 with ui.card().classes(styles.STAT_CARDS_CLASSES):

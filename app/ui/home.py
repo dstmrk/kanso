@@ -13,35 +13,54 @@ class HomeRenderer:
 
     async def load_kpi_data(self) -> dict[str, Any] | None:
         """Load and cache key performance indicators from financial data."""
-        data_sheet_str = app.storage.user.get("data_sheet")
+        assets_sheet_str = app.storage.user.get("assets_sheet")
+        liabilities_sheet_str = app.storage.user.get("liabilities_sheet")
         expenses_sheet_str = app.storage.user.get("expenses_sheet")
         incomes_sheet_str = app.storage.user.get("incomes_sheet")
 
-        if not data_sheet_str or not expenses_sheet_str:
+        if not assets_sheet_str or not liabilities_sheet_str or not expenses_sheet_str:
             return None
 
         def compute_kpi_data():
-            data_sheet = utils.read_json(data_sheet_str)
+            assets_sheet = utils.read_json(assets_sheet_str)
+            liabilities_sheet = utils.read_json(liabilities_sheet_str)
             expenses_sheet = utils.read_json(expenses_sheet_str)
             incomes_sheet = utils.read_json(incomes_sheet_str) if incomes_sheet_str else None
 
             calculator = FinanceCalculator(
-                data_sheet, expenses_df=expenses_sheet, incomes_df=incomes_sheet
+                assets_df=assets_sheet,
+                liabilities_df=liabilities_sheet,
+                expenses_df=expenses_sheet,
+                incomes_df=incomes_sheet,
             )
 
-            return {
-                "last_update_date": calculator.get_last_update_date(),
-                "net_worth": calculator.get_current_net_worth(),
-                "mom_variation_percentage": calculator.get_month_over_month_net_worth_variation_percentage(),
-                "mom_variation_absolute": calculator.get_month_over_month_net_worth_variation_absolute(),
-                "yoy_variation_percentage": calculator.get_year_over_year_net_worth_variation_percentage(),
-                "yoy_variation_absolute": calculator.get_year_over_year_net_worth_variation_absolute(),
-                "avg_saving_ratio_percentage": calculator.get_average_saving_ratio_last_12_months_percentage(),
-                "avg_saving_ratio_absolute": calculator.get_average_saving_ratio_last_12_months_absolute(),
+            # Ensure all values are Python native types (not numpy/pandas types)
+            result = {
+                "last_update_date": str(calculator.get_last_update_date()),
+                "net_worth": float(calculator.get_current_net_worth()),
+                "mom_variation_percentage": float(
+                    calculator.get_month_over_month_net_worth_variation_percentage()
+                ),
+                "mom_variation_absolute": float(
+                    calculator.get_month_over_month_net_worth_variation_absolute()
+                ),
+                "yoy_variation_percentage": float(
+                    calculator.get_year_over_year_net_worth_variation_percentage()
+                ),
+                "yoy_variation_absolute": float(
+                    calculator.get_year_over_year_net_worth_variation_absolute()
+                ),
+                "avg_saving_ratio_percentage": float(
+                    calculator.get_average_saving_ratio_last_12_months_percentage()
+                ),
+                "avg_saving_ratio_absolute": float(
+                    calculator.get_average_saving_ratio_last_12_months_absolute()
+                ),
             }
+            return result
 
         return await state_manager.get_or_compute(
-            user_storage_key="data_sheet",
+            user_storage_key="assets_sheet",
             computation_key="kpi_data",
             compute_fn=compute_kpi_data,
             ttl_seconds=86400,
@@ -49,24 +68,25 @@ class HomeRenderer:
 
     async def load_chart_data(self) -> dict[str, Any] | None:
         """Load and cache chart data for dashboard visualizations."""
-        data_sheet_str = app.storage.user.get("data_sheet")
         assets_sheet_str = app.storage.user.get("assets_sheet")
         liabilities_sheet_str = app.storage.user.get("liabilities_sheet")
         expenses_sheet_str = app.storage.user.get("expenses_sheet")
         incomes_sheet_str = app.storage.user.get("incomes_sheet")
 
-        if not data_sheet_str or not expenses_sheet_str:
+        if not assets_sheet_str or not liabilities_sheet_str or not expenses_sheet_str:
             return None
 
         def compute_chart_data():
-            data_sheet = utils.read_json(data_sheet_str)
             assets_sheet = utils.read_json(assets_sheet_str)
             liabilities_sheet = utils.read_json(liabilities_sheet_str)
             expenses_sheet = utils.read_json(expenses_sheet_str)
             incomes_sheet = utils.read_json(incomes_sheet_str) if incomes_sheet_str else None
 
             calculator = FinanceCalculator(
-                data_sheet, assets_sheet, liabilities_sheet, expenses_sheet, incomes_sheet
+                assets_df=assets_sheet,
+                liabilities_df=liabilities_sheet,
+                expenses_df=expenses_sheet,
+                incomes_df=incomes_sheet,
             )
 
             return {
@@ -78,7 +98,7 @@ class HomeRenderer:
             }
 
         return await state_manager.get_or_compute(
-            user_storage_key="data_sheet",
+            user_storage_key="assets_sheet",
             computation_key="chart_data",
             compute_fn=compute_chart_data,
             ttl_seconds=86400,
@@ -292,11 +312,12 @@ def render() -> None:
     containers = renderer.render_skeleton_ui()
 
     # Check if data needs to be loaded
-    data_sheet = app.storage.user.get("data_sheet")
+    assets_sheet = app.storage.user.get("assets_sheet")
+    liabilities_sheet = app.storage.user.get("liabilities_sheet")
     expenses_sheet = app.storage.user.get("expenses_sheet")
     incomes_sheet = app.storage.user.get("incomes_sheet")
 
-    if not data_sheet or not expenses_sheet or not incomes_sheet:
+    if not assets_sheet or not liabilities_sheet or not expenses_sheet or not incomes_sheet:
         # Data not loaded yet - start background loading
         async def load_data_in_background():
             """Load data from Google Sheets in background."""

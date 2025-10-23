@@ -11,10 +11,7 @@ from app.core.constants import (
     COL_AMOUNT,
     COL_CATEGORY,
     COL_DATE,
-    COL_EXPENSES,
-    COL_INCOME,
     COL_MERCHANT,
-    COL_NET_WORTH,
     COL_TYPE,
 )
 from app.logic.finance_calculator import FinanceCalculator, detect_currency, parse_monetary_value
@@ -145,8 +142,13 @@ class TestFinanceCalculator:
     """Tests for FinanceCalculator class."""
 
     @pytest.fixture
-    def sample_data(self):
-        """Create sample data for testing."""
+    def sample_assets(self):
+        """Create sample assets data for testing.
+
+        Assets grow from 110k to 122k over 13 months.
+        Combined with sample_liabilities (fixed at 100k), this creates
+        Net Worth from 10k to 22k.
+        """
         data = {
             COL_DATE: [
                 "2024-01",
@@ -163,23 +165,34 @@ class TestFinanceCalculator:
                 "2024-12",
                 "2025-01",
             ],
-            COL_NET_WORTH: [
-                "€ 10.000",
-                "€ 11.000",
-                "€ 12.000",
-                "€ 13.000",
-                "€ 14.000",
-                "€ 15.000",
-                "€ 16.000",
-                "€ 17.000",
-                "€ 18.000",
-                "€ 19.000",
-                "€ 20.000",
-                "€ 21.000",
-                "€ 22.000",
+            "Cash": ["€ 50.000"] * 13,  # Fixed
+            "Stocks": [f"€ {60000 + i * 1000}" for i in range(13)],  # Growing: 60k to 72k
+        }
+        return pd.DataFrame(data)
+
+    @pytest.fixture
+    def sample_liabilities(self):
+        """Create sample liabilities data for testing.
+
+        Fixed mortgage at 100k throughout all months.
+        """
+        data = {
+            COL_DATE: [
+                "2024-01",
+                "2024-02",
+                "2024-03",
+                "2024-04",
+                "2024-05",
+                "2024-06",
+                "2024-07",
+                "2024-08",
+                "2024-09",
+                "2024-10",
+                "2024-11",
+                "2024-12",
+                "2025-01",
             ],
-            COL_INCOME: ["€ 3.000"] * 13,
-            COL_EXPENSES: ["€ 2.000"] * 13,
+            "Mortgage": ["€ 100.000"] * 13,
         }
         return pd.DataFrame(data)
 
@@ -232,14 +245,51 @@ class TestFinanceCalculator:
         return pd.DataFrame(data)
 
     @pytest.fixture
-    def calculator(self, sample_data, sample_detailed_expenses):
-        """Create FinanceCalculator instance with detailed expenses."""
-        return FinanceCalculator(sample_data, expenses_df=sample_detailed_expenses)
+    def sample_incomes(self):
+        """Create sample incomes data for all 13 months (€3000 per month total)."""
+        data = {
+            COL_DATE: [
+                "2024-01",
+                "2024-02",
+                "2024-03",
+                "2024-04",
+                "2024-05",
+                "2024-06",
+                "2024-07",
+                "2024-08",
+                "2024-09",
+                "2024-10",
+                "2024-11",
+                "2024-12",
+                "2025-01",
+            ],
+            "Salary": ["€ 3.000"] * 13,
+        }
+        return pd.DataFrame(data)
 
     @pytest.fixture
-    def calculator_with_expenses(self, sample_data, sample_expenses):
-        """Create FinanceCalculator instance with expenses."""
-        return FinanceCalculator(sample_data, expenses_df=sample_expenses)
+    def calculator(
+        self, sample_assets, sample_liabilities, sample_detailed_expenses, sample_incomes
+    ):
+        """Create FinanceCalculator instance with assets, liabilities, detailed expenses, and incomes."""
+        return FinanceCalculator(
+            assets_df=sample_assets,
+            liabilities_df=sample_liabilities,
+            expenses_df=sample_detailed_expenses,
+            incomes_df=sample_incomes,
+        )
+
+    @pytest.fixture
+    def calculator_with_expenses(
+        self, sample_assets, sample_liabilities, sample_expenses, sample_incomes
+    ):
+        """Create FinanceCalculator instance with assets, liabilities, expenses, and incomes."""
+        return FinanceCalculator(
+            assets_df=sample_assets,
+            liabilities_df=sample_liabilities,
+            expenses_df=sample_expenses,
+            incomes_df=sample_incomes,
+        )
 
     def test_get_current_net_worth(self, calculator):
         """Test getting current net worth."""
@@ -327,23 +377,28 @@ class TestFinanceCalculator:
         assert all(expense == -2000.0 for expense in data["expenses"])
 
     def test_missing_columns(self):
-        """Test behavior with missing required columns."""
-        df = pd.DataFrame({COL_DATE: ["2024-01"]})
-        calc = FinanceCalculator(df)
-        # Should return 0.0 when columns are missing
+        """Test behavior when no assets/liabilities are provided."""
+        # No assets or liabilities provided
+        calc = FinanceCalculator()
+        # Should return 0.0 when no data available
         assert calc.get_current_net_worth() == 0.0
 
     def test_insufficient_data_for_yoy(self):
-        """Test year-over-year with insufficient data."""
-        df = pd.DataFrame(
+        """Test year-over-year with insufficient data (less than 13 months)."""
+        # Create assets and liabilities with only 2 months (insufficient for YoY)
+        assets = pd.DataFrame(
             {
                 COL_DATE: ["2024-01", "2024-02"],
-                COL_NET_WORTH: ["€ 10.000", "€ 11.000"],
-                COL_INCOME: ["€ 3.000"] * 2,
-                COL_EXPENSES: ["€ 2.000"] * 2,
+                "Cash": ["€ 60.000", "€ 61.000"],
             }
         )
-        calc = FinanceCalculator(df)
-        # Should return 0.0 when not enough data
+        liabilities = pd.DataFrame(
+            {
+                COL_DATE: ["2024-01", "2024-02"],
+                "Mortgage": ["€ 50.000", "€ 50.000"],
+            }
+        )
+        calc = FinanceCalculator(assets_df=assets, liabilities_df=liabilities)
+        # Should return 0.0 when not enough data (< 13 months)
         assert calc.get_year_over_year_net_worth_variation_percentage() == 0.0
         assert calc.get_year_over_year_net_worth_variation_absolute() == 0.0

@@ -173,11 +173,47 @@ def create_cash_flow_options(
     user_agent: Literal["mobile", "desktop"],
     currency: str = "USD",
 ) -> dict[str, Any]:
+    """Create Sankey diagram for cash flow visualization.
+
+    Supports both single and multiple income sources:
+    - Single source: Income → Savings/Expenses
+    - Multiple sources: Source1, Source2, ... → Total Income → Savings/Expenses
+
+    Args:
+        cash_flow_data: Dict with income sources, Savings, Expenses, and expense categories
+        user_agent: mobile or desktop for sizing
+        currency: Currency code for formatting
+
+    Returns:
+        ECharts Sankey diagram options
+    """
     savings = cash_flow_data.get("Savings", 0)
     expenses_total = cash_flow_data.get("Expenses", 0)
-    expense_categories = {
-        k: v for k, v in cash_flow_data.items() if k not in ["Savings", "Expenses"]
-    }
+
+    # Income sources: keys that are not Savings or Expenses
+    # We need to differentiate between income sources and expense categories
+    # Income sources come first in the dict (from finance_calculator)
+    # Expense categories come after Expenses key
+
+    income_sources: dict[str, float] = {}
+    expense_categories: dict[str, float] = {}
+
+    # Parse keys in order to identify structure
+    found_expenses_key = False
+    for key, value in cash_flow_data.items():
+        if key == "Expenses":
+            found_expenses_key = True
+            continue
+        elif key == "Savings":
+            continue
+        elif not found_expenses_key:
+            # Before "Expenses" key = income sources
+            income_sources[key] = value
+        else:
+            # After "Expenses" key = expense categories
+            expense_categories[key] = value
+
+    has_multiple_sources = len(income_sources) > 1
 
     colors = [
         "#e6b600",
@@ -191,22 +227,64 @@ def create_cash_flow_options(
         "#3fb27f",
     ]
 
-    nodes = [
-        {"name": "Income", "itemStyle": {"color": "#2b821d"}},
-        {"name": "Savings", "itemStyle": {"color": "#005eaa"}},
-        {"name": "Expenses", "itemStyle": {"color": "#c12e34"}},
-    ] + [
-        {"name": category, "itemStyle": {"color": colors[i % len(colors)]}}
-        for i, category in enumerate(expense_categories)
-    ]
+    # Build nodes and links based on income source count
+    if has_multiple_sources:
+        # Multiple income sources: Source1, Source2 → Total Income → Savings/Expenses
+        nodes = [
+            # Income source nodes (green shades)
+            *[
+                {"name": source, "itemStyle": {"color": "#2b821d" if i == 0 else "#4a9d3a"}}
+                for i, source in enumerate(income_sources)
+            ],
+            # Aggregation node
+            {"name": "Total Income", "itemStyle": {"color": "#2b821d"}},
+            # Output nodes
+            {"name": "Savings", "itemStyle": {"color": "#005eaa"}},
+            {"name": "Expenses", "itemStyle": {"color": "#c12e34"}},
+            # Expense category nodes
+            *[
+                {"name": category, "itemStyle": {"color": colors[i % len(colors)]}}
+                for i, category in enumerate(expense_categories)
+            ],
+        ]
 
-    links = [
-        {"source": "Income", "target": "Savings", "value": round(savings, 2)},
-        {"source": "Income", "target": "Expenses", "value": round(expenses_total, 2)},
-    ] + [
-        {"source": "Expenses", "target": category, "value": round(amount, 2)}
-        for category, amount in expense_categories.items()
-    ]
+        links = [
+            # Income sources → Total Income
+            *[
+                {"source": source, "target": "Total Income", "value": round(amount, 2)}
+                for source, amount in income_sources.items()
+            ],
+            # Total Income → Savings/Expenses
+            {"source": "Total Income", "target": "Savings", "value": round(savings, 2)},
+            {"source": "Total Income", "target": "Expenses", "value": round(expenses_total, 2)},
+            # Expenses → Categories
+            *[
+                {"source": "Expenses", "target": category, "value": round(amount, 2)}
+                for category, amount in expense_categories.items()
+            ],
+        ]
+    else:
+        # Single income source: keep original behavior
+        income_name = list(income_sources.keys())[0] if income_sources else "Income"
+
+        nodes = [
+            {"name": income_name, "itemStyle": {"color": "#2b821d"}},
+            {"name": "Savings", "itemStyle": {"color": "#005eaa"}},
+            {"name": "Expenses", "itemStyle": {"color": "#c12e34"}},
+            *[
+                {"name": category, "itemStyle": {"color": colors[i % len(colors)]}}
+                for i, category in enumerate(expense_categories)
+            ],
+        ]
+
+        links = [
+            {"source": income_name, "target": "Savings", "value": round(savings, 2)},
+            {"source": income_name, "target": "Expenses", "value": round(expenses_total, 2)},
+            *[
+                {"source": "Expenses", "target": category, "value": round(amount, 2)}
+                for category, amount in expense_categories.items()
+            ],
+        ]
 
     return {
         "tooltip": {
