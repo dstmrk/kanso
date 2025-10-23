@@ -76,7 +76,7 @@ class GoogleSheetService:
         self,
         worksheet_name: str,
         header: int | list[int] = 0,
-        index_col: int | None = 0,
+        index_col: int | None = None,
         validate: bool = True,
     ) -> pd.DataFrame:
         """Get worksheet data as a pandas DataFrame with optional validation.
@@ -132,8 +132,11 @@ class GoogleSheetService:
             if index_col is not None:
                 index_name = df.columns[index_col]
                 df = df.set_index(index_name)
-
-            result_df = df.reset_index()
+                # Reset index to convert it back to a column
+                result_df = df.reset_index()
+            else:
+                # No index_col specified - just reset to default sequential index
+                result_df = df.reset_index(drop=True)
 
             # Optional non-blocking validation
             if validate and not isinstance(df.columns, pd.MultiIndex):

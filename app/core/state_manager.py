@@ -152,9 +152,9 @@ class StateManager:
             loop = asyncio.get_event_loop()
             result = await loop.run_in_executor(None, compute_fn)
         except Exception as e:
-            # Direct fallback if there are thread pool issues
-            logger.warning(
-                f"Thread pool execution failed for {computation_key}, using direct execution: {e}"
+            # Direct fallback if there are thread pool issues (pickling errors, etc.)
+            logger.error(
+                f"Thread pool execution failed for {computation_key}, falling back to direct execution: {e}"
             )
             result = compute_fn()
 

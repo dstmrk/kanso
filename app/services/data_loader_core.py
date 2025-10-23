@@ -79,41 +79,50 @@ class DataLoaderCore:
             True if all sheets loaded successfully, False otherwise
         """
         try:
+            sheets_loaded = []
+
             if not self.storage.get("assets_sheet"):
-                logger.info("Loading Assets sheet...")
+                logger.debug("Loading Assets sheet...")
                 df = service.get_worksheet_as_dataframe(
                     self.app_config.assets_sheet_name, header=[0, 1]
                 )
                 self.storage["assets_sheet"] = df.to_json(orient="split")
                 self.storage["assets_sheet_hash"] = self.calculate_dataframe_hash(df)
+                sheets_loaded.append(f"Assets ({len(df)} rows)")
 
             if not self.storage.get("liabilities_sheet"):
-                logger.info("Loading Liabilities sheet...")
+                logger.debug("Loading Liabilities sheet...")
                 df = service.get_worksheet_as_dataframe(
                     self.app_config.liabilities_sheet_name, header=[0, 1]
                 )
                 self.storage["liabilities_sheet"] = df.to_json(orient="split")
                 self.storage["liabilities_sheet_hash"] = self.calculate_dataframe_hash(df)
+                sheets_loaded.append(f"Liabilities ({len(df)} rows)")
 
             if not self.storage.get("expenses_sheet"):
-                logger.info("Loading Expenses sheet...")
+                logger.debug("Loading Expenses sheet...")
                 df = service.get_worksheet_as_dataframe(self.app_config.expenses_sheet_name)
                 self.storage["expenses_sheet"] = df.to_json(orient="split")
                 self.storage["expenses_sheet_hash"] = self.calculate_dataframe_hash(df)
+                sheets_loaded.append(f"Expenses ({len(df)} rows)")
 
             if not self.storage.get("incomes_sheet"):
-                logger.info("Loading Incomes sheet...")
+                logger.debug("Loading Incomes sheet...")
                 # Load with multi-index header like Assets/Liabilities
                 df = service.get_worksheet_as_dataframe(
                     self.app_config.incomes_sheet_name, header=[0, 1]
                 )
-                logger.info(
+                logger.debug(
                     f"Incomes sheet loaded with {len(df)} rows and columns: {df.columns.tolist()[:5]}"
                 )
                 self.storage["incomes_sheet"] = df.to_json(orient="split")
                 self.storage["incomes_sheet_hash"] = self.calculate_dataframe_hash(df)
+                sheets_loaded.append(f"Incomes ({len(df)} rows)")
 
-            logger.info("All data sheets loaded successfully")
+            if sheets_loaded:
+                logger.info(f"Data sheets loaded successfully: {', '.join(sheets_loaded)}")
+            else:
+                logger.debug("All data sheets already loaded (skipped)")
             return True
 
         except Exception as e:
@@ -170,7 +179,7 @@ class DataLoaderCore:
         """
         try:
             # Load fresh data from Google Sheets
-            logger.info(f"Refreshing {sheet_name} sheet from Google Sheets...")
+            logger.debug(f"Refreshing {sheet_name} sheet from Google Sheets...")
             df = service.get_worksheet_as_dataframe(sheet_name, header=header)
 
             # Calculate hash of new data
@@ -182,13 +191,13 @@ class DataLoaderCore:
 
             # Compare hashes
             if existing_hash == new_hash:
-                logger.info(f"No changes detected in {sheet_name} sheet")
+                logger.debug(f"No changes detected in {sheet_name} sheet")
                 return False, f"No changes in {sheet_name}"
 
             # Data has changed - update storage
             self.storage[storage_key] = df.to_json(orient="split")
             self.storage[hash_key] = new_hash
-            logger.info(f"Updated {sheet_name} sheet (hash changed)")
+            logger.info(f"Updated {sheet_name} sheet - data changed ({len(df)} rows)")
 
             return True, f"Updated {sheet_name}"
 

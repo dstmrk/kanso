@@ -120,6 +120,10 @@ def parse_monetary_value(value: Any, currency: str | None = None) -> float:
         cleaned = re.sub(r"[€$£¥]|Fr|CHF|JPY|USD|EUR|GBP", "", value).strip()
         cleaned = cleaned.replace(" ", "")
 
+        # Special case: empty or just dash (common in Google Sheets for zero with monetary format)
+        if not cleaned or cleaned == "-":
+            return 0.0
+
         # Special case: plain number without currency symbol
         # If no currency was detected, treat dots/commas intelligently:
         # - If only one separator exists, it's likely decimal (most common case)
@@ -156,8 +160,19 @@ def parse_monetary_value(value: Any, currency: str | None = None) -> float:
 
         return float(cleaned) if cleaned else 0.0
 
-    except (ValueError, TypeError):
-        logger.warning(f"Failed to parse monetary value: {value}")
+    except (ValueError, TypeError) as e:
+        # Check if this looks like a text header or label (contains only letters/underscores)
+        if cleaned and cleaned.replace("_", "").replace(" ", "").isalpha():
+            # Silently skip text headers/labels - common in sheets with duplicate header rows
+            # or when iterating over all columns including label columns
+            logger.debug(
+                f"Skipping text value '{value}' during monetary parsing (likely a header/label)"
+            )
+        else:
+            logger.error(
+                f"Failed to parse monetary value '{value}' (cleaned: '{cleaned}'): {e}. "
+                "This indicates a data quality issue in the source sheet."
+            )
         return 0.0
 
 
