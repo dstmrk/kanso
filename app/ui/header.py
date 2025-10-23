@@ -186,7 +186,7 @@ def render() -> None:
     with ui.header().classes("bg-secondary p-2 mobile-hide"):
         with ui.row().classes("w-full items-center justify-between text-2xl"):
             with ui.row().classes("items-center gap-x-1 cursor-pointer") as title_left:
-                ui.label("Kanso").classes("font-semibold text-2xl")
+                ui.html(styles.LOGO_SVG, sanitize=False)
             title_left.props('tabindex="0" role="button" aria-label="Toggle menu"')
             title_left.on("click", left_drawer.toggle)
             profile_picture = ui.html(styles.PROFILE_SVG, sanitize=False).classes(
@@ -198,6 +198,6 @@ def render() -> None:
     with ui.header().classes("bg-secondary p-2 md:hidden"):
         with ui.row().classes("w-full justify-center"):
             with ui.row().classes("items-center gap-x-1 cursor-pointer") as title_center:
-                ui.label("Kanso").classes("font-semibold text-2xl")
+                ui.html(styles.LOGO_SVG, sanitize=False)
             title_center.props('tabindex="0" role="button" aria-label="Go home"')
             title_center.on("click", lambda: ui.navigate.to(pages.HOME_PAGE))
