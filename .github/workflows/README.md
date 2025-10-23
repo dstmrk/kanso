@@ -13,65 +13,76 @@ Runs tests, linting, and builds on every push and PR.
 #### Jobs
 
 1. **changes** - Detects which files changed (for smart job execution)
-2. **test** - Unit tests (skips on docs-only or static-only, ~2 min)
-3. **lint** - Code quality checks (skips on docs-only or static-only, ~1 min)
-4. **test-e2e** - E2E tests (smart conditional, always validates static changes, ~5 min)
-5. **docker** - Docker build validation (skips on docs-only, always validates static changes, ~2 min)
+2. **test** - Unit tests (runs only if code changed, ~2 min)
+3. **lint** - Code quality checks (runs only if code changed, ~1 min)
+4. **test-e2e** - E2E tests (smart conditional, ~5 min)
+5. **docker** - Docker build validation (runs if code or static changed, ~2 min)
 
 #### Performance Optimizations ⚡
 
+- **Smart path filtering**: Jobs run based on what changed
+  - `code`: Everything except docs and static assets
+  - `static`: Only static assets (images, logos, themes)
+  - `ui`: UI-specific files (for E2E smart logic)
 - **Docs-only skip**: All jobs skip when only `.md`, `docs/`, or `LICENSE` files change
-- **Static-only skip**: `test` and `lint` skip when only `static/**` files change (E2E and Docker still run to validate visual changes)
+- **Static-only skip**: `test` and `lint` skip, but E2E and Docker run (visual validation)
 - **Dependency caching**: `uv` dependencies are cached using GitHub Actions cache
-- **Smart E2E**: E2E tests run only when UI/services change or on main branch
+- **Smart E2E**: E2E tests run when code/static/UI changes or on main branch
 
 #### Smart Job Execution 🎯
 
-All CI jobs use intelligent conditions to run only when needed:
+All CI jobs use intelligent conditions based on path filters:
 
-| Trigger | Test/Lint | E2E | Docker | Why |
-|---------|-----------|-----|--------|-----|
-| Push to `main` (code changes) | ✅ Yes | ✅ Yes | ✅ Yes | Protect production |
-| Push to `main` (docs only) | ⚡ Skip | ⚡ Skip | ⚡ Skip | No code/UI impact |
-| Push to `main` (static only) | ⚡ Skip | ✅ Yes | ✅ Yes | Validate visual changes |
-| PR with code changes | ✅ Yes | ✅ If UI changed | ✅ Yes | Standard validation |
-| PR with docs only (`.md`, `LICENSE`) | ⚡ Skip | ⚡ Skip | ⚡ Skip | No code/UI impact |
-| PR with static only (`static/**`) | ⚡ Skip | ✅ If UI changed | ✅ Yes | Logo/favicon/theme validation |
-| PR with `app/ui/` changes | ✅ Yes | ✅ Yes | ✅ Yes | UI changes need E2E |
-| PR with `app/services/` changes | ✅ Yes | ✅ Yes | ✅ Yes | Backend affects UI |
-| Commit with `[e2e]` | ✅ Yes | ✅ Force | ✅ Yes | Manual override |
-| Commit with `[skip e2e]` | ✅ Yes | ❌ Skip | ✅ Yes | Skip only E2E |
-| Manual trigger | ✅ Yes | ✅ Yes | ✅ Yes | On-demand testing |
+| Files Changed | Test | Lint | E2E | Docker | Why |
+|---------------|------|------|-----|--------|-----|
+| Only `README.md` | ⚡ Skip | ⚡ Skip | ⚡ Skip | ⚡ Skip | Docs-only, no impact |
+| Only `ROADMAP.md` + `LICENSE` | ⚡ Skip | ⚡ Skip | ⚡ Skip | ⚡ Skip | Docs-only, no impact |
+| Only `static/logo.svg` | ⚡ Skip | ⚡ Skip | ✅ Yes | ✅ Yes | Visual validation needed |
+| `app/ui/header.py` | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | Code change |
+| `app/ui/header.py` + `README.md` | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | Code change (docs ignored) |
+| `main.py` + `ROADMAP.md` | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | Code change |
+| `styles.py` + `logo.svg` | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | Code + static |
+| `pyproject.toml` | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | Dependency change |
+| Push to `main` (any code) | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | Always protect main |
+| Commit with `[skip e2e]` | ✅ Yes | ✅ Yes | ❌ Skip | ✅ Yes | Manual E2E skip |
+| Commit with `[e2e]` | ✅ Yes | ✅ Yes | ✅ Force | ✅ Yes | Force E2E run |
+| Manual trigger | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | On-demand testing |
 
-#### Docs-Only Detection
+**Key principle**: If ANY code file changes (even mixed with docs), all code validation runs.
 
-Files that trigger docs-only skip (all jobs skip):
+#### Path Filter Definitions
+
+The workflow uses three filters to determine which jobs to run:
+
+**1. Code Filter** (triggers test/lint/e2e/docker):
 ```yaml
-- '**.md'              # All markdown files
-- 'docs/**'            # Documentation directory
-- 'LICENSE'            # License file
-- '.github/**/*.md'    # GitHub docs
+code:
+  - '**'               # Match everything
+  - '!**.md'           # Except markdown files
+  - '!docs/**'         # Except docs directory
+  - '!LICENSE'         # Except license
+  - '!.github/**/*.md' # Except GitHub markdown
+  - '!static/**'       # Except static assets
 ```
 
-#### Static-Only Detection
-
-Files that trigger static-only skip (test/lint skip, E2E/Docker run):
+**2. Static Filter** (triggers e2e/docker, skips test/lint):
 ```yaml
-- 'static/**'          # Favicon, logo, themes (visual assets need E2E validation)
+static:
+  - 'static/**'        # Images, logos, themes, favicons
 ```
 
-**Why E2E still runs?** Static files (logo, favicon, themes) affect the visual appearance of the UI, so E2E tests validate that they render correctly.
-
-#### File Patterns Triggering E2E
-
+**3. UI Filter** (for E2E smart logic):
 ```yaml
-- 'app/ui/**'         # UI components
-- 'app/services/**'   # Backend services
-- 'tests/e2e/**'      # E2E test files
-- 'main.py'           # App entry point
-- '.env.test'         # Test configuration
-- 'pyproject.toml'    # Dependencies
+ui:
+  - 'app/ui/**'        # UI components
+  - 'app/services/**'  # Backend services affecting UI
+  - 'tests/e2e/**'     # E2E test files
+  - 'main.py'          # App entry point
+  - '.env.test'        # Test configuration
+  - 'pyproject.toml'   # Dependencies
 ```
+
+**Why E2E runs for static?** Visual assets (logo, favicon, themes) affect UI appearance and need visual validation.
 
 ## Usage
 
@@ -108,22 +119,23 @@ pytest --browser chromium
 
 ## Maintenance
 
-- **Unit tests**: Run on all code changes (skip on docs-only or static-only)
-- **E2E tests**: Run when UI/services/static change or on main branch (skip on docs-only)
-- **Lint**: Run on all code changes (skip on docs-only or static-only)
-- **Docker**: Run on all code/static changes (skip on docs-only)
-- **Docs-only changes**: All jobs skipped to save CI resources
-- **Static-only changes**: Only E2E and Docker run to validate visual changes
+- **Unit tests**: Run when `code` filter matches (any non-docs, non-static file)
+- **Lint**: Run when `code` filter matches (any non-docs, non-static file)
+- **E2E tests**: Run when `code` OR `static` filter matches (visual validation)
+- **Docker**: Run when `code` OR `static` filter matches (container validation)
 
 ### CI Resource Optimization
 
-Smart skip features save significant CI time:
+Smart path filtering saves significant CI time:
 
-| Change Type | Time Saved | What Runs |
-|-------------|-----------|-----------|
-| Docs only (`.md`, `LICENSE`) | ~10 min → 0 min | Nothing (all jobs skip) |
-| Static only (`static/**`) | ~10 min → ~7 min | Only E2E + Docker (visual validation) |
-| Code changes | Full validation | All jobs run |
+| Change Type | Time Saved | What Runs | Reason |
+|-------------|-----------|-----------|--------|
+| Docs only (`.md`, `LICENSE`) | ~10 min → 0 min | Nothing | No code/UI impact |
+| Static only (`static/**`) | ~10 min → ~7 min | E2E + Docker only | Visual validation needed |
+| Code + docs (`header.py` + `README.md`) | Full validation | All jobs | Code validation needed |
+| Code only (`app/ui/header.py`) | Full validation | All jobs | Standard validation |
+
+**Key improvement**: Mixed changes (code + docs) now correctly trigger all code validation jobs.
 
 Applies to **all branches** including `main` to maximize resource savings.
 
