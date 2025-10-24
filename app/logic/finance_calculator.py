@@ -1,32 +1,26 @@
 # app/logic/finance_calculator.py
-"""Financial calculations and monetary value parsing.
+"""Financial calculations with modular architecture.
 
 This module provides the core financial calculation logic for the Kanso application.
-It includes intelligent multi-currency parsing and a comprehensive calculator class
-for computing financial KPIs from monthly data.
+It coordinates DataFrame preprocessing and calculations, delegating to specialized
+modules for specific concerns.
 
 Key features:
-    - Multi-currency support (EUR, USD, GBP, CHF, JPY)
-    - Intelligent format detection (European vs US/UK formats)
-    - Cached DataFrame preprocessing for performance
     - Net worth tracking and variation calculations
     - Savings ratio and cash flow analysis
+    - Chart data generation for dashboards
+    - Modular preprocessing with DataFrameProcessor
+    - Multi-currency support via monetary_parsing
 
 Example:
-    >>> from app.logic.finance_calculator import FinanceCalculator, parse_monetary_value
-    >>> # Parse various currency formats
-    >>> parse_monetary_value("€ 1.234,56")
-    1234.56
-    >>> parse_monetary_value("$1,234.56")
-    1234.56
-    >>> # Create calculator instance
-    >>> calc = FinanceCalculator(df)
+    >>> from app.logic.finance_calculator import FinanceCalculator
+    >>> calc = FinanceCalculator(assets_df=assets, liabilities_df=liabilities,
+    ...                           expenses_df=expenses, incomes_df=incomes)
     >>> calc.get_current_net_worth()
     50000.0
 """
 
 import logging
-import re
 from typing import Any
 
 import pandas as pd
@@ -36,7 +30,6 @@ from app.core.constants import (
     CATEGORY_EXPENSES,
     CATEGORY_LIABILITIES,
     CATEGORY_SAVINGS,
-    COL_AMOUNT,
     COL_AMOUNT_PARSED,
     COL_CATEGORY,
     COL_DATE,
@@ -47,133 +40,13 @@ from app.core.constants import (
     MONTHS_IN_YEAR,
     MONTHS_LOOKBACK_YEAR,
 )
-from app.core.currency_formats import CURRENCY_FORMATS, get_currency_format
 from app.core.monitoring import track_performance
+from app.logic.dataframe_processor import DataFrameProcessor
+
+# Re-export parsing functions for backward compatibility
+from app.logic.monetary_parsing import parse_monetary_value
 
 logger = logging.getLogger(__name__)
-
-
-def detect_currency(value: str) -> str | None:
-    """Detect currency from symbol in string.
-
-    Args:
-        value: String potentially containing currency symbol
-
-    Returns:
-        Currency code (EUR, USD, GBP, CHF, JPY) or None if not detected
-    """
-    # Check for each currency symbol from centralized config
-    for currency_code, fmt in CURRENCY_FORMATS.items():
-        if fmt.symbol in value:
-            return currency_code
-    # Also check for currency code strings
-    if "CHF" in value:
-        return "CHF"
-    if "JPY" in value:
-        return "JPY"
-    return None
-
-
-def parse_monetary_value(value: Any, currency: str | None = None) -> float:
-    """Parse monetary value with intelligent currency detection.
-
-    Supports multiple currency formats:
-    - EUR, CHF: European format (1.234,56)
-    - USD, GBP: US/UK format (1,234.56)
-    - JPY: No decimals (1,234)
-
-    Args:
-        value: Monetary value as string, int, or float
-        currency: Optional currency override (EUR, USD, GBP, CHF, JPY)
-
-    Returns:
-        Parsed float value. Returns 0.0 for None, empty strings, or unparseable values.
-
-    Examples:
-        >>> parse_monetary_value("€ 1.234,56")
-        1234.56
-        >>> parse_monetary_value("$1,234.56")
-        1234.56
-        >>> parse_monetary_value("¥1,234")
-        1234.0
-        >>> parse_monetary_value("1234.56", currency="EUR")
-        123456.0  # Interprets as European: dot = thousand separator
-    """
-    if not isinstance(value, str):
-        return float(value) if value is not None else 0.0
-
-    # Detect or use provided currency
-    detected_currency = currency or detect_currency(value)
-
-    # Get format config (default to EUR if not found)
-    if detected_currency and detected_currency in CURRENCY_FORMATS:
-        fmt = get_currency_format(detected_currency)
-    else:
-        # Default to EUR format
-        fmt = get_currency_format("EUR")
-
-    thousand_sep = fmt.thousands_sep
-    decimal_sep = fmt.decimal_sep
-
-    try:
-        # Remove currency symbols and extra spaces
-        cleaned = re.sub(r"[€$£¥]|Fr|CHF|JPY|USD|EUR|GBP", "", value).strip()
-        cleaned = cleaned.replace(" ", "")
-
-        # Special case: empty or just dash (common in Google Sheets for zero with monetary format)
-        if not cleaned or cleaned == "-":
-            return 0.0
-
-        # Special case: plain number without currency symbol
-        # If no currency was detected, treat dots/commas intelligently:
-        # - If only one separator exists, it's likely decimal (most common case)
-        # - Format like "1234.56" or "1234,56" should be treated as decimal
-        if detected_currency is None:
-            # Count separators
-            dot_count = cleaned.count(".")
-            comma_count = cleaned.count(",")
-
-            # Only one type of separator
-            if dot_count == 1 and comma_count == 0:
-                # Single dot - likely decimal point (standard notation)
-                return float(cleaned)
-            elif comma_count == 1 and dot_count == 0:
-                # Single comma - likely decimal (European)
-                return float(cleaned.replace(",", "."))
-            elif dot_count == 0 and comma_count == 0:
-                # No separators - plain integer or float
-                return float(cleaned) if cleaned else 0.0
-            # Multiple separators - fall through to currency-specific logic
-
-        # Handle the case where there are no separators (plain number)
-        if thousand_sep not in cleaned and (not decimal_sep or decimal_sep not in cleaned):
-            # No separators found - treat as plain number
-            return float(cleaned) if cleaned else 0.0
-
-        # Remove thousand separator
-        if thousand_sep:
-            cleaned = cleaned.replace(thousand_sep, "")
-
-        # Replace decimal separator with dot (Python standard)
-        if decimal_sep and decimal_sep != ".":
-            cleaned = cleaned.replace(decimal_sep, ".")
-
-        return float(cleaned) if cleaned else 0.0
-
-    except (ValueError, TypeError) as e:
-        # Check if this looks like a text header or label (contains only letters/underscores)
-        if cleaned and cleaned.replace("_", "").replace(" ", "").isalpha():
-            # Silently skip text headers/labels - common in sheets with duplicate header rows
-            # or when iterating over all columns including label columns
-            logger.debug(
-                f"Skipping text value '{value}' during monetary parsing (likely a header/label)"
-            )
-        else:
-            logger.error(
-                f"Failed to parse monetary value '{value}' (cleaned: '{cleaned}'): {e}. "
-                "This indicates a data quality issue in the source sheet."
-            )
-        return 0.0
 
 
 class FinanceCalculator:
@@ -244,28 +117,30 @@ class FinanceCalculator:
     def processed_expenses_df(self) -> pd.DataFrame | None:
         """Lazily processed and cached expenses DataFrame."""
         if self.expenses_df is not None and self._processed_expenses_df is None:
-            self._processed_expenses_df = self._preprocess_expenses_df()
+            self._processed_expenses_df = DataFrameProcessor.preprocess_expenses(self.expenses_df)
         return self._processed_expenses_df
 
     @property
     def processed_assets_df(self) -> pd.DataFrame | None:
         """Lazily processed and cached assets DataFrame."""
         if self.assets_df is not None and self._processed_assets_df is None:
-            self._processed_assets_df = self._preprocess_assets_df()
+            self._processed_assets_df = DataFrameProcessor.preprocess_assets(self.assets_df)
         return self._processed_assets_df
 
     @property
     def processed_liabilities_df(self) -> pd.DataFrame | None:
         """Lazily processed and cached liabilities DataFrame."""
         if self.liabilities_df is not None and self._processed_liabilities_df is None:
-            self._processed_liabilities_df = self._preprocess_liabilities_df()
+            self._processed_liabilities_df = DataFrameProcessor.preprocess_liabilities(
+                self.liabilities_df
+            )
         return self._processed_liabilities_df
 
     @property
     def processed_incomes_df(self) -> pd.DataFrame | None:
         """Lazily processed and cached incomes DataFrame."""
         if self.incomes_df is not None and self._processed_incomes_df is None:
-            self._processed_incomes_df = self._preprocess_incomes_df()
+            self._processed_incomes_df = DataFrameProcessor.preprocess_incomes(self.incomes_df)
         return self._processed_incomes_df
 
     @property
@@ -318,206 +193,6 @@ class FinanceCalculator:
         )
 
         return monthly_totals
-
-    def _preprocess_expenses_df(self) -> pd.DataFrame | None:
-        """Preprocess expenses DataFrame once.
-
-        Converts Date column to datetime, parses Amount column to float, and sorts by date.
-
-        Returns:
-            Preprocessed expenses DataFrame with date_dt and amount_parsed columns,
-            or None if no expenses DataFrame was provided
-        """
-        if self.expenses_df is None:
-            return None
-
-        df = self.expenses_df.copy()
-
-        # Check if Date column exists
-        if COL_DATE not in df.columns:
-            logger.error(
-                f"Expenses sheet missing '{COL_DATE}' column! Available: {df.columns.tolist()}"
-            )
-            return None
-
-        # Check if dates are already datetime objects (from Google Sheets)
-        if pd.api.types.is_datetime64_any_dtype(df[COL_DATE]):
-            # Dates are already datetime objects - just normalize to first day of month
-            df[COL_DATE_DT] = pd.to_datetime(df[COL_DATE]).dt.to_period("M").dt.to_timestamp()
-        else:
-            # Dates are strings - parse them
-            df[COL_DATE_DT] = pd.to_datetime(
-                df[COL_DATE].astype(str).str.strip(), format=DATE_FORMAT_STORAGE, errors="coerce"
-            )
-
-        # Warn if too many dates failed to parse
-        nat_count = df[COL_DATE_DT].isna().sum()
-        if nat_count > 0:
-            logger.warning(f"Failed to parse {nat_count} dates in Expenses sheet")
-
-        # Check if Amount column exists
-        if COL_AMOUNT not in df.columns:
-            logger.error(
-                f"Expenses sheet missing '{COL_AMOUNT}' column! Available: {df.columns.tolist()}"
-            )
-            return None
-
-        df[COL_AMOUNT_PARSED] = df[COL_AMOUNT].apply(parse_monetary_value)
-
-        return df.sort_values(by=COL_DATE_DT)
-
-    def _find_date_column(self, df: pd.DataFrame) -> str | tuple[Any, ...] | None:
-        """Find the Date column in a DataFrame, handling both single and MultiIndex columns.
-
-        Searches for a column named exactly "Date" in either single-level or
-        MultiIndex column structure.
-
-        Args:
-            df: DataFrame to search for Date column
-
-        Returns:
-            Column name (str or tuple) if found, None otherwise
-
-        Example:
-            >>> df = pd.DataFrame({'Date': ['2024-01'], 'Value': [100]})
-            >>> self._find_date_column(df)
-            'Date'
-            >>> df_multi = pd.DataFrame({('Date', ''): ['2024-01'], ('Cash', 'Checking'): [100]})
-            >>> self._find_date_column(df_multi)
-            ('Date', '')
-        """
-        for col in df.columns:
-            if isinstance(col, tuple):
-                # MultiIndex column - check if "Date" in either level
-                if COL_DATE == col[0] or COL_DATE == col[1]:
-                    return col
-            else:
-                # Single-level column
-                if COL_DATE == col:
-                    return col
-        return None
-
-    def _preprocess_assets_df(self) -> pd.DataFrame | None:
-        """Preprocess assets DataFrame once with date parsing and sorting.
-
-        Handles both single-level and MultiIndex column structures. Locates the Date
-        column dynamically and converts it to datetime for sorting.
-
-        Returns:
-            Preprocessed assets DataFrame with date_dt column, or None if no assets
-            DataFrame was provided
-        """
-        if self.assets_df is None or self.assets_df.empty:
-            return None
-
-        df = self.assets_df.copy()
-
-        # Find Date column using helper method
-        date_col = self._find_date_column(df)
-
-        if date_col is not None:
-            df[COL_DATE_DT] = pd.to_datetime(
-                df[date_col], format=DATE_FORMAT_STORAGE, errors="coerce"
-            )
-            df = df.sort_values(by=COL_DATE_DT)
-
-        return df
-
-    def _preprocess_liabilities_df(self) -> pd.DataFrame | None:
-        """Preprocess liabilities DataFrame once with date parsing and sorting.
-
-        Handles both single-level and MultiIndex column structures. Locates the Date
-        column dynamically and converts it to datetime for sorting.
-
-        Returns:
-            Preprocessed liabilities DataFrame with date_dt column, or None if no
-            liabilities DataFrame was provided
-        """
-        if self.liabilities_df is None or self.liabilities_df.empty:
-            return None
-
-        df = self.liabilities_df.copy()
-
-        # Find Date column using helper method
-        date_col = self._find_date_column(df)
-
-        if date_col is not None:
-            df[COL_DATE_DT] = pd.to_datetime(
-                df[date_col], format=DATE_FORMAT_STORAGE, errors="coerce"
-            )
-            df = df.sort_values(by=COL_DATE_DT)
-
-        return df
-
-    def _preprocess_incomes_df(self) -> pd.DataFrame | None:
-        """Preprocess incomes DataFrame once with date parsing and sorting.
-
-        Handles both single-level and MultiIndex column structures. Locates the Date
-        column dynamically and converts it to datetime for sorting.
-
-        Returns:
-            Preprocessed incomes DataFrame with date_dt column, or None if no
-            incomes DataFrame was provided
-        """
-        if self.incomes_df is None or self.incomes_df.empty:
-            return None
-
-        df = self.incomes_df.copy()
-
-        # Find Date column using helper method
-        date_col = self._find_date_column(df)
-
-        if date_col is not None:
-            df[COL_DATE_DT] = pd.to_datetime(
-                df[date_col], format=DATE_FORMAT_STORAGE, errors="coerce"
-            )
-            df = df.sort_values(by=COL_DATE_DT)
-
-        return df
-
-    def _sum_monetary_columns_for_row(self, row: pd.Series, exclude_patterns: list[str]) -> float:
-        """Sum all monetary columns in a row, excluding specified patterns.
-
-        Helper method to efficiently sum monetary values in a DataFrame row,
-        skipping columns that match exclude patterns (like 'Date', 'date_dt', 'Category').
-
-        Args:
-            row: DataFrame row as pandas Series
-            exclude_patterns: List of column name patterns to exclude
-
-        Returns:
-            Total sum of all monetary values in the row
-
-        Example:
-            >>> row = pd.Series({'Date': '2024-01', 'Cash': '1000', 'Stocks': '5000'})
-            >>> self._sum_monetary_columns_for_row(row, ['Date'])
-            6000.0
-        """
-        total = 0.0
-        for col, value in row.items():
-            # Skip excluded columns
-            skip = False
-            for pattern in exclude_patterns:
-                if isinstance(col, tuple):
-                    # MultiIndex column - check if pattern in either level
-                    if pattern in (col[0], col[1]) or pattern in str(col):
-                        skip = True
-                        break
-                else:
-                    # Single-level column
-                    if col == pattern or pattern in str(col):
-                        skip = True
-                        break
-
-            if skip:
-                continue
-
-            # Parse and add monetary value
-            parsed_value = parse_monetary_value(value)
-            if parsed_value is not None:
-                total += parsed_value
-
-        return total
 
     def _calculate_net_worth_from_assets_liabilities(self) -> pd.DataFrame:
         """Calculate monthly Net Worth from Assets and Liabilities sheets.
@@ -574,7 +249,9 @@ class FinanceCalculator:
                 # Sum all monetary columns for this date's row
                 # Since groupby returns a DataFrame, get the first (and only) row
                 row = group.iloc[0]
-                total_assets = self._sum_monetary_columns_for_row(row, exclude_date_cols)
+                total_assets = DataFrameProcessor.sum_monetary_columns_for_row(
+                    row, exclude_date_cols
+                )
                 assets_by_date[date] = total_assets
 
         # Process Liabilities using vectorized operations
@@ -588,7 +265,9 @@ class FinanceCalculator:
 
                 # Sum all monetary columns for this date's row
                 row = group.iloc[0]
-                total_liabilities = self._sum_monetary_columns_for_row(row, exclude_liability_cols)
+                total_liabilities = DataFrameProcessor.sum_monetary_columns_for_row(
+                    row, exclude_liability_cols
+                )
                 liabilities_by_date[date] = total_liabilities
 
         # Get all unique dates
