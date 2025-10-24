@@ -366,6 +366,37 @@ class FinanceCalculator:
 
         return df.sort_values(by=COL_DATE_DT)
 
+    def _find_date_column(self, df: pd.DataFrame) -> str | tuple | None:
+        """Find the Date column in a DataFrame, handling both single and MultiIndex columns.
+
+        Searches for a column named exactly "Date" in either single-level or
+        MultiIndex column structure.
+
+        Args:
+            df: DataFrame to search for Date column
+
+        Returns:
+            Column name (str or tuple) if found, None otherwise
+
+        Example:
+            >>> df = pd.DataFrame({'Date': ['2024-01'], 'Value': [100]})
+            >>> self._find_date_column(df)
+            'Date'
+            >>> df_multi = pd.DataFrame({('Date', ''): ['2024-01'], ('Cash', 'Checking'): [100]})
+            >>> self._find_date_column(df_multi)
+            ('Date', '')
+        """
+        for col in df.columns:
+            if isinstance(col, tuple):
+                # MultiIndex column - check if "Date" in either level
+                if COL_DATE == col[0] or COL_DATE == col[1]:
+                    return col
+            else:
+                # Single-level column
+                if COL_DATE == col:
+                    return col
+        return None
+
     def _preprocess_assets_df(self) -> pd.DataFrame | None:
         """Preprocess assets DataFrame once with date parsing and sorting.
 
@@ -381,18 +412,8 @@ class FinanceCalculator:
 
         df = self.assets_df.copy()
 
-        # Find Date column (handles MultiIndex)
-        # Only accepts columns named exactly "Date"
-        date_col = None
-        for col in df.columns:
-            if isinstance(col, tuple):
-                if COL_DATE == col[0] or COL_DATE == col[1]:
-                    date_col = col
-                    break
-            else:
-                if COL_DATE == col:
-                    date_col = col
-                    break
+        # Find Date column using helper method
+        date_col = self._find_date_column(df)
 
         if date_col is not None:
             df[COL_DATE_DT] = pd.to_datetime(
@@ -417,17 +438,8 @@ class FinanceCalculator:
 
         df = self.liabilities_df.copy()
 
-        # Find Date column (handles MultiIndex)
-        date_col = None
-        for col in df.columns:
-            if isinstance(col, tuple):
-                if COL_DATE == col[0] or COL_DATE == col[1]:
-                    date_col = col
-                    break
-            else:
-                if COL_DATE == col:
-                    date_col = col
-                    break
+        # Find Date column using helper method
+        date_col = self._find_date_column(df)
 
         if date_col is not None:
             df[COL_DATE_DT] = pd.to_datetime(
@@ -452,18 +464,8 @@ class FinanceCalculator:
 
         df = self.incomes_df.copy()
 
-        # Find Date column (handles MultiIndex)
-        # Only accepts columns named exactly "Date"
-        date_col = None
-        for col in df.columns:
-            if isinstance(col, tuple):
-                if COL_DATE == col[0] or COL_DATE == col[1]:
-                    date_col = col
-                    break
-            else:
-                if COL_DATE == col:
-                    date_col = col
-                    break
+        # Find Date column using helper method
+        date_col = self._find_date_column(df)
 
         if date_col is not None:
             df[COL_DATE_DT] = pd.to_datetime(
@@ -472,6 +474,50 @@ class FinanceCalculator:
             df = df.sort_values(by=COL_DATE_DT)
 
         return df
+
+    def _sum_monetary_columns_for_row(self, row: pd.Series, exclude_patterns: list[str]) -> float:
+        """Sum all monetary columns in a row, excluding specified patterns.
+
+        Helper method to efficiently sum monetary values in a DataFrame row,
+        skipping columns that match exclude patterns (like 'Date', 'date_dt', 'Category').
+
+        Args:
+            row: DataFrame row as pandas Series
+            exclude_patterns: List of column name patterns to exclude
+
+        Returns:
+            Total sum of all monetary values in the row
+
+        Example:
+            >>> row = pd.Series({'Date': '2024-01', 'Cash': '1000', 'Stocks': '5000'})
+            >>> self._sum_monetary_columns_for_row(row, ['Date'])
+            6000.0
+        """
+        total = 0.0
+        for col, value in row.items():
+            # Skip excluded columns
+            skip = False
+            for pattern in exclude_patterns:
+                if isinstance(col, tuple):
+                    # MultiIndex column - check if pattern in either level
+                    if pattern in (col[0], col[1]) or pattern in str(col):
+                        skip = True
+                        break
+                else:
+                    # Single-level column
+                    if col == pattern or pattern in str(col):
+                        skip = True
+                        break
+
+            if skip:
+                continue
+
+            # Parse and add monetary value
+            parsed_value = parse_monetary_value(value)
+            if parsed_value is not None:
+                total += parsed_value
+
+        return total
 
     def _calculate_net_worth_from_assets_liabilities(self) -> pd.DataFrame:
         """Calculate monthly Net Worth from Assets and Liabilities sheets.
@@ -485,6 +531,7 @@ class FinanceCalculator:
             - Net worth is only calculated for dates present in the Incomes sheet
               (if Incomes sheet is available). This ensures we only show financial
               data for periods where we have complete income information.
+            - Uses vectorized operations for better performance on large datasets
 
         Returns:
             DataFrame with columns: date_dt (datetime), net_worth_parsed (float)
@@ -511,77 +558,41 @@ class FinanceCalculator:
         if incomes_df is not None and not incomes_df.empty and COL_DATE_DT in incomes_df.columns:
             max_income_date = incomes_df[COL_DATE_DT].max()
 
-        all_dates = set()
-        assets_by_date: dict[pd.Timestamp, float] = {}
-        liabilities_by_date: dict[pd.Timestamp, float] = {}
+        # Columns to exclude when summing monetary values
+        exclude_date_cols = [COL_DATE, COL_DATE_DT, "date_dt"]
+        exclude_liability_cols = exclude_date_cols + [COL_CATEGORY]
 
-        # Process Assets
+        # Process Assets using vectorized operations
+        assets_by_date: dict[pd.Timestamp, float] = {}
         if assets_df is not None and not assets_df.empty:
-            for _, row in assets_df.iterrows():
-                date = row[COL_DATE_DT]
-                # Ensure date is a scalar, not a Series (can happen with multi-index columns)
+            # Group by date and sum monetary columns
+            for date, group in assets_df.groupby(COL_DATE_DT):
+                # Handle case where date might be a Series (multi-index edge case)
                 if isinstance(date, pd.Series):
                     date = date.iloc[0]
-                all_dates.add(date)
 
-                # Sum all asset columns (skip Date and date_dt columns)
-                total_assets = 0.0
-                for col in assets_df.columns:
-                    # Skip date columns
-                    if col == COL_DATE_DT or col == "date_dt":
-                        continue
-                    if isinstance(col, tuple):
-                        # Skip if Date or date_dt appears in tuple
-                        if (
-                            COL_DATE in (col[0], col[1])
-                            or "date_dt" in str(col[0])
-                            or "date_dt" in str(col[1])
-                        ):
-                            continue
-                    else:
-                        if col == COL_DATE or col == "date_dt":
-                            continue
-
-                    # Parse and add value
-                    value = parse_monetary_value(row[col])
-                    if value is not None:
-                        total_assets += value
-
+                # Sum all monetary columns for this date's row
+                # Since groupby returns a DataFrame, get the first (and only) row
+                row = group.iloc[0]
+                total_assets = self._sum_monetary_columns_for_row(row, exclude_date_cols)
                 assets_by_date[date] = total_assets
 
-        # Process Liabilities
+        # Process Liabilities using vectorized operations
+        liabilities_by_date: dict[pd.Timestamp, float] = {}
         if liabilities_df is not None and not liabilities_df.empty:
-            for _, row in liabilities_df.iterrows():
-                date = row[COL_DATE_DT]
-                # Ensure date is a scalar, not a Series (can happen with multi-index columns)
+            # Group by date and sum monetary columns
+            for date, group in liabilities_df.groupby(COL_DATE_DT):
+                # Handle case where date might be a Series (multi-index edge case)
                 if isinstance(date, pd.Series):
                     date = date.iloc[0]
-                all_dates.add(date)
 
-                # Sum all liability columns (skip Date, date_dt, and Category columns)
-                total_liabilities = 0.0
-                for col in liabilities_df.columns:
-                    # Skip date and category columns
-                    if col == COL_DATE_DT or col == "date_dt":
-                        continue
-                    if isinstance(col, tuple):
-                        if (
-                            COL_DATE in (col[0], col[1])
-                            or "date_dt" in str(col[0])
-                            or "date_dt" in str(col[1])
-                            or COL_CATEGORY in (col[0], col[1])
-                        ):
-                            continue
-                    else:
-                        if col in (COL_DATE, "date_dt", COL_CATEGORY):
-                            continue
-
-                    # Parse and add value
-                    value = parse_monetary_value(row[col])
-                    if value is not None:
-                        total_liabilities += value
-
+                # Sum all monetary columns for this date's row
+                row = group.iloc[0]
+                total_liabilities = self._sum_monetary_columns_for_row(row, exclude_liability_cols)
                 liabilities_by_date[date] = total_liabilities
+
+        # Get all unique dates
+        all_dates = set(assets_by_date.keys()) | set(liabilities_by_date.keys())
 
         # Filter dates to only include those up to max income date
         if max_income_date is not None:
