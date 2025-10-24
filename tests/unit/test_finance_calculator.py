@@ -14,7 +14,8 @@ from app.core.constants import (
     COL_MERCHANT,
     COL_TYPE,
 )
-from app.logic.finance_calculator import FinanceCalculator, detect_currency, parse_monetary_value
+from app.logic.finance_calculator import FinanceCalculator
+from app.logic.monetary_parsing import detect_currency, parse_monetary_value
 
 
 class TestDetectCurrency:

@@ -42,8 +42,6 @@ from app.core.constants import (
 )
 from app.core.monitoring import track_performance
 from app.logic.dataframe_processor import DataFrameProcessor
-
-# Re-export parsing functions for backward compatibility
 from app.logic.monetary_parsing import parse_monetary_value
 
 logger = logging.getLogger(__name__)
