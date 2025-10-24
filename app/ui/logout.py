@@ -19,7 +19,6 @@ def render() -> None:
         # Informative text
         with ui.column().classes("items-center gap-2 text-center"):
             ui.label("Your session has been cleared").classes("text-base opacity-70")
-            ui.label("All cached data has been removed").classes("text-sm opacity-60")
 
         # Divider
         ui.separator().classes("w-48")

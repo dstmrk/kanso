@@ -1,6 +1,6 @@
 """Tests for chart formatting functions in app/ui/charts.py"""
 
-from app.core.currency_formats import CURRENCY_FORMATS
+from app.core.currency_formats import CURRENCY_FORMATS, get_currency_symbol
 from app.ui.charts import ChartOptionsBuilder
 
 
@@ -17,15 +17,15 @@ class TestCurrencySymbolMapping:
 
     def test_get_currency_symbol(self):
         """get_currency_symbol should return correct symbols."""
-        assert ChartOptionsBuilder.get_currency_symbol("EUR") == "€"
-        assert ChartOptionsBuilder.get_currency_symbol("USD") == "$"
-        assert ChartOptionsBuilder.get_currency_symbol("GBP") == "£"
-        assert ChartOptionsBuilder.get_currency_symbol("CHF") == "Fr"
-        assert ChartOptionsBuilder.get_currency_symbol("JPY") == "¥"
+        assert get_currency_symbol("EUR") == "€"
+        assert get_currency_symbol("USD") == "$"
+        assert get_currency_symbol("GBP") == "£"
+        assert get_currency_symbol("CHF") == "Fr"
+        assert get_currency_symbol("JPY") == "¥"
 
     def test_get_currency_symbol_fallback(self):
         """get_currency_symbol should fallback to USD symbol for unknown currencies."""
-        assert ChartOptionsBuilder.get_currency_symbol("XXX") == "$"
+        assert get_currency_symbol("XXX") == "$"
 
 
 class TestCreateCurrencyFormatter:

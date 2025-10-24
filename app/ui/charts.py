@@ -1,6 +1,6 @@
 from typing import Any, Literal
 
-from app.core.currency_formats import get_currency_format, get_currency_symbol
+from app.core.currency_formats import get_currency_format
 
 
 class ChartOptionsBuilder:
@@ -10,20 +10,6 @@ class ChartOptionsBuilder:
     def get_font_size(user_agent: Literal["mobile", "desktop"]) -> int:
         """Get font size based on user agent."""
         return 8 if user_agent == "mobile" else 12
-
-    # Deprecated: Use get_currency_symbol from app.core.currency_formats instead
-    # Kept for backward compatibility with existing tests
-    @staticmethod
-    def get_currency_symbol(currency: str) -> str:
-        """Get currency symbol for given currency code.
-
-        Args:
-            currency: Currency code (EUR, USD, GBP, CHF, JPY)
-
-        Returns:
-            Currency symbol string (€, $, £, Fr, ¥)
-        """
-        return get_currency_symbol(currency)
 
     @staticmethod
     def create_currency_formatter(currency: str, decimals: int = 2) -> str:
