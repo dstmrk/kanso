@@ -55,3 +55,9 @@ SHEET_NAME_INCOMES = "Incomes"
 # Number of months for various calculations
 MONTHS_IN_YEAR = 12
 MONTHS_LOOKBACK_YEAR = 13  # 12 months + 1 for YoY comparison
+
+# === Financial Thresholds ===
+
+# Saving ratio thresholds for UI coloring (as decimal percentages)
+SAVING_RATIO_THRESHOLD_LOW = 0.2  # Below this is "error" (red)
+SAVING_RATIO_THRESHOLD_MEDIUM = 0.4  # Below this is "warning" (yellow), above is "success" (green)

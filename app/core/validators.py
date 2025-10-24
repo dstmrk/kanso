@@ -181,7 +181,51 @@ class ExpenseRow(BaseModel):
         return v
 
 
-class AssetRow(BaseModel):
+class MonetaryValueValidatorMixin:
+    """Mixin for validating monetary values in MultiIndex models.
+
+    Provides common validation logic for models with dynamic monetary columns
+    (Assets, Liabilities, Incomes) that use Pydantic's extra fields mechanism.
+
+    This mixin validates that all extra fields contain parse-able monetary values
+    or are empty/NaN. It should be mixed into Pydantic models that have a Date
+    field plus dynamic monetary columns.
+    """
+
+    @model_validator(mode="after")
+    def validate_monetary_values(self):
+        """Validate that all monetary columns contain parse-able values.
+
+        Checks all extra fields (monetary columns) to ensure they can be parsed
+        as numeric values or are empty/NaN. This validator works with Pydantic v2's
+        __pydantic_extra__ mechanism for models with extra="allow".
+
+        Returns:
+            Self if validation passes
+
+        Raises:
+            ValueError: If any monetary value is invalid
+        """
+        # Check extra fields (Pydantic v2 stores them in __pydantic_extra__)
+        if hasattr(self, "__pydantic_extra__") and self.__pydantic_extra__:
+            for field_name, value in self.__pydantic_extra__.items():
+                # Skip None, empty strings, or common NaN representations
+                if value is None or value == "" or str(value).lower() in ["nan", "n/a"]:
+                    continue
+
+                # Check if value contains at least one digit
+                cleaned = (
+                    str(value).replace("€", "").replace("$", "").replace(" ", "").replace(",", "")
+                )
+                if cleaned and not any(c.isdigit() for c in cleaned):
+                    # Get the model class name for error message
+                    model_type = self.__class__.__name__.replace("Row", "")
+                    raise ValueError(f"{model_type} '{field_name}' has invalid value: {value}")
+
+        return self
+
+
+class AssetRow(MonetaryValueValidatorMixin, BaseModel):
     """Validation model for a row in the Assets sheet.
 
     Assets use multi-index columns like (Category, Item), e.g., ('Cash', 'Checking'),
@@ -226,37 +270,8 @@ class AssetRow(BaseModel):
         except ValueError as e:
             raise ValueError(f"Date must be in YYYY-MM format, got: {v}") from e
 
-    @model_validator(mode="after")
-    def validate_monetary_values(self) -> "AssetRow":
-        """Validate that all asset columns contain parse-able monetary values.
 
-        Checks all extra fields (asset columns) to ensure they can be parsed
-        as numeric values or are empty/NaN.
-
-        Returns:
-            Self if validation passes
-
-        Raises:
-            ValueError: If any asset value is invalid
-        """
-        # Check extra fields (Pydantic v2 stores them in model_extra)
-        if hasattr(self, "__pydantic_extra__") and self.__pydantic_extra__:
-            for field_name, value in self.__pydantic_extra__.items():
-                # Skip None, empty strings, or common NaN representations
-                if value is None or value == "" or str(value).lower() in ["nan", "n/a"]:
-                    continue
-
-                # Check if value contains at least one digit
-                cleaned = (
-                    str(value).replace("€", "").replace("$", "").replace(" ", "").replace(",", "")
-                )
-                if cleaned and not any(c.isdigit() for c in cleaned):
-                    raise ValueError(f"Asset '{field_name}' has invalid value: {value}")
-
-        return self
-
-
-class LiabilityRow(BaseModel):
+class LiabilityRow(MonetaryValueValidatorMixin, BaseModel):
     """Validation model for a row in the Liabilities sheet.
 
     Liabilities use multi-index columns like (Category, Item), e.g., ('Mortgage', ''),
@@ -301,37 +316,8 @@ class LiabilityRow(BaseModel):
         except ValueError as e:
             raise ValueError(f"Date must be in YYYY-MM format, got: {v}") from e
 
-    @model_validator(mode="after")
-    def validate_monetary_values(self) -> "LiabilityRow":
-        """Validate that all liability columns contain parse-able monetary values.
 
-        Checks all extra fields (liability columns) to ensure they can be parsed
-        as numeric values or are empty/NaN.
-
-        Returns:
-            Self if validation passes
-
-        Raises:
-            ValueError: If any liability value is invalid
-        """
-        # Check extra fields (Pydantic v2 stores them in model_extra)
-        if hasattr(self, "__pydantic_extra__") and self.__pydantic_extra__:
-            for field_name, value in self.__pydantic_extra__.items():
-                # Skip None, empty strings, or common NaN representations
-                if value is None or value == "" or str(value).lower() in ["nan", "n/a"]:
-                    continue
-
-                # Check if value contains at least one digit
-                cleaned = (
-                    str(value).replace("€", "").replace("$", "").replace(" ", "").replace(",", "")
-                )
-                if cleaned and not any(c.isdigit() for c in cleaned):
-                    raise ValueError(f"Liability '{field_name}' has invalid value: {value}")
-
-        return self
-
-
-class IncomeRow(BaseModel):
+class IncomeRow(MonetaryValueValidatorMixin, BaseModel):
     """Validation model for a row in the Incomes sheet.
 
     Incomes use multi-index columns like (Source, Item), e.g., ('Salary', ''),
@@ -375,35 +361,6 @@ class IncomeRow(BaseModel):
             return v.strip()
         except ValueError as e:
             raise ValueError(f"Date must be in YYYY-MM format, got: {v}") from e
-
-    @model_validator(mode="after")
-    def validate_monetary_values(self) -> "IncomeRow":
-        """Validate that all income columns contain parse-able monetary values.
-
-        Checks all extra fields (income columns) to ensure they can be parsed
-        as numeric values or are empty/NaN.
-
-        Returns:
-            Self if validation passes
-
-        Raises:
-            ValueError: If any income value is invalid
-        """
-        # Check extra fields (Pydantic v2 stores them in model_extra)
-        if hasattr(self, "__pydantic_extra__") and self.__pydantic_extra__:
-            for field_name, value in self.__pydantic_extra__.items():
-                # Skip None, empty strings, or common NaN representations
-                if value is None or value == "" or str(value).lower() in ["nan", "n/a"]:
-                    continue
-
-                # Check if value contains at least one digit
-                cleaned = (
-                    str(value).replace("€", "").replace("$", "").replace(" ", "").replace(",", "")
-                )
-                if cleaned and not any(c.isdigit() for c in cleaned):
-                    raise ValueError(f"Income '{field_name}' has invalid value: {value}")
-
-        return self
 
 
 def validate_dataframe_structure(

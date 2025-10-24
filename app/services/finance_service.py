@@ -215,3 +215,58 @@ class FinanceService:
             "cash_flow_data": calculator.get_cash_flow_last_12_months(),
             "avg_expenses": calculator.get_average_expenses_by_category_last_12_months(),
         }
+
+    def get_dashboard_data(self) -> dict[str, Any] | None:
+        """Get all dashboard data (KPIs + charts) in a single call.
+
+        This is more efficient than calling get_kpi_data() and get_chart_data()
+        separately, as it creates the FinanceCalculator only once and retrieves
+        all data in a single pass.
+
+        Returns:
+            Dictionary containing both 'kpi_data' and 'chart_data' keys,
+            or None if data is not available
+
+        Example:
+            >>> service = FinanceService()
+            >>> data = service.get_dashboard_data()
+            >>> if data:
+            ...     print(f"Net Worth: {data['kpi_data']['net_worth']}")
+            ...     print(f"Chart dates: {data['chart_data']['net_worth_data']['dates']}")
+        """
+        calculator = self.get_calculator()
+        if not calculator:
+            return None
+
+        # Compute all KPIs and chart data with a single calculator instance
+        return {
+            "kpi_data": {
+                "last_update_date": str(calculator.get_last_update_date()),
+                "net_worth": float(calculator.get_current_net_worth()),
+                "mom_variation_percentage": float(
+                    calculator.get_month_over_month_net_worth_variation_percentage()
+                ),
+                "mom_variation_absolute": float(
+                    calculator.get_month_over_month_net_worth_variation_absolute()
+                ),
+                "yoy_variation_percentage": float(
+                    calculator.get_year_over_year_net_worth_variation_percentage()
+                ),
+                "yoy_variation_absolute": float(
+                    calculator.get_year_over_year_net_worth_variation_absolute()
+                ),
+                "avg_saving_ratio_percentage": float(
+                    calculator.get_average_saving_ratio_last_12_months_percentage()
+                ),
+                "avg_saving_ratio_absolute": float(
+                    calculator.get_average_saving_ratio_last_12_months_absolute()
+                ),
+            },
+            "chart_data": {
+                "net_worth_data": calculator.get_monthly_net_worth(),
+                "asset_vs_liabilities_data": calculator.get_assets_liabilities(),
+                "incomes_vs_expenses_data": calculator.get_incomes_vs_expenses(),
+                "cash_flow_data": calculator.get_cash_flow_last_12_months(),
+                "avg_expenses": calculator.get_average_expenses_by_category_last_12_months(),
+            },
+        }

@@ -366,7 +366,7 @@ class FinanceCalculator:
 
         return df.sort_values(by=COL_DATE_DT)
 
-    def _find_date_column(self, df: pd.DataFrame) -> str | tuple | None:
+    def _find_date_column(self, df: pd.DataFrame) -> str | tuple[Any, ...] | None:
         """Find the Date column in a DataFrame, handling both single and MultiIndex columns.
 
         Searches for a column named exactly "Date" in either single-level or
@@ -983,7 +983,7 @@ class FinanceCalculator:
         return 0.263
 
     @track_performance("get_monthly_net_worth")
-    def get_monthly_net_worth(self) -> dict[str, list]:
+    def get_monthly_net_worth(self) -> dict[str, list[Any]]:
         """Get monthly net worth data for charting.
 
         Calculates Net Worth from Assets and Liabilities sheets.
@@ -1221,7 +1221,7 @@ class FinanceCalculator:
         }
 
     @track_performance("get_incomes_vs_expenses")
-    def get_incomes_vs_expenses(self) -> dict[str, list]:
+    def get_incomes_vs_expenses(self) -> dict[str, list[Any]]:
         """Get income vs expenses data for charting last 12 months.
 
         Uses incomes_df if available, otherwise falls back to Income column from main DataFrame.

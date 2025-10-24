@@ -2,6 +2,11 @@ from typing import Any, Literal
 
 from nicegui import app, ui
 
+from app.core.constants import (
+    CACHE_TTL_SECONDS,
+    SAVING_RATIO_THRESHOLD_LOW,
+    SAVING_RATIO_THRESHOLD_MEDIUM,
+)
 from app.core.state_manager import state_manager
 from app.services import utils
 from app.services.finance_service import FinanceService
@@ -15,35 +20,37 @@ class HomeRenderer:
         """Initialize HomeRenderer with FinanceService."""
         self.finance_service = FinanceService()
 
-    async def load_kpi_data(self) -> dict[str, Any] | None:
-        """Load and cache key performance indicators from financial data."""
+    async def load_dashboard_data(self) -> dict[str, Any] | None:
+        """Load and cache all dashboard data (KPIs + charts) efficiently.
+
+        This method is more efficient than loading KPIs and charts separately,
+        as it creates the FinanceCalculator only once.
+
+        Returns:
+            Dictionary with 'kpi_data' and 'chart_data' keys, or None if data unavailable
+        """
         if not self.finance_service.has_required_data():
             return None
 
-        def compute_kpi_data():
-            return self.finance_service.get_kpi_data()
+        def compute_dashboard_data():
+            return self.finance_service.get_dashboard_data()
 
         return await state_manager.get_or_compute(
             user_storage_key="assets_sheet",
-            computation_key="kpi_data",
-            compute_fn=compute_kpi_data,
-            ttl_seconds=86400,
+            computation_key="dashboard_data",
+            compute_fn=compute_dashboard_data,
+            ttl_seconds=CACHE_TTL_SECONDS,
         )
+
+    async def load_kpi_data(self) -> dict[str, Any] | None:
+        """Load KPI data from dashboard data cache."""
+        dashboard_data = await self.load_dashboard_data()
+        return dashboard_data["kpi_data"] if dashboard_data else None
 
     async def load_chart_data(self) -> dict[str, Any] | None:
-        """Load and cache chart data for dashboard visualizations."""
-        if not self.finance_service.has_required_data():
-            return None
-
-        def compute_chart_data():
-            return self.finance_service.get_chart_data()
-
-        return await state_manager.get_or_compute(
-            user_storage_key="assets_sheet",
-            computation_key="chart_data",
-            compute_fn=compute_chart_data,
-            ttl_seconds=86400,
-        )
+        """Load chart data from dashboard data cache."""
+        dashboard_data = await self.load_dashboard_data()
+        return dashboard_data["chart_data"] if dashboard_data else None
 
     async def render_kpi_cards(self, container: ui.row) -> None:
         """Render KPI cards with real data, replacing skeleton loaders."""
@@ -121,9 +128,9 @@ class HomeRenderer:
                 ui.tooltip("Average monthly Saving Ratio of last 12 months").classes("tooltip")
                 ui.label("Avg Saving Ratio").classes(styles.STAT_CARDS_LABEL_CLASSES)
                 text_color = ""
-                if kpi_data["avg_saving_ratio_percentage"] < 0.2:
+                if kpi_data["avg_saving_ratio_percentage"] < SAVING_RATIO_THRESHOLD_LOW:
                     text_color = "text-error"
-                elif kpi_data["avg_saving_ratio_percentage"] < 0.4:
+                elif kpi_data["avg_saving_ratio_percentage"] < SAVING_RATIO_THRESHOLD_MEDIUM:
                     text_color = "text-warning"
                 else:
                     text_color = "text-success"
