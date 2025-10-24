@@ -3,61 +3,25 @@ from typing import Any, Literal
 from nicegui import app, ui
 
 from app.core.state_manager import state_manager
-from app.logic.finance_calculator import FinanceCalculator
 from app.services import utils
+from app.services.finance_service import FinanceService
 from app.ui import charts, dock, header, styles
 
 
 class HomeRenderer:
     """Home dashboard renderer with clean separation of concerns."""
 
+    def __init__(self):
+        """Initialize HomeRenderer with FinanceService."""
+        self.finance_service = FinanceService()
+
     async def load_kpi_data(self) -> dict[str, Any] | None:
         """Load and cache key performance indicators from financial data."""
-        assets_sheet_str = app.storage.user.get("assets_sheet")
-        liabilities_sheet_str = app.storage.user.get("liabilities_sheet")
-        expenses_sheet_str = app.storage.user.get("expenses_sheet")
-        incomes_sheet_str = app.storage.user.get("incomes_sheet")
-
-        if not assets_sheet_str or not liabilities_sheet_str or not expenses_sheet_str:
+        if not self.finance_service.has_required_data():
             return None
 
         def compute_kpi_data():
-            assets_sheet = utils.read_json(assets_sheet_str)
-            liabilities_sheet = utils.read_json(liabilities_sheet_str)
-            expenses_sheet = utils.read_json(expenses_sheet_str)
-            incomes_sheet = utils.read_json(incomes_sheet_str) if incomes_sheet_str else None
-
-            calculator = FinanceCalculator(
-                assets_df=assets_sheet,
-                liabilities_df=liabilities_sheet,
-                expenses_df=expenses_sheet,
-                incomes_df=incomes_sheet,
-            )
-
-            # Ensure all values are Python native types (not numpy/pandas types)
-            result = {
-                "last_update_date": str(calculator.get_last_update_date()),
-                "net_worth": float(calculator.get_current_net_worth()),
-                "mom_variation_percentage": float(
-                    calculator.get_month_over_month_net_worth_variation_percentage()
-                ),
-                "mom_variation_absolute": float(
-                    calculator.get_month_over_month_net_worth_variation_absolute()
-                ),
-                "yoy_variation_percentage": float(
-                    calculator.get_year_over_year_net_worth_variation_percentage()
-                ),
-                "yoy_variation_absolute": float(
-                    calculator.get_year_over_year_net_worth_variation_absolute()
-                ),
-                "avg_saving_ratio_percentage": float(
-                    calculator.get_average_saving_ratio_last_12_months_percentage()
-                ),
-                "avg_saving_ratio_absolute": float(
-                    calculator.get_average_saving_ratio_last_12_months_absolute()
-                ),
-            }
-            return result
+            return self.finance_service.get_kpi_data()
 
         return await state_manager.get_or_compute(
             user_storage_key="assets_sheet",
@@ -68,34 +32,11 @@ class HomeRenderer:
 
     async def load_chart_data(self) -> dict[str, Any] | None:
         """Load and cache chart data for dashboard visualizations."""
-        assets_sheet_str = app.storage.user.get("assets_sheet")
-        liabilities_sheet_str = app.storage.user.get("liabilities_sheet")
-        expenses_sheet_str = app.storage.user.get("expenses_sheet")
-        incomes_sheet_str = app.storage.user.get("incomes_sheet")
-
-        if not assets_sheet_str or not liabilities_sheet_str or not expenses_sheet_str:
+        if not self.finance_service.has_required_data():
             return None
 
         def compute_chart_data():
-            assets_sheet = utils.read_json(assets_sheet_str)
-            liabilities_sheet = utils.read_json(liabilities_sheet_str)
-            expenses_sheet = utils.read_json(expenses_sheet_str)
-            incomes_sheet = utils.read_json(incomes_sheet_str) if incomes_sheet_str else None
-
-            calculator = FinanceCalculator(
-                assets_df=assets_sheet,
-                liabilities_df=liabilities_sheet,
-                expenses_df=expenses_sheet,
-                incomes_df=incomes_sheet,
-            )
-
-            return {
-                "net_worth_data": calculator.get_monthly_net_worth(),
-                "asset_vs_liabilities_data": calculator.get_assets_liabilities(),
-                "incomes_vs_expenses_data": calculator.get_incomes_vs_expenses(),
-                "cash_flow_data": calculator.get_cash_flow_last_12_months(),
-                "avg_expenses": calculator.get_average_expenses_by_category_last_12_months(),
-            }
+            return self.finance_service.get_chart_data()
 
         return await state_manager.get_or_compute(
             user_storage_key="assets_sheet",
