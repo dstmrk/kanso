@@ -58,8 +58,8 @@ Your data stays in your Google Sheet. Kanso just makes it beautiful and easy to 
 
 ### Data Management
 - 📑 **Google Sheets Integration** - Your data stays in your own Google Sheet
-- 🔄 **Real-time Updates** - Changes in your sheet reflect immediately
-- ✅ **Data Validation** - Pydantic-based validation for data quality
+- 🔄 **Smart Refresh System** - Hash-based change detection with granular updates
+- ✅ **Data Validation** - Comprehensive validation for all financial data sheets
 - 💾 **Smart Caching** - Performance-optimized with intelligent cache invalidation
 - 📊 **MultiIndex Support** - Handle complex sheet structures with ease
 

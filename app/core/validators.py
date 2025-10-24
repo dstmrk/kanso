@@ -9,15 +9,26 @@ don't prevent data loading, allowing the application to handle imperfect data
 gracefully.
 
 Key features:
-    - Date format validation (YYYY-MM)
-    - Monetary field format checking
+    - Date format validation (YYYY-MM) for all sheet types
+    - Monetary field format checking for all values
     - Category and amount validation for expenses
+    - Multi-index column support for assets, liabilities, and incomes
     - Batch validation with detailed error reporting
 
+Available models:
+    - ExpenseRow: Validates expense transactions (Date, Merchant, Amount, Category, Type)
+    - AssetRow: Validates asset data with multi-index columns (Date + dynamic columns)
+    - LiabilityRow: Validates liability data with multi-index columns (Date + dynamic columns)
+    - IncomeRow: Validates income data with multi-index columns (Date + dynamic columns)
+
 Example:
-    >>> from app.core.validators import ExpenseRow, validate_dataframe_structure
-    >>> data = [{'Date': '2024-01', 'Merchant': 'Store', 'Amount': '€ 100', 'Category': 'Food', 'Type': 'Variable'}]
-    >>> is_valid, errors = validate_dataframe_structure(data, ExpenseRow)
+    >>> from app.core.validators import ExpenseRow, AssetRow, validate_dataframe_structure
+    >>> expense_data = [{'Date': '2024-01', 'Merchant': 'Store', 'Amount': '€ 100', 'Category': 'Food', 'Type': 'Variable'}]
+    >>> is_valid, errors = validate_dataframe_structure(expense_data, ExpenseRow)
+    >>> is_valid
+    True
+    >>> asset_data = [{'Date': '2024-01', '("Cash", "Checking")': '1000'}]
+    >>> is_valid, errors = validate_dataframe_structure(asset_data, AssetRow)
     >>> is_valid
     True
 """
@@ -26,7 +37,7 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 from app.core.constants import DATE_FORMAT_STORAGE
 
@@ -168,6 +179,231 @@ class ExpenseRow(BaseModel):
             raise ValueError(f"Amount must contain numbers, got: {v}")
 
         return v
+
+
+class AssetRow(BaseModel):
+    """Validation model for a row in the Assets sheet.
+
+    Assets use multi-index columns like (Category, Item), e.g., ('Cash', 'Checking'),
+    ('Investments', 'Stocks'). This model validates the Date column and ensures
+    monetary values are parse-able.
+
+    Attributes:
+        Date: Asset date in YYYY-MM format (e.g., "2024-01")
+        **extra_fields: Dynamic asset columns with monetary values
+
+    Example:
+        >>> asset = AssetRow(
+        ...     Date='2024-01',
+        ...     **{'("Cash", "Checking")': '1000', '("Investments", "Stocks")': '5000'}
+        ... )
+    """
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="allow")
+
+    Date: str
+
+    @field_validator("Date")
+    @classmethod
+    def validate_date_format(cls, v: str) -> str:
+        """Validate that Date is in YYYY-MM format.
+
+        Args:
+            v: Date string to validate
+
+        Returns:
+            Stripped date string if valid
+
+        Raises:
+            ValueError: If date is empty or not in YYYY-MM format
+        """
+        if not v:
+            raise ValueError("Date cannot be empty")
+
+        try:
+            datetime.strptime(v.strip(), DATE_FORMAT_STORAGE)
+            return v.strip()
+        except ValueError as e:
+            raise ValueError(f"Date must be in YYYY-MM format, got: {v}") from e
+
+    @model_validator(mode="after")
+    def validate_monetary_values(self) -> "AssetRow":
+        """Validate that all asset columns contain parse-able monetary values.
+
+        Checks all extra fields (asset columns) to ensure they can be parsed
+        as numeric values or are empty/NaN.
+
+        Returns:
+            Self if validation passes
+
+        Raises:
+            ValueError: If any asset value is invalid
+        """
+        # Check extra fields (Pydantic v2 stores them in model_extra)
+        if hasattr(self, "__pydantic_extra__") and self.__pydantic_extra__:
+            for field_name, value in self.__pydantic_extra__.items():
+                # Skip None, empty strings, or common NaN representations
+                if value is None or value == "" or str(value).lower() in ["nan", "n/a"]:
+                    continue
+
+                # Check if value contains at least one digit
+                cleaned = (
+                    str(value).replace("€", "").replace("$", "").replace(" ", "").replace(",", "")
+                )
+                if cleaned and not any(c.isdigit() for c in cleaned):
+                    raise ValueError(f"Asset '{field_name}' has invalid value: {value}")
+
+        return self
+
+
+class LiabilityRow(BaseModel):
+    """Validation model for a row in the Liabilities sheet.
+
+    Liabilities use multi-index columns like (Category, Item), e.g., ('Mortgage', ''),
+    ('Loans', 'Car'). This model validates the Date column and ensures
+    monetary values are parse-able.
+
+    Attributes:
+        Date: Liability date in YYYY-MM format (e.g., "2024-01")
+        **extra_fields: Dynamic liability columns with monetary values
+
+    Example:
+        >>> liability = LiabilityRow(
+        ...     Date='2024-01',
+        ...     **{'("Mortgage", "")': '250000', '("Loans", "Car")': '15000'}
+        ... )
+    """
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="allow")
+
+    Date: str
+
+    @field_validator("Date")
+    @classmethod
+    def validate_date_format(cls, v: str) -> str:
+        """Validate that Date is in YYYY-MM format.
+
+        Args:
+            v: Date string to validate
+
+        Returns:
+            Stripped date string if valid
+
+        Raises:
+            ValueError: If date is empty or not in YYYY-MM format
+        """
+        if not v:
+            raise ValueError("Date cannot be empty")
+
+        try:
+            datetime.strptime(v.strip(), DATE_FORMAT_STORAGE)
+            return v.strip()
+        except ValueError as e:
+            raise ValueError(f"Date must be in YYYY-MM format, got: {v}") from e
+
+    @model_validator(mode="after")
+    def validate_monetary_values(self) -> "LiabilityRow":
+        """Validate that all liability columns contain parse-able monetary values.
+
+        Checks all extra fields (liability columns) to ensure they can be parsed
+        as numeric values or are empty/NaN.
+
+        Returns:
+            Self if validation passes
+
+        Raises:
+            ValueError: If any liability value is invalid
+        """
+        # Check extra fields (Pydantic v2 stores them in model_extra)
+        if hasattr(self, "__pydantic_extra__") and self.__pydantic_extra__:
+            for field_name, value in self.__pydantic_extra__.items():
+                # Skip None, empty strings, or common NaN representations
+                if value is None or value == "" or str(value).lower() in ["nan", "n/a"]:
+                    continue
+
+                # Check if value contains at least one digit
+                cleaned = (
+                    str(value).replace("€", "").replace("$", "").replace(" ", "").replace(",", "")
+                )
+                if cleaned and not any(c.isdigit() for c in cleaned):
+                    raise ValueError(f"Liability '{field_name}' has invalid value: {value}")
+
+        return self
+
+
+class IncomeRow(BaseModel):
+    """Validation model for a row in the Incomes sheet.
+
+    Incomes use multi-index columns like (Source, Item), e.g., ('Salary', ''),
+    ('Freelance', 'Project A'). This model validates the Date column and ensures
+    monetary values are parse-able.
+
+    Attributes:
+        Date: Income date in YYYY-MM format (e.g., "2024-01")
+        **extra_fields: Dynamic income columns with monetary values
+
+    Example:
+        >>> income = IncomeRow(
+        ...     Date='2024-01',
+        ...     **{'("Salary", "")': '3000', '("Freelance", "Project A")': '500'}
+        ... )
+    """
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="allow")
+
+    Date: str
+
+    @field_validator("Date")
+    @classmethod
+    def validate_date_format(cls, v: str) -> str:
+        """Validate that Date is in YYYY-MM format.
+
+        Args:
+            v: Date string to validate
+
+        Returns:
+            Stripped date string if valid
+
+        Raises:
+            ValueError: If date is empty or not in YYYY-MM format
+        """
+        if not v:
+            raise ValueError("Date cannot be empty")
+
+        try:
+            datetime.strptime(v.strip(), DATE_FORMAT_STORAGE)
+            return v.strip()
+        except ValueError as e:
+            raise ValueError(f"Date must be in YYYY-MM format, got: {v}") from e
+
+    @model_validator(mode="after")
+    def validate_monetary_values(self) -> "IncomeRow":
+        """Validate that all income columns contain parse-able monetary values.
+
+        Checks all extra fields (income columns) to ensure they can be parsed
+        as numeric values or are empty/NaN.
+
+        Returns:
+            Self if validation passes
+
+        Raises:
+            ValueError: If any income value is invalid
+        """
+        # Check extra fields (Pydantic v2 stores them in model_extra)
+        if hasattr(self, "__pydantic_extra__") and self.__pydantic_extra__:
+            for field_name, value in self.__pydantic_extra__.items():
+                # Skip None, empty strings, or common NaN representations
+                if value is None or value == "" or str(value).lower() in ["nan", "n/a"]:
+                    continue
+
+                # Check if value contains at least one digit
+                cleaned = (
+                    str(value).replace("€", "").replace("$", "").replace(" ", "").replace(",", "")
+                )
+                if cleaned and not any(c.isdigit() for c in cleaned):
+                    raise ValueError(f"Income '{field_name}' has invalid value: {value}")
+
+        return self
 
 
 def validate_dataframe_structure(
