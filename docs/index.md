@@ -42,7 +42,7 @@
 ### 🎨 Modern UI
 - **Interactive charts** built with ECharts
 - **Responsive design** works on mobile and desktop
-- **Light/dark mode** toggle
+- **Light/dark mode** toggle with DaisyUI
 - **Transaction tables** with search and filtering
 
 ### 🔧 Technical Excellence
