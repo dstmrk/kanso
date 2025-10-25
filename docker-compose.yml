@@ -1,0 +1,38 @@
+services:
+  kanso:
+    image: ghcr.io/dstmrk/kanso:latest
+    container_name: kanso
+    ports:
+      - "6789:6789"
+    environment:
+      # Application environment (prod/dev)
+      - APP_ENV=prod
+
+      # Log level (DEBUG, INFO, WARNING, ERROR)
+      - LOG_LEVEL=WARNING
+
+      # Optional: Override default port
+      # - APP_PORT=6789
+
+      # Optional: Cache duration (seconds)
+      # - CACHE_TTL_SECONDS=86400
+
+      # Optional: Reverse proxy path
+      # - ROOT_PATH=/kanso
+
+    volumes:
+      # Persistent data storage
+      - ./kanso-data:/app/data
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6789/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+# Optional: Uncomment to use named volume instead of local folder
+# volumes:
+#   kanso-data:

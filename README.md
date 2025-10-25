@@ -5,6 +5,8 @@
 [![codecov](https://codecov.io/gh/dstmrk/kanso/branch/main/graph/badge.svg)](https://codecov.io/gh/dstmrk/kanso)
 ![GitHub](https://img.shields.io/github/license/dstmrk/kanso)
 
+**📚 [Full Documentation](https://dstmrk.github.io/kanso/)** • [Installation](https://dstmrk.github.io/kanso/installation/) • [Configuration](https://dstmrk.github.io/kanso/configuration/) • [Architecture](https://dstmrk.github.io/kanso/architecture/)
+
 <table>
   <tr>
     <td><img src="docs/images/dashboard_light.png" alt="Light Mode"/></td>
@@ -64,7 +66,7 @@ Your data stays in your Google Sheet. Kanso just makes it beautiful and easy to 
 - 📊 **MultiIndex Support** - Handle complex sheet structures with ease
 
 ### User Experience
-- 🚀 **Zero-Config Onboarding** - 3-step setup wizard for first-time users
+- 🚀 **Zero-Config Onboarding** - 2-step setup wizard for first-time users
 - 🔐 **Secure Storage** - Credentials stored safely in encrypted browser storage
 - ⚡ **Skeleton Loading** - Smooth loading experience with placeholders
 - 🎯 **Settings Management** - Update credentials and preferences anytime
@@ -101,25 +103,34 @@ uv run main.py
 
 Visit http://localhost:6789 and complete the onboarding setup!
 
-### Option 2: Docker Deployment
+### Option 2: Docker (Pre-built Image)
 
-See [DOCKER.md](./DOCKER.md) for complete Docker deployment instructions with docker-compose.
+```bash
+# 1. Create directory and download compose file
+mkdir kanso && cd kanso
+curl -o docker-compose.yml https://raw.githubusercontent.com/dstmrk/kanso/main/docker-compose.yml
+
+# 2. Start Kanso
+docker compose up -d
+
+# 3. Open http://localhost:6789
+```
+
+See **[Installation Guide](https://dstmrk.github.io/kanso/installation/)** for detailed instructions.
 
 ---
 
 ## 🎯 First-Time Setup
 
-On your first visit, Kanso will guide you through a simple 3-step onboarding:
+On your first visit, Kanso will guide you through a simple 2-step onboarding:
 
 1. **Welcome** - Introduction to the setup process
-2. **Credentials** - Paste your Google Service Account JSON credentials
+2. **Storage Setup** - Configure Google Sheets credentials
+   - Paste your Google Service Account JSON credentials
+   - Enter your Google Sheet URL (e.g., `https://docs.google.com/spreadsheets/d/...`)
    - Follow [this guide](https://docs.gspread.org/en/latest/oauth2.html#service-account) to create a service account
-   - Copy and paste the JSON content into the provided textarea
-3. **Configuration** - Enter your Google Sheet URL
-   - Provide your spreadsheet URL (e.g., `https://docs.google.com/spreadsheets/d/...`)
-   - Click "Save & Test Configuration" to validate
 
-Your credentials are stored securely in your browser's encrypted storage.
+Your credentials are stored securely in your browser's local storage and persist across sessions.
 
 After onboarding, your dashboard loads with skeleton placeholders while data is fetched from Google Sheets.
 
@@ -232,17 +243,13 @@ uv run black .
 
 ### Contributing
 
-While this is primarily a personal project, contributions are welcome! Please:
+Contributions are welcome! See **[CONTRIBUTING.md](./CONTRIBUTING.md)** for guidelines on:
+- Setting up your development environment
+- Running tests and linters
+- Commit message conventions
+- Pull request process
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Write tests for your changes
-4. Ensure all tests and linters pass
-5. Commit your changes (`git commit -m 'feat: add amazing feature'`)
-6. Push to your branch (`git push origin feature/amazing-feature`)
-7. Open a Pull Request
-
-For E2E tests, include `[e2e]` in your commit message to trigger E2E CI runs.
+For detailed contributing documentation, visit the **[Contributing Guide](https://dstmrk.github.io/kanso/contributing/)**.
 
 ---
 
@@ -276,7 +283,17 @@ For E2E tests, include `[e2e]` in your commit message to trigger E2E CI runs.
 
 ## 📚 Documentation
 
-- **[Docker Deployment Guide](./DOCKER.md)** - Production deployment with Docker
+For comprehensive documentation, visit **[dstmrk.github.io/kanso](https://dstmrk.github.io/kanso/)**
+
+Key documentation pages:
+- **[Installation Guide](https://dstmrk.github.io/kanso/installation/)** - Docker and local setup
+- **[Google Sheets Setup](https://dstmrk.github.io/kanso/google-sheets-setup/)** - Prepare your financial data
+- **[Configuration](https://dstmrk.github.io/kanso/configuration/)** - Environment variables and settings
+- **[Architecture](https://dstmrk.github.io/kanso/architecture/)** - Technical design and components
+- **[API Reference](https://dstmrk.github.io/kanso/api-reference/)** - Classes and methods documentation
+- **[Contributing](https://dstmrk.github.io/kanso/contributing/)** - How to contribute to Kanso
+
+Additional resources:
 - **[CI/CD Workflow Guide](./.github/workflows/README.md)** - GitHub Actions workflow documentation
 - **[Security Policy](./SECURITY.md)** - Security guidelines and vulnerability reporting
 

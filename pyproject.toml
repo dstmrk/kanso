@@ -119,3 +119,7 @@ dev = [
     "playwright>=1.55.0",
     "pytest-playwright>=0.7.1",
 ]
+docs = [
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.6.22",
+]
