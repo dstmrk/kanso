@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "gspread==6.2.1",
-    "nicegui==3.0.4",
+    "nicegui==3.1.0",
     "pandas==2.3.3",
     "pydantic==2.12.3",
     "pytest==8.4.2",
