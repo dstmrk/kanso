@@ -41,7 +41,7 @@ jobs:
             - '!**.md'
             - '!docs/**'
             - '!LICENSE'
-            - '!.github/**/*.md'
+            - '!.github/**'
             - '!static/**'
             - '!Dockerfile'
             - '!docker-compose*.yml'
