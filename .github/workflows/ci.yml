@@ -35,16 +35,14 @@ jobs:
             - 'Dockerfile'
             - 'docker-compose*.yml'
             - '.github/workflows/**'
-          # Code changes (everything except docs, static, and infra)
+          # Code changes (app code, tests, dependencies)
           code:
-            - '**'
-            - '!**.md'
-            - '!docs/**'
-            - '!LICENSE'
-            - '!.github/**'
-            - '!static/**'
-            - '!Dockerfile'
-            - '!docker-compose*.yml'
+            - 'app/**'
+            - 'tests/**'
+            - 'main.py'
+            - 'pyproject.toml'
+            - 'uv.lock'
+            - '.env.*'
           # Static assets (images, logos, themes)
           static:
             - 'static/**'
