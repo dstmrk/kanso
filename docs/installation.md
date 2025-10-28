@@ -36,10 +36,9 @@ services:
   kanso:
     image: ghcr.io/dstmrk/kanso:latest
     ports:
-      - "6789:6789"
+      - "6789:6789"  # Change host port if needed (e.g., "8080:6789")
     environment:
       - APP_ENV=prod
-      - LOG_LEVEL=WARNING
     volumes:
       - ./kanso-data:/app/data
     restart: unless-stopped
@@ -69,15 +68,23 @@ You'll see the onboarding wizard on first launch.
 
 ### Optional Configuration
 
-To customize settings, edit the `docker-compose.yml` environment section:
+The application uses default settings from `.env.prod` (embedded in the image).
+
+To **override defaults**, add environment variables in `docker-compose.yml`:
 
 ```yaml
 environment:
-  - APP_ENV=prod              # Environment (dev/prod)
-  - LOG_LEVEL=WARNING         # Log level (DEBUG, INFO, WARNING, ERROR)
-  - APP_PORT=6789             # Application port
-  - CACHE_TTL_SECONDS=86400   # Cache duration (24 hours)
-  - ROOT_PATH=                # Reverse proxy path
+  - APP_ENV=prod              # Required - loads .env.prod defaults
+  - LOG_LEVEL=INFO            # Override: Change log verbosity
+  - CACHE_TTL_SECONDS=3600    # Override: Cache duration (seconds)
+  - ROOT_PATH=/kanso          # Override: Reverse proxy path prefix
+```
+
+To **change the port**, modify the port mapping (not environment variables):
+
+```yaml
+ports:
+  - "8080:6789"  # Access on http://localhost:8080
 ```
 
 ## Local Development Setup
@@ -143,13 +150,14 @@ After completing onboarding, you'll be redirected to the dashboard.
 
 ### Port Already in Use
 
-If port 6789 is already taken, change it in `.env`:
+If port 6789 is already taken on your host machine, change the **host port** (left side) in `docker-compose.yml`:
 
-```bash
-APP_PORT=8080
+```yaml
+ports:
+  - "8080:6789"  # Access on http://localhost:8080 instead
 ```
 
-And update your `docker-compose.yml` accordingly.
+The container always uses port 6789 internally.
 
 ### Docker Compose Issues
 
@@ -181,10 +189,22 @@ Clear browser storage and cookies for `localhost:6789` if you see authentication
 
 ## Updating Kanso
 
-### Docker Compose
+### Docker (Pre-built Image)
 
 ```bash
-# Pull latest changes
+# Pull latest image
+docker compose pull
+
+# Restart with new image
+docker compose up -d
+```
+
+### Docker (Local Build)
+
+If you're building locally from source:
+
+```bash
+# Pull latest code
 git pull origin main
 
 # Rebuild and restart
@@ -217,8 +237,8 @@ docker compose down
 # Remove volumes (⚠️ deletes all data)
 docker compose down -v
 
-# Remove images
-docker rmi kanso:latest
+# Remove downloaded image
+docker rmi ghcr.io/dstmrk/kanso:latest
 ```
 
 ### Local Development

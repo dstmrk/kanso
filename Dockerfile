@@ -42,5 +42,6 @@ EXPOSE 6789
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:6789')"
 
-# Default command (can be overridden in docker-compose)
-CMD ["uv", "run", "--env-file", ".env.prod", "--env-file", ".env.prod.local", "python", "main.py"]
+# Default command
+# Note: main.py automatically loads .env.{APP_ENV} based on APP_ENV environment variable
+CMD ["uv", "run", "python", "main.py"]

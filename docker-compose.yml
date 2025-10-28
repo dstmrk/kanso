@@ -3,22 +3,16 @@ services:
     image: ghcr.io/dstmrk/kanso:latest
     container_name: kanso
     ports:
-      - "6789:6789"
+      - "6789:6789"  # Host:Container - Change host port if 6789 is taken (e.g., "8080:6789")
     environment:
-      # Application environment (prod/dev)
+      # Application environment - tells main.py which .env file to load
+      # Defaults in .env.prod are used automatically
       - APP_ENV=prod
 
-      # Log level (DEBUG, INFO, WARNING, ERROR)
-      - LOG_LEVEL=WARNING
-
-      # Optional: Override default port
-      # - APP_PORT=6789
-
-      # Optional: Cache duration (seconds)
-      # - CACHE_TTL_SECONDS=86400
-
-      # Optional: Reverse proxy path
-      # - ROOT_PATH=/kanso
+      # Optional overrides (uncomment to customize):
+      # - LOG_LEVEL=INFO              # Override log level (DEBUG, INFO, WARNING, ERROR)
+      # - CACHE_TTL_SECONDS=86400      # Override cache duration (seconds)
+      # - ROOT_PATH=/kanso             # Set reverse proxy path prefix
 
     volumes:
       # Persistent data storage
