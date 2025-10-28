@@ -59,11 +59,21 @@ Thumbs.db
 # Documentation
 README.md
 IMPROVEMENTS.md
+ROADMAP.md
 *.md
+docs/
+site/
+
+# Testing
+tests/
 
 # CI/CD
 .github/
 .pre-commit-config.yaml
+
+# Docker files (not needed in image)
+Dockerfile
+docker-compose*.yml
 
 # Other
 *.log

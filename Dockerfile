@@ -18,9 +18,6 @@ RUN uv sync --frozen --no-dev --no-install-project
 # Production stage: Minimal runtime image
 FROM python:3.13-slim
 
-# Install uv in production image
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
-
 # Set working directory
 WORKDIR /app
 
@@ -39,7 +36,7 @@ USER kanso
 EXPOSE 6789
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD /app/.venv/bin/python -c "import urllib.request; urllib.request.urlopen('http://localhost:6789')"
 
 # Default command
