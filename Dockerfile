@@ -40,8 +40,9 @@ EXPOSE 6789
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:6789')"
+    CMD /app/.venv/bin/python -c "import urllib.request; urllib.request.urlopen('http://localhost:6789')"
 
 # Default command
 # Note: main.py automatically loads .env.{APP_ENV} based on APP_ENV environment variable
-CMD ["uv", "run", "python", "main.py"]
+# Use venv python directly to avoid uv sync at runtime
+CMD ["/app/.venv/bin/python", "main.py"]
