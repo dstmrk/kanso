@@ -15,6 +15,7 @@ jobs:
       ui: ${{ steps.filter.outputs.ui }}
       code: ${{ steps.filter.outputs.code }}
       static: ${{ steps.filter.outputs.static }}
+      infra: ${{ steps.filter.outputs.infra }}
     steps:
     - uses: actions/checkout@v5
     - uses: dorny/paths-filter@v3
@@ -29,7 +30,12 @@ jobs:
             - 'main.py'
             - '.env.test'
             - 'pyproject.toml'
-          # Code changes (everything except docs and static assets)
+          # Infrastructure files (Docker, CI)
+          infra:
+            - 'Dockerfile'
+            - 'docker-compose*.yml'
+            - '.github/workflows/**'
+          # Code changes (everything except docs, static, and infra)
           code:
             - '**'
             - '!**.md'
@@ -37,6 +43,8 @@ jobs:
             - '!LICENSE'
             - '!.github/**/*.md'
             - '!static/**'
+            - '!Dockerfile'
+            - '!docker-compose*.yml'
           # Static assets (images, logos, themes)
           static:
             - 'static/**'
@@ -162,8 +170,8 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     needs: [changes]
-    # Run if code or static files changed (skip for docs-only changes)
-    if: needs.changes.outputs.code == 'true' || needs.changes.outputs.static == 'true'
+    # Run if code, static, or infrastructure files changed (skip for docs-only changes)
+    if: needs.changes.outputs.code == 'true' || needs.changes.outputs.static == 'true' || needs.changes.outputs.infra == 'true'
 
     steps:
     - uses: actions/checkout@v5
