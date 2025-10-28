@@ -39,9 +39,9 @@ class FinanceService:
         """Initialize FinanceService.
 
         Args:
-            storage: Optional storage dictionary. If None, uses app.storage.user
+            storage: Optional storage dictionary. If None, uses app.storage.general
         """
-        self.storage = storage if storage is not None else app.storage.user
+        self.storage = storage if storage is not None else app.storage.general
 
     def _load_dataframes(self) -> tuple[pd.DataFrame | None, ...]:
         """Load all financial DataFrames from storage with error handling.

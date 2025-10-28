@@ -171,7 +171,7 @@ class DataLoaderCore:
         Args:
             service: GoogleSheetService instance
             sheet_name: Name of the worksheet to refresh
-            storage_key: Key in storage (e.g., 'data_sheet')
+            storage_key: Key in storage (e.g., 'assets_sheet')
             header: Header row(s) - 0 for single header, [0, 1] for multi-index (default: 0)
 
         Returns:

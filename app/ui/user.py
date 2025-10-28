@@ -22,12 +22,12 @@ def render() -> None:
 
             # Theme toggle
             def save_theme_preference() -> None:
-                current_theme: str = app.storage.user.get("theme", "light")
+                current_theme: str = app.storage.general.get("theme", "light")
                 new_theme: str = "dark" if current_theme == "light" else "light"
-                app.storage.user["theme"] = new_theme
+                app.storage.general["theme"] = new_theme
 
-                # Update echarts theme URL for charts
-                app.storage.user["echarts_theme_url"] = (
+                # Update echarts theme URL for charts (in general storage - shared across devices)
+                app.storage.general["echarts_theme_url"] = (
                     styles.DEFAULT_ECHART_THEME_FOLDER
                     + new_theme
                     + styles.DEFAULT_ECHARTS_THEME_SUFFIX
@@ -51,23 +51,23 @@ def render() -> None:
                         .classes("toggle")
                         .on("click", save_theme_preference)
                     )
-                    current_theme: str = app.storage.user.get("theme", "light")
+                    current_theme: str = app.storage.general.get("theme", "light")
                     if current_theme == "dark":
                         toggle.props("checked")
                     ui.html(styles.MOON_SVG, sanitize=False)
 
             # Currency selector
             def save_currency_preference(event) -> None:
-                """Save the selected currency preference."""
+                """Save the selected currency preference (in general storage - shared across devices)."""
                 selected_code = event.value
-                app.storage.user["currency"] = selected_code
+                app.storage.general["currency"] = selected_code
                 ui.notify(f"Currency changed to {CURRENCY_OPTIONS[selected_code]}", type="positive")
 
             # Get current currency: use stored preference or detect from locale
-            current_currency: str = app.storage.user.get("currency", get_user_currency())
+            current_currency: str = app.storage.general.get("currency", get_user_currency())
             # Save it if it wasn't stored yet
-            if "currency" not in app.storage.user:
-                app.storage.user["currency"] = current_currency
+            if "currency" not in app.storage.general:
+                app.storage.general["currency"] = current_currency
 
             with ui.row().classes("items-center gap-4 mt-4"):
                 ui.label("Currency:").classes("text-base")
@@ -118,7 +118,7 @@ def render() -> None:
             ui.label("Google Service Account Credentials JSON:").classes("text-base mt-2")
 
             # Get existing credentials if any
-            existing_creds = app.storage.user.get("google_credentials_json", "")
+            existing_creds = app.storage.general.get("google_credentials_json", "")
 
             credentials_textarea = (
                 ui.textarea(
@@ -132,7 +132,7 @@ def render() -> None:
 
             # Workbook URL input
             ui.label("Google Sheet URL:").classes("text-base mt-4")
-            current_url = app.storage.user.get("custom_workbook_url", "")
+            current_url = app.storage.general.get("custom_workbook_url", "")
 
             url_input = ui.input(
                 label="Workbook URL",
@@ -178,9 +178,9 @@ def render() -> None:
                     ui.notify("✗ Invalid Google Sheets URL format", type="negative")
                     return
 
-                # Data is valid - save to storage
-                app.storage.user["google_credentials_json"] = credentials_content
-                app.storage.user["custom_workbook_url"] = url_value
+                # Data is valid - save to general storage (shared across devices)
+                app.storage.general["google_credentials_json"] = credentials_content
+                app.storage.general["custom_workbook_url"] = url_value
 
                 # Clear all cached sheets and computed data to force reload with new data
                 from app.core.state_manager import state_manager
@@ -191,8 +191,8 @@ def render() -> None:
                     "expenses_sheet",
                     "incomes_sheet",
                 ]:
-                    if sheet_key in app.storage.user:
-                        del app.storage.user[sheet_key]
+                    if sheet_key in app.storage.general:
+                        del app.storage.general[sheet_key]
                         # Also invalidate all computed cache for this storage key
                         state_manager.invalidate_cache(sheet_key)
 

@@ -7,8 +7,8 @@ from app.ui import dock, header, styles
 
 def render() -> None:
     # Load required sheets
-    assets_sheet_str = app.storage.user.get("assets_sheet")
-    liabilities_sheet_str = app.storage.user.get("liabilities_sheet")
+    assets_sheet_str = app.storage.general.get("assets_sheet")
+    liabilities_sheet_str = app.storage.general.get("liabilities_sheet")
 
     header.render()
 

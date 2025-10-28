@@ -22,7 +22,7 @@ class ExpensesRenderer:
 
     async def load_expenses_data(self) -> dict[str, Any] | None:
         """Load and cache expenses data from financial records."""
-        expenses_sheet_str = app.storage.user.get("expenses_sheet")
+        expenses_sheet_str = app.storage.general.get("expenses_sheet")
         if not expenses_sheet_str:
             return None
 
@@ -64,8 +64,8 @@ class ExpensesRenderer:
                 ui.label("No expenses data available").classes("text-center text-gray-500 py-8")
             return
 
-        # Get user currency preference
-        user_currency: str = app.storage.user.get("currency", utils.get_user_currency())
+        # Get user currency preference (from general storage - shared across devices)
+        user_currency: str = app.storage.general.get("currency", utils.get_user_currency())
 
         with container:
             ui.label(f"All Transactions ({expenses_data['total_count']})").classes(
@@ -140,10 +140,10 @@ class ExpensesRenderer:
             user_agent = "mobile"
         else:
             user_agent = "desktop"
-        echart_theme = app.storage.user.get("echarts_theme_url") or ""
+        echart_theme = app.storage.general.get("echarts_theme_url") or ""
 
-        # Get user currency preference
-        user_currency: str = app.storage.user.get("currency", utils.get_user_currency())
+        # Get user currency preference (from general storage - shared across devices)
+        user_currency: str = app.storage.general.get("currency", utils.get_user_currency())
 
         with container:
             ui.label("Expenses by Category (Last 12 Months)").classes(
@@ -194,7 +194,7 @@ def render() -> None:
     containers = renderer.render_skeleton_ui()
 
     # Check if expenses data is loaded
-    expenses_sheet = app.storage.user.get("expenses_sheet")
+    expenses_sheet = app.storage.general.get("expenses_sheet")
 
     if not expenses_sheet:
         # Data not loaded yet - start background loading

@@ -3,6 +3,11 @@ from nicegui import app, ui
 
 def render() -> None:
     """Render the onboarding page with stepper for first-time setup."""
+    # Redirect to home if onboarding already completed
+    if app.storage.general.get("onboarding_completed"):
+        ui.navigate.to("/home")
+        return
+
     with ui.column().classes("w-full min-h-screen flex items-center justify-center p-4"):
         with ui.column().classes("w-full max-w-4xl"):
             # Header
@@ -181,10 +186,10 @@ def render() -> None:
                     ui.notify("✗ Invalid Google Sheets URL format", type="negative")
                     return
 
-                # Save to storage
-                app.storage.user["google_credentials_json"] = credentials_content
-                app.storage.user["custom_workbook_url"] = url
-                app.storage.user["onboarding_completed"] = True
+                # Save to general storage (shared across devices)
+                app.storage.general["google_credentials_json"] = credentials_content
+                app.storage.general["custom_workbook_url"] = url
+                app.storage.general["onboarding_completed"] = True
 
                 # Quick validation test (non-blocking)
                 try:

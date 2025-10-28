@@ -105,7 +105,7 @@ def render_last_refresh_timestamp() -> None:
 
     def check_and_render():
         """Check if timestamp exists and render/update UI accordingly."""
-        last_refresh = app.storage.user.get("last_data_refresh")
+        last_refresh = app.storage.general.get("last_data_refresh")
 
         if not last_refresh:
             # No timestamp yet - keep container empty

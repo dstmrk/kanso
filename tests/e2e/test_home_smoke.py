@@ -26,7 +26,7 @@ class TestHomePageSmoke:
         # This simulates data that would be loaded from Google Sheets
         page.goto("/home")
 
-        # Inject mock data into NiceGUI's app.storage.user
+        # Inject mock data into NiceGUI's app.storage
         mock_data_script = """
         // Mock minimal financial data for smoke test
         const mockAssetsSheet = JSON.stringify({
@@ -72,15 +72,18 @@ class TestHomePageSmoke:
             ]
         });
 
-        // Store in NiceGUI's storage (simulate loaded data)
-        if (window.app && window.app.storage && window.app.storage.user) {
-            window.app.storage.user.assets_sheet = mockAssetsSheet;
-            window.app.storage.user.liabilities_sheet = mockLiabilitiesSheet;
-            window.app.storage.user.expenses_sheet = mockExpensesSheet;
-            window.app.storage.user.incomes_sheet = mockIncomesSheet;
-            window.app.storage.user.currency = "EUR";
-            window.app.storage.user.theme = "light";
-            window.app.storage.user.onboarding_completed = "true";
+        // Store sheets, onboarding, theme, and currency in general storage (shared across devices)
+        if (window.app && window.app.storage) {
+            if (window.app.storage.general) {
+                window.app.storage.general.assets_sheet = mockAssetsSheet;
+                window.app.storage.general.liabilities_sheet = mockLiabilitiesSheet;
+                window.app.storage.general.expenses_sheet = mockExpensesSheet;
+                window.app.storage.general.incomes_sheet = mockIncomesSheet;
+                window.app.storage.general.onboarding_completed = "true";
+                window.app.storage.general.currency = "EUR";
+                window.app.storage.general.theme = "light";
+                window.app.storage.general.echarts_theme_url = "/themes/light.json";
+            }
         }
         """
 
@@ -132,9 +135,10 @@ class TestHomePageSmoke:
             "data": [["2024-01", "€ 100.000"]]
         });
 
-        if (window.app && window.app.storage && window.app.storage.user) {
-            window.app.storage.user.assets_sheet = mockAssetsSheet;
-            window.app.storage.user.liabilities_sheet = mockLiabilitiesSheet;
+        // Store in general storage (shared across devices)
+        if (window.app && window.app.storage && window.app.storage.general) {
+            window.app.storage.general.assets_sheet = mockAssetsSheet;
+            window.app.storage.general.liabilities_sheet = mockLiabilitiesSheet;
             // Intentionally omit expenses_sheet and incomes_sheet
         }
         """

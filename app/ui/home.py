@@ -62,8 +62,8 @@ class HomeRenderer:
                 ui.label("No data available").classes("text-center text-gray-500")
             return
 
-        # Get user currency preference
-        user_currency: str = app.storage.user.get("currency", utils.get_user_currency())
+        # Get user currency preference (from general storage - shared across devices)
+        user_currency: str = app.storage.general.get("currency", utils.get_user_currency())
 
         with container:
             net_worth_value = utils.format_currency(kpi_data["net_worth"], user_currency)
@@ -164,10 +164,10 @@ class HomeRenderer:
             user_agent: Literal["mobile", "desktop"] = "mobile"
         else:
             user_agent = "desktop"
-        echart_theme = app.storage.user.get("echarts_theme_url") or ""
+        echart_theme = app.storage.general.get("echarts_theme_url") or ""
 
-        # Get user currency preference
-        user_currency: str = app.storage.user.get("currency", utils.get_user_currency())
+        # Get user currency preference (from general storage - shared across devices)
+        user_currency: str = app.storage.general.get("currency", utils.get_user_currency())
 
         with container:
             ui.label(title).classes(styles.CHART_CARDS_LABEL_CLASSES)
@@ -260,10 +260,10 @@ def render() -> None:
     containers = renderer.render_skeleton_ui()
 
     # Check if data needs to be loaded
-    assets_sheet = app.storage.user.get("assets_sheet")
-    liabilities_sheet = app.storage.user.get("liabilities_sheet")
-    expenses_sheet = app.storage.user.get("expenses_sheet")
-    incomes_sheet = app.storage.user.get("incomes_sheet")
+    assets_sheet = app.storage.general.get("assets_sheet")
+    liabilities_sheet = app.storage.general.get("liabilities_sheet")
+    expenses_sheet = app.storage.general.get("expenses_sheet")
+    incomes_sheet = app.storage.general.get("incomes_sheet")
 
     if not assets_sheet or not liabilities_sheet or not expenses_sheet or not incomes_sheet:
         # Data not loaded yet - start background loading

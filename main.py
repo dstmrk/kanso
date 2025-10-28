@@ -195,16 +195,16 @@ sheet_service = None
 
 
 def get_sheet_service():
-    """Get or create GoogleSheetService with credentials from user storage."""
+    """Get or create GoogleSheetService with credentials from general storage (shared across devices)."""
     global sheet_service
     import json
     import tempfile
     from pathlib import Path
 
-    # Check for credentials and URL in user storage
-    if hasattr(app, "storage") and hasattr(app.storage, "user"):
-        custom_creds_json = app.storage.user.get("google_credentials_json")
-        custom_url = app.storage.user.get("custom_workbook_url")
+    # Check for credentials and URL in general storage
+    if hasattr(app, "storage") and hasattr(app.storage, "general"):
+        custom_creds_json = app.storage.general.get("google_credentials_json")
+        custom_url = app.storage.general.get("custom_workbook_url")
 
         # Use credentials if both are available
         if custom_creds_json and custom_url:
@@ -217,7 +217,7 @@ def get_sheet_service():
 
                     # Initialize with credentials from storage
                     sheet_service = GoogleSheetService(tmp_path, custom_url)
-                    logger.info("Using credentials and workbook URL from user storage")
+                    logger.info("Using credentials and workbook URL from general storage")
                 # File is automatically deleted when exiting the 'with' block
                 return sheet_service
             except Exception as e:
@@ -230,19 +230,19 @@ def get_sheet_service():
 
 def ensure_theme_setup():
     """Helper function to set up echarts theme based on saved theme."""
-    # Check if this is the first time setup (no theme in storage)
-    is_first_setup = "theme" not in app.storage.user
+    # Check if this is the first time setup (no theme in general storage)
+    is_first_setup = "theme" not in app.storage.general
 
-    # Use saved theme from app.storage or fallback to default
-    current_theme = app.storage.user.get("theme", app_config.default_theme)
+    # Use saved theme from app.storage.general or fallback to default
+    current_theme = app.storage.general.get("theme", app_config.default_theme)
 
     # Ensure the theme is valid
     if current_theme not in ["light", "dark"]:
         current_theme = app_config.default_theme
 
-    # Always set necessary values for echarts
-    app.storage.user["theme"] = current_theme
-    app.storage.user["echarts_theme_url"] = (
+    # Always set necessary values for echarts in general storage (shared across devices)
+    app.storage.general["theme"] = current_theme
+    app.storage.general["echarts_theme_url"] = (
         styles.DEFAULT_ECHART_THEME_FOLDER + current_theme + styles.DEFAULT_ECHARTS_THEME_SUFFIX
     )
 
@@ -284,8 +284,8 @@ def root():
     """Root page that checks onboarding status and redirects."""
     ensure_theme_setup()
 
-    # Check if onboarding is completed
-    if not app.storage.user.get("onboarding_completed"):
+    # Check if onboarding is completed (in general storage, shared across devices)
+    if not app.storage.general.get("onboarding_completed"):
         ui.navigate.to("/onboarding")
         return
 
@@ -353,10 +353,10 @@ async def sync_theme(request):
     try:
         data = await request.json()
         theme = data.get("theme", app_config.default_theme)
-        # Validate and update theme if valid
+        # Validate and update theme if valid (in general storage - shared across devices)
         if theme in ["light", "dark"]:
-            app.storage.user["theme"] = theme
-            app.storage.user["echarts_theme_url"] = (
+            app.storage.general["theme"] = theme
+            app.storage.general["echarts_theme_url"] = (
                 styles.DEFAULT_ECHART_THEME_FOLDER + theme + styles.DEFAULT_ECHARTS_THEME_SUFFIX
             )
             logger.debug(f"Theme synced to: {theme}")

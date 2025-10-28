@@ -15,7 +15,7 @@ Example:
     >>> from app.core.state_manager import state_manager
     >>> # Cache expensive calculation
     >>> result = await state_manager.get_or_compute(
-    ...     'data_sheet',
+    ...     'assets_sheet',
     ...     'net_worth_calc',
     ...     lambda: expensive_pandas_operation()
     ... )
@@ -48,7 +48,7 @@ class StateManager:
     Example:
         >>> state_manager = StateManager(default_ttl_seconds=86400)
         >>> result = await state_manager.get_or_compute(
-        ...     'data_sheet',
+        ...     'assets_sheet',
         ...     'calculation_key',
         ...     lambda: heavy_computation()
         ... )
@@ -67,11 +67,11 @@ class StateManager:
     def _get_cache_key(self, user_storage_key: str, computation_key: str) -> str:
         """Generate unique cache key for user data + computation.
 
-        Uses hash of user storage data to automatically invalidate cache when
+        Uses hash of general storage data to automatically invalidate cache when
         source data changes.
 
         Args:
-            user_storage_key: Key in app.storage.user (e.g., 'data_sheet')
+            user_storage_key: Key in app.storage.general (e.g., 'assets_sheet')
             computation_key: Unique identifier for this computation
 
         Returns:
@@ -82,7 +82,7 @@ class StateManager:
         """
         # Use data hash to invalidate cache when data changes
         try:
-            user_data = app.storage.user.get(user_storage_key, "")
+            user_data = app.storage.general.get(user_storage_key, "")
             data_str = str(user_data) if user_data is not None else ""
             data_hash = hash(data_str)
             return f"{user_storage_key}:{computation_key}:{data_hash}"
@@ -118,7 +118,7 @@ class StateManager:
         caches the result.
 
         Args:
-            user_storage_key: Key in app.storage.user (e.g., 'data_sheet')
+            user_storage_key: Key in app.storage.general (e.g., 'assets_sheet')
             computation_key: Unique identifier for this computation (e.g., 'net_worth_calc')
             compute_fn: Callable that computes the value (should be thread-safe)
             ttl_seconds: Cache time-to-live in seconds. If None, uses default TTL (24h)
@@ -130,7 +130,7 @@ class StateManager:
             >>> def expensive_calculation():
             ...     return df['Net Worth'].sum()  # Heavy pandas operation
             >>> result = await state_manager.get_or_compute(
-            ...     'data_sheet',
+            ...     'assets_sheet',
             ...     'total_net_worth',
             ...     expensive_calculation,
             ...     ttl_seconds=3600
@@ -173,8 +173,8 @@ class StateManager:
         Example:
             >>> # Clear all cache
             >>> state_manager.invalidate_cache()
-            >>> # Clear only data_sheet related cache
-            >>> state_manager.invalidate_cache('data_sheet')
+            >>> # Clear only assets_sheet related cache
+            >>> state_manager.invalidate_cache('assets_sheet')
         """
         if pattern is None:
             count = len(self._cache)
@@ -221,7 +221,7 @@ def cached_computation(user_storage_key: str, computation_key: str, ttl_seconds:
     global state_manager. The decorated function becomes async.
 
     Args:
-        user_storage_key: Key in app.storage.user for cache invalidation
+        user_storage_key: Key in app.storage.general for cache invalidation
         computation_key: Unique identifier for this computation
         ttl_seconds: Optional cache TTL in seconds
 
@@ -229,7 +229,7 @@ def cached_computation(user_storage_key: str, computation_key: str, ttl_seconds:
         Decorator function that converts sync function to cached async function
 
     Example:
-        >>> @cached_computation('data_sheet', 'net_worth_calculation', ttl_seconds=3600)
+        >>> @cached_computation('assets_sheet', 'net_worth_calculation', ttl_seconds=3600)
         ... def calculate_net_worth():
         ...     return df['Net Worth'].sum()  # Heavy pandas operation
         >>> # Function is now async and cached

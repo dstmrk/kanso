@@ -26,15 +26,15 @@ async def ensure_data_loaded():
         from app.services.utils import get_current_timestamp
 
         try:
-            # Create core loader with NiceGUI storage
-            loader = DataLoaderCore(app.storage.user, app_config)
+            # Create core loader with general storage (shared across devices)
+            loader = DataLoaderCore(app.storage.general, app_config)
 
             # Check if data already loaded
             if loader.all_data_loaded():
                 logger.info("All data sheets already loaded")
                 # Save timestamp if this is the first time we check (e.g., after onboarding)
-                if "last_data_refresh" not in app.storage.user:
-                    app.storage.user["last_data_refresh"] = get_current_timestamp()
+                if "last_data_refresh" not in app.storage.general:
+                    app.storage.general["last_data_refresh"] = get_current_timestamp()
                     logger.info("First data load timestamp saved (data already present)")
                 return True
 
@@ -52,8 +52,8 @@ async def ensure_data_loaded():
             success = loader.load_missing_sheets(service)
 
             # Save timestamp of first data load
-            if success and "last_data_refresh" not in app.storage.user:
-                app.storage.user["last_data_refresh"] = get_current_timestamp()
+            if success and "last_data_refresh" not in app.storage.general:
+                app.storage.general["last_data_refresh"] = get_current_timestamp()
                 logger.info("First data load timestamp saved")
 
             return success
@@ -86,8 +86,8 @@ async def refresh_all_data():
         from app.services.utils import get_current_timestamp
 
         try:
-            # Create core loader with NiceGUI storage
-            loader = DataLoaderCore(app.storage.user, app_config)
+            # Create core loader with general storage (shared across devices)
+            loader = DataLoaderCore(app.storage.general, app_config)
 
             # Get credentials
             credentials = loader.get_credentials()
@@ -105,8 +105,8 @@ async def refresh_all_data():
             results = loader.refresh_all_sheets(service)
 
             # Update timestamp if any sheet was updated or this is first refresh
-            if results["updated_count"] > 0 or "last_data_refresh" not in app.storage.user:
-                app.storage.user["last_data_refresh"] = get_current_timestamp()
+            if results["updated_count"] > 0 or "last_data_refresh" not in app.storage.general:
+                app.storage.general["last_data_refresh"] = get_current_timestamp()
                 logger.info(f"Data refresh completed: {results['updated_count']} updated")
 
             return results

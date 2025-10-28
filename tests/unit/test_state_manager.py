@@ -25,12 +25,12 @@ class TestStateManager:
         """Test cache miss triggers computation."""
         compute_fn = Mock(return_value=42)
 
-        # Mock the entire storage.user object
-        mock_user_storage = Mock()
-        mock_user_storage.get.return_value = "test_data"
+        # Mock the entire storage.general object
+        mock_general_storage = Mock()
+        mock_general_storage.get.return_value = "test_data"
 
         with patch("app.core.state_manager.app.storage") as mock_storage:
-            mock_storage.user = mock_user_storage
+            mock_storage.general = mock_general_storage
             result = await manager.get_or_compute("data", "test_key", compute_fn)
 
         assert result == 42
@@ -41,12 +41,12 @@ class TestStateManager:
         """Test cache hit returns cached value without computation."""
         compute_fn = Mock(return_value=42)
 
-        # Mock the entire storage.user object
-        mock_user_storage = Mock()
-        mock_user_storage.get.return_value = "test_data"
+        # Mock the entire storage.general object
+        mock_general_storage = Mock()
+        mock_general_storage.get.return_value = "test_data"
 
         with patch("app.core.state_manager.app.storage") as mock_storage:
-            mock_storage.user = mock_user_storage
+            mock_storage.general = mock_general_storage
             # First call - cache miss
             result1 = await manager.get_or_compute("data", "test_key", compute_fn)
             # Second call - cache hit
@@ -66,12 +66,12 @@ class TestStateManager:
             call_count[0] += 1
             return call_count[0]
 
-        # Mock the entire storage.user object
-        mock_user_storage = Mock()
-        mock_user_storage.get.return_value = "test_data"
+        # Mock the entire storage.general object
+        mock_general_storage = Mock()
+        mock_general_storage.get.return_value = "test_data"
 
         with patch("app.core.state_manager.app.storage") as mock_storage:
-            mock_storage.user = mock_user_storage
+            mock_storage.general = mock_general_storage
             # First call
             result1 = await manager.get_or_compute("data", "test_key", compute_fn, ttl_seconds=1)
             assert result1 == 1
@@ -89,19 +89,19 @@ class TestStateManager:
         compute_fn = Mock(return_value=42)
 
         # First call with original data
-        mock_user_storage1 = Mock()
-        mock_user_storage1.get.return_value = "test_data_1"
+        mock_general_storage1 = Mock()
+        mock_general_storage1.get.return_value = "test_data_1"
 
         with patch("app.core.state_manager.app.storage") as mock_storage:
-            mock_storage.user = mock_user_storage1
+            mock_storage.general = mock_general_storage1
             result1 = await manager.get_or_compute("data", "test_key", compute_fn)
 
         # Second call with changed data
-        mock_user_storage2 = Mock()
-        mock_user_storage2.get.return_value = "test_data_2"
+        mock_general_storage2 = Mock()
+        mock_general_storage2.get.return_value = "test_data_2"
 
         with patch("app.core.state_manager.app.storage") as mock_storage:
-            mock_storage.user = mock_user_storage2
+            mock_storage.general = mock_general_storage2
             result2 = await manager.get_or_compute("data", "test_key", compute_fn)
 
         assert result1 == 42
@@ -150,11 +150,11 @@ class TestStateManager:
     def test_cache_key_generation_with_fallback(self, manager):
         """Test cache key generation with fallback on error."""
         # Mock storage to raise exception when accessing .get()
-        mock_user_storage = Mock()
-        mock_user_storage.get.side_effect = Exception("Storage error")
+        mock_general_storage = Mock()
+        mock_general_storage.get.side_effect = Exception("Storage error")
 
         with patch("app.core.state_manager.app.storage") as mock_storage:
-            mock_storage.user = mock_user_storage
+            mock_storage.general = mock_general_storage
             key = manager._get_cache_key("test_storage", "test_computation")
 
         # Should return fallback key
