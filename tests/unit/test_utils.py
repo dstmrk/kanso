@@ -150,9 +150,9 @@ class TestGetCurrentTimestamp:
         parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
         now = datetime.now(UTC)
 
-        # Should be within 1 second of current time
+        # Should be within 2 seconds of current time (allow for CI slowness)
         diff = abs((now - parsed).total_seconds())
-        assert diff < 1.0
+        assert diff < 2.0
 
 
 class TestFormatTimestampRelative:

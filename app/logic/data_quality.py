@@ -10,6 +10,7 @@ The checks are designed to provide actionable warnings to users about their data
 
 import logging
 from dataclasses import dataclass
+from io import StringIO
 from typing import Any
 
 import pandas as pd
@@ -106,7 +107,7 @@ class DataQualityChecker:
                 continue
 
             try:
-                df = pd.read_json(storage[sheet_key], orient="split")
+                df = pd.read_json(StringIO(storage[sheet_key]), orient="split")
 
                 if df.empty or len(df) == 0:
                     display_name = self.SHEET_DISPLAY_NAMES[sheet_key]
@@ -151,7 +152,7 @@ class DataQualityChecker:
                 continue
 
             try:
-                df = pd.read_json(storage[sheet_key], orient="split")
+                df = pd.read_json(StringIO(storage[sheet_key]), orient="split")
 
                 # Skip if empty (already caught by check_empty_sheets)
                 if df.empty or len(df) == 0:
