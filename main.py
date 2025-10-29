@@ -400,40 +400,6 @@ async def reset_metrics():
     return {"status": "success", "message": "Metrics reset"}
 
 
-@app.post("/api/test/clear-storage")
-async def clear_storage_test():
-    """Clear all storage (only available in test environment)."""
-    from starlette.responses import JSONResponse
-
-    # Only allow in test environment for security
-    if app_config.app_env != "test":
-        return JSONResponse(
-            {"status": "error", "message": "Endpoint only available in test environment"},
-            status_code=403,
-        )
-
-    try:
-        import os
-        import shutil
-
-        # NiceGUI stores storage in current working directory's .nicegui folder
-        cwd = Path(os.getcwd())
-        nicegui_dir = cwd / ".nicegui"
-
-        # Remove entire .nicegui directory to clear all storage
-        if nicegui_dir.exists():
-            shutil.rmtree(nicegui_dir)
-            logger.info(f"Removed .nicegui directory: {nicegui_dir}")
-
-        return {"status": "success", "message": "Storage cleared"}
-    except Exception as e:
-        logger.error(f"Failed to clear storage: {e}", exc_info=True)
-        return JSONResponse(
-            {"status": "error", "message": f"{type(e).__name__}: {str(e)}"},
-            status_code=500,
-        )
-
-
 # Save metrics on shutdown
 @app.on_shutdown
 async def save_metrics_on_shutdown():

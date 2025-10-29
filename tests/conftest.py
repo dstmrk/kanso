@@ -17,9 +17,14 @@ def storage_dir():
         yield Path(tmpdir)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def app_server(storage_dir):
-    """Start the NiceGUI app server for E2E testing as a subprocess."""
+    """Start the NiceGUI app server for E2E testing as a subprocess.
+
+    Note: scope="function" means the server restarts for each test,
+    providing complete storage isolation. This is more expensive but ensures
+    tests don't interfere with each other through persistent storage.
+    """
     import shutil
 
     port = 8765  # Use a different port to avoid conflicts
@@ -29,7 +34,9 @@ def app_server(storage_dir):
     nicegui_dir = project_root / ".nicegui"
     if nicegui_dir.exists():
         shutil.rmtree(nicegui_dir)
-        print(f"Cleaned up {nicegui_dir} before starting test server")
+        print(
+            f"Cleaned up {nicegui_dir} before starting test server for test: {os.getenv('PYTEST_CURRENT_TEST', 'unknown')}"
+        )
 
     # Environment variables for test
     test_env = os.environ.copy()
@@ -92,16 +99,12 @@ def app_server(storage_dir):
 @pytest.fixture
 def page(app_server, page: Page):
     """Configure page for E2E tests with app server URL."""
-
     # Store base URL in page object for easy access
-    page.base_url = app_server
+    page.base_url = app_server  # type: ignore[attr-defined]
 
-    # Clear storage before each test
+    # Clear browser storage before each test
     page.context.clear_cookies()
     page.context.clear_permissions()
-
-    # Note: NiceGUI storage is cleaned once before server starts (see app_server fixture)
-    # We don't clean it between tests to avoid server instability
 
     # Override goto to handle relative URLs
     original_goto = page.goto
@@ -111,7 +114,7 @@ def page(app_server, page: Page):
             url = app_server + url
         return original_goto(url, **kwargs)
 
-    page.goto = goto_with_base
+    page.goto = goto_with_base  # type: ignore[method-assign]
     return page
 
 
