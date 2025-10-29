@@ -84,12 +84,28 @@ def app_server(storage_dir):
 @pytest.fixture
 def page(app_server, page: Page):
     """Configure page for E2E tests with app server URL."""
+    import urllib.request
+
     # Store base URL in page object for easy access
     page.base_url = app_server
 
     # Clear storage before each test
     page.context.clear_cookies()
     page.context.clear_permissions()
+
+    # Clear NiceGUI storage via API endpoint
+    try:
+        req = urllib.request.Request(
+            f"{app_server}/api/test/clear-storage",
+            method="POST",
+            headers={"Content-Type": "application/json"},
+            data=b"{}",
+        )
+        urllib.request.urlopen(req, timeout=5)
+        # Storage cleared successfully
+    except Exception:
+        # If clearing fails on first test, that's ok (no storage yet)
+        pass
 
     # Override goto to handle relative URLs
     original_goto = page.goto
