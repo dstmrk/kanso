@@ -20,8 +20,16 @@ def storage_dir():
 @pytest.fixture(scope="session")
 def app_server(storage_dir):
     """Start the NiceGUI app server for E2E testing as a subprocess."""
+    import shutil
+
     port = 8765  # Use a different port to avoid conflicts
     project_root = Path(__file__).parent.parent
+
+    # Clean up NiceGUI storage before starting server to ensure clean state
+    nicegui_dir = project_root / ".nicegui"
+    if nicegui_dir.exists():
+        shutil.rmtree(nicegui_dir)
+        print(f"Cleaned up {nicegui_dir} before starting test server")
 
     # Environment variables for test
     test_env = os.environ.copy()
@@ -84,7 +92,6 @@ def app_server(storage_dir):
 @pytest.fixture
 def page(app_server, page: Page):
     """Configure page for E2E tests with app server URL."""
-    import urllib.request
 
     # Store base URL in page object for easy access
     page.base_url = app_server
@@ -93,19 +100,8 @@ def page(app_server, page: Page):
     page.context.clear_cookies()
     page.context.clear_permissions()
 
-    # Clear NiceGUI storage via API endpoint
-    try:
-        req = urllib.request.Request(
-            f"{app_server}/api/test/clear-storage",
-            method="POST",
-            headers={"Content-Type": "application/json"},
-            data=b"{}",
-        )
-        urllib.request.urlopen(req, timeout=5)
-        # Storage cleared successfully
-    except Exception:
-        # If clearing fails on first test, that's ok (no storage yet)
-        pass
+    # Note: NiceGUI storage is cleaned once before server starts (see app_server fixture)
+    # We don't clean it between tests to avoid server instability
 
     # Override goto to handle relative URLs
     original_goto = page.goto
