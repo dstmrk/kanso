@@ -23,7 +23,7 @@ async def load_net_worth_evolution_data():
 
     return await state_manager.get_or_compute(
         user_storage_key="assets_sheet",
-        computation_key="net_worth_evolution_by_class_v2",  # Changed to force cache refresh
+        computation_key="net_worth_evolution_by_class_v4",  # Changed to force cache refresh
         compute_fn=compute_net_worth_evolution,
         ttl_seconds=300,  # 5 minute cache
     )
@@ -37,7 +37,7 @@ def render() -> None:
         # Main chart container - 40vh height
         chart_container = (
             ui.card()
-            .classes("w-full max-w-screen-xl mx-auto")
+            .classes("w-full max-w-screen-xl mx-auto bg-base-100 shadow-md")
             .style("height: 40vh; min-height: 300px;")
         )
 
@@ -55,7 +55,9 @@ def render() -> None:
         # Placeholder section - future tables
         with (
             ui.card()
-            .classes("w-full max-w-screen-xl mx-auto p-8 flex items-center justify-center")
+            .classes(
+                "w-full max-w-screen-xl mx-auto p-8 flex items-center justify-center bg-base-100 shadow-md"
+            )
             .style("min-height: 200px;")
         ):
             with ui.column().classes("items-center gap-2"):

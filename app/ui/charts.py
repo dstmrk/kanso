@@ -457,7 +457,7 @@ def create_net_worth_evolution_by_class_options(
             "axisPointer": {"type": "cross"},
             **ChartOptionsBuilder.get_common_tooltip(currency),
         },
-        "grid": {"left": "10%", "right": "5%", "top": "15%", "bottom": "20%"},
+        "grid": ChartOptionsBuilder.get_common_grid(),
         "xAxis": {
             "type": "category",
             "data": dates,
@@ -468,7 +468,7 @@ def create_net_worth_evolution_by_class_options(
             "type": "value",
             "axisLabel": ChartOptionsBuilder.get_currency_axis_label(user_agent, currency),
             "axisLine": {"onZero": True},
-            "splitLine": {"show": True, "lineStyle": {"type": "dashed", "opacity": 0.3}},
+            "splitLine": {"show": False},
         },
         "dataZoom": [
             {

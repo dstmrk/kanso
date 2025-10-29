@@ -33,11 +33,13 @@ def render() -> None:
                     + styles.DEFAULT_ECHARTS_THEME_SUFFIX
                 )
 
-                # Update localStorage and DOM immediately
+                # Update localStorage and DOM, then reload page to apply theme to all components
                 script: str = f"""
                     localStorage.setItem('kanso-theme', '{new_theme}');
                     document.documentElement.setAttribute('data-theme', '{new_theme}');
                     document.documentElement.style.colorScheme = '{new_theme}';
+                    // Reload page after a brief delay to ensure storage is updated
+                    setTimeout(() => window.location.reload(), 100);
                 """
                 ui.run_javascript(script)
 
