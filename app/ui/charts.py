@@ -351,3 +351,150 @@ def create_income_vs_expenses_options(
             },
         ],
     }
+
+
+def create_net_worth_evolution_by_class_options(
+    net_worth_data: dict[str, Any],
+    user_agent: Literal["mobile", "desktop"],
+    currency: str = "USD",
+) -> dict[str, Any]:
+    """Create combo chart for net worth evolution with asset/liability class breakdown.
+
+    Shows stacked area chart for asset classes (positive, green shades) and liability
+    classes (negative, red shades), with a bold line for total net worth.
+
+    Args:
+        net_worth_data: Dict with dates, total, asset_classes, liability_classes
+        user_agent: mobile or desktop for sizing
+        currency: Currency code for formatting
+
+    Returns:
+        ECharts options for combo chart (stacked areas + line)
+    """
+    dates = net_worth_data.get("dates", [])
+    total = net_worth_data.get("total", [])
+    asset_classes = net_worth_data.get("asset_classes", {})
+    liability_classes = net_worth_data.get("liability_classes", {})
+
+    # Build legend data (all classes + Total Net Worth)
+    legend_data = list(asset_classes.keys()) + list(liability_classes.keys()) + ["Net Worth"]
+
+    # Build series: asset classes (stacked, green shades), liability classes (stacked, red shades)
+    series: list[dict[str, Any]] = []
+
+    # Asset classes - green shades, stacked
+    asset_colors = [
+        "#2b821d",  # Dark green
+        "#4a9d3a",  # Medium green
+        "#6fb85e",  # Light green
+        "#8cc980",  # Lighter green
+        "#a8daa1",  # Very light green
+    ]
+    for i, (class_name, values) in enumerate(asset_classes.items()):
+        series.append(
+            {
+                "name": class_name,
+                "type": "line",
+                "stack": "assets",
+                "areaStyle": {},
+                "data": values,
+                "smooth": True,
+                "emphasis": {"focus": "series"},
+                "itemStyle": {"color": asset_colors[i % len(asset_colors)]},
+            }
+        )
+
+    # Liability classes - red shades (negative values below X axis, no stack)
+    # Note: We don't stack liabilities because ECharts doesn't handle negative stacking well
+    # Each liability class is shown as a separate negative area
+    liability_colors = [
+        "#c12e34",  # Dark red
+        "#d9534f",  # Medium red
+        "#e67373",  # Light red
+        "#f19494",  # Lighter red
+        "#f5b5b5",  # Very light red
+    ]
+    for i, (class_name, values) in enumerate(liability_classes.items()):
+        # Ensure values are negative by taking absolute value and inverting
+        negative_values = [-abs(v) for v in values]
+        series.append(
+            {
+                "name": class_name,
+                "type": "line",
+                # No stack - show each liability as separate negative area
+                "areaStyle": {"opacity": 0.7},  # Semi-transparent to see overlap
+                "data": negative_values,  # Force negative values
+                "smooth": True,
+                "emphasis": {"focus": "series"},
+                "itemStyle": {"color": liability_colors[i % len(liability_colors)]},
+            }
+        )
+
+    # Total Net Worth - bold line on top (no stack)
+    series.append(
+        {
+            "name": "Net Worth",
+            "type": "line",
+            "data": total,
+            "smooth": True,
+            "lineStyle": {"width": 3, "color": "#005eaa"},
+            "itemStyle": {"color": "#005eaa"},
+            "emphasis": {"focus": "series"},
+            "z": 10,  # Ensure it's on top
+        }
+    )
+
+    return {
+        "legend": {
+            "data": legend_data,
+            "top": "3%",
+            "left": "center",
+            "type": "scroll",
+            "textStyle": {"fontSize": ChartOptionsBuilder.get_font_size(user_agent)},
+        },
+        "tooltip": {
+            "trigger": "axis",
+            "axisPointer": {"type": "cross"},
+            **ChartOptionsBuilder.get_common_tooltip(currency),
+        },
+        "grid": {"left": "10%", "right": "5%", "top": "15%", "bottom": "20%"},
+        "xAxis": {
+            "type": "category",
+            "data": dates,
+            "axisLabel": {"fontSize": ChartOptionsBuilder.get_font_size(user_agent)},
+            "boundaryGap": False,
+        },
+        "yAxis": {
+            "type": "value",
+            "axisLabel": ChartOptionsBuilder.get_currency_axis_label(user_agent, currency),
+            "axisLine": {"onZero": True},
+            "splitLine": {"show": True, "lineStyle": {"type": "dashed", "opacity": 0.3}},
+        },
+        "dataZoom": [
+            {
+                "type": "slider",
+                "show": True,
+                "start": 0,
+                "end": 100,
+                "height": 20,
+                "bottom": "2%",
+                "handleSize": "110%",
+                "handleStyle": {"color": "#005eaa"},
+                "textStyle": {"fontSize": ChartOptionsBuilder.get_font_size(user_agent)},
+                "borderColor": "transparent",
+                "backgroundColor": "#f0f0f0",
+                "fillerColor": "rgba(0, 94, 170, 0.2)",
+                "dataBackground": {"lineStyle": {"color": "#005eaa", "opacity": 0.5}},
+                "selectedDataBackground": {"lineStyle": {"color": "#005eaa"}},
+            },
+            {
+                "type": "inside",
+                "start": 0,
+                "end": 100,
+                "zoomOnMouseWheel": True,
+                "moveOnMouseMove": True,
+                "moveOnMouseWheel": False,
+            },
+        ],
+        "series": series,
+    }

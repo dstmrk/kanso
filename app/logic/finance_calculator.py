@@ -685,6 +685,184 @@ class FinanceCalculator:
             "values": [float(v) for v in df[COL_NET_WORTH_PARSED].tolist()],
         }
 
+    @track_performance("get_monthly_net_worth_by_asset_class")
+    def get_monthly_net_worth_by_asset_class(self) -> dict[str, Any]:
+        """Get monthly net worth evolution broken down by asset and liability classes.
+
+        Returns time series data for each asset class (positive values) and liability
+        class (negative values), plus the total net worth line.
+
+        Returns:
+            Dictionary with:
+                - dates: List of YYYY-MM strings
+                - total: List of total net worth values
+                - asset_classes: Dict of {class_name: [values]} for assets (positive)
+                - liability_classes: Dict of {class_name: [values]} for liabilities (negative)
+
+        Example (single-index):
+            {
+                'dates': ['2024-01', '2024-02'],
+                'total': [32000.0, 33500.0],
+                'asset_classes': {
+                    'Checking': [2000.0, 2500.0],
+                    'Savings': [10000.0, 11000.0]
+                },
+                'liability_classes': {
+                    'Mortgage': [-200000.0, -199000.0],
+                    'Car Loan': [-15000.0, -14500.0]
+                }
+            }
+
+        Example (multi-index):
+            {
+                'dates': ['2024-01', '2024-02'],
+                'total': [32000.0, 33500.0],
+                'asset_classes': {
+                    'Cash': [12000.0, 13500.0],  # Sum of Checking + Savings
+                    'Investments': [20000.0, 20000.0]  # Sum of Stocks + Bonds
+                },
+                'liability_classes': {
+                    'Loans': [-215000.0, -213500.0]  # Sum of Mortgage + Car Loan
+                }
+            }
+        """
+        # Get net worth for dates and total values
+        nw_data = self.get_monthly_net_worth()
+        if not nw_data["dates"]:
+            return {
+                "dates": [],
+                "total": [],
+                "asset_classes": {},
+                "liability_classes": {},
+            }
+
+        dates = nw_data["dates"]
+        total = nw_data["values"]
+
+        # Use preprocessed DataFrames
+        assets_df = self.processed_assets_df
+        liabilities_df = self.processed_liabilities_df
+
+        # Initialize result structure
+        asset_classes: dict[str, list[float]] = {}
+        liability_classes: dict[str, list[float]] = {}
+
+        # Process Assets
+        if assets_df is not None and not assets_df.empty:
+            # Filter to matching dates
+            assets_df_filtered = assets_df[
+                assets_df[COL_DATE_DT].dt.strftime(DATE_FORMAT_STORAGE).isin(dates)
+            ]
+
+            # Identify columns (skip date_dt and Date)
+            asset_columns = [
+                col
+                for col in assets_df.columns
+                if col != COL_DATE_DT
+                and not (isinstance(col, tuple) and COL_DATE_DT in col)
+                and not (isinstance(col, str) and col == COL_DATE)
+                and not (isinstance(col, tuple) and COL_DATE in col)
+            ]
+
+            # Group columns by category (for multi-index) or use column name (for single-index)
+            for col in asset_columns:
+                if isinstance(col, tuple) and len(col) == 2:
+                    # MultiIndex: aggregate by category (first level)
+                    category = col[0].strip()
+                    if not category or category == COL_CATEGORY:
+                        continue
+
+                    # Initialize category if not exists
+                    if category not in asset_classes:
+                        asset_classes[category] = [0.0] * len(dates)
+
+                    # Add values for this item to its category
+                    for i, date in enumerate(dates):
+                        row = assets_df_filtered[
+                            assets_df_filtered[COL_DATE_DT].dt.strftime(DATE_FORMAT_STORAGE) == date
+                        ]
+                        if not row.empty:
+                            value = parse_monetary_value(row.iloc[0][col])
+                            asset_classes[category][i] += value
+                else:
+                    # Single header: each column is its own series
+                    item = str(col)
+                    if item == COL_DATE or item == COL_CATEGORY:
+                        continue
+
+                    asset_classes[item] = []
+                    for date in dates:
+                        row = assets_df_filtered[
+                            assets_df_filtered[COL_DATE_DT].dt.strftime(DATE_FORMAT_STORAGE) == date
+                        ]
+                        if not row.empty:
+                            value = parse_monetary_value(row.iloc[0][col])
+                            asset_classes[item].append(value)
+                        else:
+                            asset_classes[item].append(0.0)
+
+        # Process Liabilities (same logic but with negative values)
+        if liabilities_df is not None and not liabilities_df.empty:
+            # Filter to matching dates
+            liabilities_df_filtered = liabilities_df[
+                liabilities_df[COL_DATE_DT].dt.strftime(DATE_FORMAT_STORAGE).isin(dates)
+            ]
+
+            # Identify columns
+            liability_columns = [
+                col
+                for col in liabilities_df.columns
+                if col != COL_DATE_DT
+                and not (isinstance(col, tuple) and COL_DATE_DT in col)
+                and not (isinstance(col, str) and col in (COL_DATE, COL_CATEGORY))
+                and not (isinstance(col, tuple) and COL_DATE in col)
+            ]
+
+            for col in liability_columns:
+                if isinstance(col, tuple) and len(col) == 2:
+                    # MultiIndex: aggregate by category
+                    category = col[0].strip()
+                    if not category or category == COL_CATEGORY:
+                        continue
+
+                    # Initialize category if not exists
+                    if category not in liability_classes:
+                        liability_classes[category] = [0.0] * len(dates)
+
+                    # Add values (as negative) for this item to its category
+                    for i, date in enumerate(dates):
+                        row = liabilities_df_filtered[
+                            liabilities_df_filtered[COL_DATE_DT].dt.strftime(DATE_FORMAT_STORAGE)
+                            == date
+                        ]
+                        if not row.empty:
+                            value = parse_monetary_value(row.iloc[0][col])
+                            liability_classes[category][i] -= value  # Negative
+                else:
+                    # Single header: each column is its own series (negative)
+                    item = str(col)
+                    if item in (COL_DATE, COL_CATEGORY):
+                        continue
+
+                    liability_classes[item] = []
+                    for date in dates:
+                        row = liabilities_df_filtered[
+                            liabilities_df_filtered[COL_DATE_DT].dt.strftime(DATE_FORMAT_STORAGE)
+                            == date
+                        ]
+                        if not row.empty:
+                            value = parse_monetary_value(row.iloc[0][col])
+                            liability_classes[item].append(-value)  # Negative
+                        else:
+                            liability_classes[item].append(0.0)
+
+        return {
+            "dates": dates,
+            "total": total,
+            "asset_classes": asset_classes,
+            "liability_classes": liability_classes,
+        }
+
     @track_performance("get_assets_liabilities")
     def get_assets_liabilities(self) -> dict[str, dict[str, Any]]:
         """Get assets and liabilities breakdown from the latest data.
