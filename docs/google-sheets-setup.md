@@ -164,8 +164,8 @@ You can mix formats - Kanso will detect and parse correctly.
 For complex asset structures, use multi-level headers:
 
 ```
-| Date    | Cash        | Cash        | Investments | Investments |
-|         | Checking    | Savings     | Stocks      | Bonds       |
+|         | Cash        | Cash        | Investments | Investments |
+| Date    | Checking    | Savings     | Stocks      | Bonds       |
 |---------|-------------|-------------|-------------|-------------|
 | 2024-01 | 2000        | 10000       | 15000       | 5000        |
 ```
