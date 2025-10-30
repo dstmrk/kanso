@@ -8,6 +8,8 @@ from collections.abc import Awaitable, Callable
 
 from nicegui import app, ui
 
+from app.ui.rendering_utils import render_error_message
+
 
 def render_with_data_loading(
     *,
@@ -59,18 +61,13 @@ def render_with_data_loading(
                         await render_fn()
                 else:
                     # Failed to load data - show error
-                    error_container.clear()
-                    with error_container:
-                        ui.label(
-                            "Failed to load data. Please check your configuration in Advanced Settings."
-                        ).classes("text-center text-error text-lg")
+                    render_error_message(
+                        error_container,
+                        "Failed to load data. Please check your configuration in Advanced Settings.",
+                    )
             except Exception as e:
                 # Exception during loading - show error
-                error_container.clear()
-                with error_container:
-                    ui.label(f"Error loading data: {str(e)}").classes(
-                        "text-center text-error text-lg"
-                    )
+                render_error_message(error_container, f"Error loading data: {str(e)}")
 
         # Start loading data asynchronously (non-blocking)
         ui.timer(background_delay, load_data_in_background, once=True)

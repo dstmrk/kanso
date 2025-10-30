@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from datetime import UTC
 
 from nicegui import app
 
@@ -14,7 +15,8 @@ async def ensure_data_loaded():
     """Lazy load data sheets from Google Sheets if not already in storage.
 
     This function runs the I/O-bound operation in a separate thread to avoid blocking
-    the UI. It checks if data is already loaded and only fetches missing sheets.
+    the UI. It checks if data is already loaded and respects a 24h cache TTL to avoid
+    unnecessary reloads. Users can still manually refresh using the refresh button.
 
     Returns:
         bool: True if all data was loaded successfully, False otherwise.
@@ -22,7 +24,10 @@ async def ensure_data_loaded():
 
     def load_data_sync():
         """Synchronous data loading function that runs in background thread."""
+        from datetime import datetime
+
         from app.core.config import config as app_config
+        from app.core.constants import DATA_REFRESH_TTL_SECONDS
         from app.services.utils import get_current_timestamp
 
         try:
@@ -31,12 +36,31 @@ async def ensure_data_loaded():
 
             # Check if data already loaded
             if loader.all_data_loaded():
-                logger.info("All data sheets already loaded")
-                # Save timestamp if this is the first time we check (e.g., after onboarding)
-                if "last_data_refresh" not in app.storage.general:
+                # Check if data is still fresh (within TTL)
+                last_refresh = app.storage.general.get("last_data_refresh")
+                if last_refresh:
+                    try:
+                        last_refresh_dt = datetime.fromisoformat(last_refresh)
+                        now = datetime.now(UTC)
+                        age_seconds = (now - last_refresh_dt).total_seconds()
+
+                        if age_seconds < DATA_REFRESH_TTL_SECONDS:
+                            logger.info(
+                                f"Data is fresh (age: {age_seconds:.0f}s / {DATA_REFRESH_TTL_SECONDS}s TTL)"
+                            )
+                            return True
+                        else:
+                            logger.info(
+                                f"Data is stale (age: {age_seconds:.0f}s), will refresh from Google Sheets"
+                            )
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"Invalid timestamp format: {e}, will reload data")
+
+                # Data exists but no timestamp or stale - save timestamp for backward compatibility
+                if not last_refresh:
                     app.storage.general["last_data_refresh"] = get_current_timestamp()
                     logger.info("First data load timestamp saved (data already present)")
-                return True
+                    return True
 
             # Get credentials
             credentials = loader.get_credentials()

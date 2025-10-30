@@ -41,6 +41,15 @@ DATE_FORMAT_DISPLAY = "%m-%Y"
 # Suitable for monthly financial data updates
 CACHE_TTL_SECONDS = 86400
 
+# Data refresh TTL in seconds (24 hours)
+# Determines how often data is automatically reloaded from Google Sheets
+# Users can still manually refresh data using the refresh button
+DATA_REFRESH_TTL_SECONDS = 86400
+
+# Short cache TTL for frequently changing data (5 minutes)
+# Used for data that may be more dynamic or needs quicker updates
+CACHE_TTL_SHORT_SECONDS = 300
+
 # === Google Sheets Worksheet Names ===
 # Note: These are also defined in config.py with env variable fallbacks
 # These serve as default constants
@@ -61,3 +70,8 @@ MONTHS_LOOKBACK_YEAR = 13  # 12 months + 1 for YoY comparison
 # Saving ratio thresholds for UI coloring (as decimal percentages)
 SAVING_RATIO_THRESHOLD_LOW = 0.2  # Below this is "error" (red)
 SAVING_RATIO_THRESHOLD_MEDIUM = 0.4  # Below this is "warning" (yellow), above is "success" (green)
+
+# === UI Pagination ===
+
+# Default rows per page for data tables
+TABLE_ROWS_PER_PAGE_DEFAULT = 10

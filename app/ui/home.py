@@ -14,6 +14,7 @@ from app.ui import charts, dock, header, styles
 from app.ui.common import get_user_preferences
 from app.ui.components.skeleton import render_chart_skeleton, render_kpi_card_skeleton
 from app.ui.data_loading import render_with_data_loading
+from app.ui.rendering_utils import render_no_data_message
 
 
 class HomeRenderer:
@@ -158,9 +159,7 @@ class HomeRenderer:
         container.clear()
 
         if not chart_data:
-            with container:
-                ui.label(title).classes(styles.CHART_CARDS_LABEL_CLASSES)
-                ui.label("No data available").classes("text-center text-gray-500")
+            render_no_data_message(container, title, tooltip or "")
             return
 
         # Get user preferences using centralized utility

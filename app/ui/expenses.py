@@ -6,11 +6,13 @@ from typing import Any
 from nicegui import app, ui
 
 from app.core.constants import (
+    CACHE_TTL_SECONDS,
     COL_AMOUNT_PARSED,
     COL_CATEGORY,
     COL_DATE,
     COL_MERCHANT,
     COL_TYPE,
+    TABLE_ROWS_PER_PAGE_DEFAULT,
 )
 from app.core.state_manager import state_manager
 from app.logic.finance_calculator import FinanceCalculator
@@ -19,6 +21,7 @@ from app.ui import charts, dock, header, styles
 from app.ui.common import get_user_preferences
 from app.ui.components.skeleton import render_chart_skeleton, render_table_skeleton
 from app.ui.data_loading import render_with_data_loading
+from app.ui.rendering_utils import render_no_data_message
 
 
 class ExpensesRenderer:
@@ -60,7 +63,7 @@ class ExpensesRenderer:
             user_storage_key="expenses_sheet",
             computation_key="expenses_data_v2",  # Changed to force cache refresh
             compute_fn=compute_expenses_data,
-            ttl_seconds=86400,
+            ttl_seconds=CACHE_TTL_SECONDS,
         )
 
     async def render_expenses_table(self, container: ui.column) -> None:
@@ -117,7 +120,11 @@ class ExpensesRenderer:
                 columns=columns,
                 rows=rows,
                 row_key="Date",
-                pagination={"rowsPerPage": 10, "sortBy": "date", "descending": True},
+                pagination={
+                    "rowsPerPage": TABLE_ROWS_PER_PAGE_DEFAULT,
+                    "sortBy": "date",
+                    "descending": True,
+                },
             ).classes("w-full")
 
             # Custom cell rendering for amount with currency format
@@ -165,10 +172,7 @@ class ExpensesRenderer:
         # Load expenses sheet from storage
         expenses_sheet_str = app.storage.general.get("expenses_sheet")
         if not expenses_sheet_str:
-            with container:
-                ui.label(title).classes(styles.CHART_CARDS_LABEL_CLASSES)
-                ui.tooltip(tooltip_text)
-                ui.label("No data available").classes("text-center text-gray-500 p-8")
+            render_no_data_message(container, title, tooltip_text)
             return
 
         # Compute or retrieve cached data
@@ -181,15 +185,12 @@ class ExpensesRenderer:
             user_storage_key="expenses_sheet",
             computation_key=computation_key,
             compute_fn=compute_wrapper,
-            ttl_seconds=86400,
+            ttl_seconds=CACHE_TTL_SECONDS,
         )
 
         # Validate data
         if not data or (data_validation_key and not data.get(data_validation_key)):
-            with container:
-                ui.label(title).classes(styles.CHART_CARDS_LABEL_CLASSES)
-                ui.tooltip(tooltip_text)
-                ui.label("No data available").classes("text-center text-gray-500 p-8")
+            render_no_data_message(container, title, tooltip_text)
             return
 
         # Get user preferences using centralized utility

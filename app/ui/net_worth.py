@@ -1,11 +1,13 @@
 from nicegui import ui
 
+from app.core.constants import CACHE_TTL_SHORT_SECONDS
 from app.core.state_manager import state_manager
 from app.services.finance_service import FinanceService
 from app.ui import charts, dock, header
 from app.ui.common import get_user_preferences
 from app.ui.components.skeleton import render_large_chart_skeleton
 from app.ui.data_loading import render_with_data_loading
+from app.ui.rendering_utils import render_no_data_message
 
 
 async def load_net_worth_evolution_data():
@@ -25,7 +27,7 @@ async def load_net_worth_evolution_data():
         user_storage_key="assets_sheet",
         computation_key="net_worth_evolution_by_class_v4",  # Changed to force cache refresh
         compute_fn=compute_net_worth_evolution,
-        ttl_seconds=300,  # 5 minute cache
+        ttl_seconds=CACHE_TTL_SHORT_SECONDS,  # 5 minute cache
     )
 
 
@@ -65,10 +67,11 @@ def render() -> None:
         chart_container.clear()
 
         if not chart_data or not chart_data.get("dates"):
-            with chart_container:
-                ui.label("Net Worth Evolution").classes("text-2xl font-bold p-4")
-                ui.tooltip("Evolution by Asset / Asset Class")
-                ui.label("No data available").classes("text-center text-gray-500 p-8")
+            render_no_data_message(
+                chart_container,
+                "Net Worth Evolution",
+                "Evolution by Asset / Asset Class",
+            )
             return
 
         # Get user preferences using centralized utility
