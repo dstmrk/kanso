@@ -17,6 +17,7 @@ from app.logic.finance_calculator import FinanceCalculator
 from app.services import utils
 from app.ui import charts, dock, header, styles
 from app.ui.common import get_user_preferences
+from app.ui.components.skeleton import render_chart_skeleton, render_table_skeleton
 
 
 class ExpensesRenderer:
@@ -248,42 +249,13 @@ class ExpensesRenderer:
             # Table container
             table_container = ui.column().classes("w-full")
 
-        # Initialize chart containers with skeletons (title + chart)
-        with yoy_chart_container:
-            # Title skeleton
-            ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(
-                "w-48 h-6 rounded mb-4"
-            )
-            # Chart skeleton - increased height for better visualization
-            ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(
-                "w-full h-96 rounded-lg"
-            )
-
-        with merchant_chart_container:
-            # Title skeleton
-            ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(
-                "w-48 h-6 rounded mb-4"
-            )
-            # Chart skeleton - increased height for better visualization
-            ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(
-                "w-full h-96 rounded-lg"
-            )
-
-        with type_chart_container:
-            # Title skeleton
-            ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(
-                "w-48 h-6 rounded mb-4"
-            )
-            # Chart skeleton - increased height for better visualization
-            ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(
-                "w-full h-96 rounded-lg"
-            )
+        # Initialize chart containers with skeletons
+        render_chart_skeleton(yoy_chart_container)
+        render_chart_skeleton(merchant_chart_container)
+        render_chart_skeleton(type_chart_container)
 
         # Initialize table container with skeleton
-        with table_container:
-            ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(
-                "w-full h-96 rounded-lg"
-            )
+        render_table_skeleton(table_container)
 
         return {
             "yoy_chart_container": yoy_chart_container,

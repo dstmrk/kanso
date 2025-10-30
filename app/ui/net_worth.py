@@ -2,8 +2,9 @@ from nicegui import ui
 
 from app.core.state_manager import state_manager
 from app.services.finance_service import FinanceService
-from app.ui import charts, dock, header, styles
+from app.ui import charts, dock, header
 from app.ui.common import get_user_preferences
+from app.ui.components.skeleton import render_large_chart_skeleton
 
 
 async def load_net_worth_evolution_data():
@@ -39,15 +40,7 @@ def render() -> None:
             .style("height: 60vh; min-height: 400px;")
         )
 
-        with chart_container:
-            # Title skeleton
-            ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(
-                "w-64 h-8 rounded mb-4 ml-4 mt-4"
-            )
-            # Chart skeleton
-            ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(
-                "w-full flex-grow rounded-lg mx-4 mb-4"
-            )
+        render_large_chart_skeleton(chart_container)
 
         # Placeholder section - future tables
         with (

@@ -12,6 +12,7 @@ from app.services import pages, utils
 from app.services.finance_service import FinanceService
 from app.ui import charts, dock, header, styles
 from app.ui.common import get_user_preferences
+from app.ui.components.skeleton import render_chart_skeleton, render_kpi_card_skeleton
 
 
 class HomeRenderer:
@@ -149,6 +150,7 @@ class HomeRenderer:
             "net_worth", "asset_vs_liabilities", "cash_flow", "avg_expenses", "income_vs_expenses"
         ],
         title: str,
+        tooltip: str | None = None,
     ) -> None:
         """Render a specific chart type into the given container."""
         chart_data = await self.load_chart_data()
@@ -165,6 +167,9 @@ class HomeRenderer:
 
         with container:
             ui.label(title).classes(styles.CHART_CARDS_LABEL_CLASSES)
+
+            if tooltip:
+                ui.tooltip(tooltip)
 
             if chart_type == "net_worth":
                 options = charts.create_net_worth_chart_options(
@@ -211,17 +216,8 @@ class HomeRenderer:
         # Initialize containers with skeleton loaders immediately
         with kpi_container:
             for _ in range(4):
-                with ui.card().classes(styles.STAT_CARDS_CLASSES):
-                    # Simulate the structure of real KPI cards: label + value + description
-                    ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(
-                        "w-24 h-4 rounded mb-2"  # Title skeleton
-                    )
-                    ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(
-                        "w-32 h-8 rounded mb-2"  # Value skeleton (larger)
-                    )
-                    ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(
-                        "w-full h-3 rounded"  # Description skeleton
-                    )
+                kpi_card = ui.card().classes(styles.STAT_CARDS_CLASSES)
+                render_kpi_card_skeleton(kpi_card)
 
         for container in [
             chart1_container,
@@ -230,15 +226,7 @@ class HomeRenderer:
             chart4_container,
             chart5_container,
         ]:
-            with container:
-                # Title skeleton
-                ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(
-                    "w-48 h-6 rounded mb-4"
-                )
-                # Chart skeleton
-                ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(
-                    "w-full h-64 rounded-lg"
-                )
+            render_chart_skeleton(container)
 
         return {
             "kpi_container": kpi_container,
@@ -284,13 +272,22 @@ def render() -> None:
                         "Asset vs Liabilities",
                     )
                     await renderer.render_chart(
-                        containers["chart3_container"], "cash_flow", "Cash Flow"
+                        containers["chart3_container"],
+                        "cash_flow",
+                        "Cash Flow",
+                        "Last 12 month cash flow",
                     )
                     await renderer.render_chart(
-                        containers["chart4_container"], "avg_expenses", "Avg Expenses"
+                        containers["chart4_container"],
+                        "avg_expenses",
+                        "Avg Expenses",
+                        "Last 12 month expenses",
                     )
                     await renderer.render_chart(
-                        containers["chart5_container"], "income_vs_expenses", "Income vs Expenses"
+                        containers["chart5_container"],
+                        "income_vs_expenses",
+                        "Income vs Expenses",
+                        "Last 12 month incomes and expenses",
                     )
                 else:
                     # Failed to load data - show error
@@ -325,20 +322,28 @@ def render() -> None:
         )
         ui.timer(
             0.5,
-            lambda: renderer.render_chart(containers["chart3_container"], "cash_flow", "Cash Flow"),
-            once=True,
-        )
-        ui.timer(
-            0.5,
             lambda: renderer.render_chart(
-                containers["chart4_container"], "avg_expenses", "Avg Expenses"
+                containers["chart3_container"], "cash_flow", "Cash Flow", "Last 12 month cash flow"
             ),
             once=True,
         )
         ui.timer(
             0.5,
             lambda: renderer.render_chart(
-                containers["chart5_container"], "income_vs_expenses", "Income vs Expenses"
+                containers["chart4_container"],
+                "avg_expenses",
+                "Avg Expenses",
+                "Last 12 month expenses",
+            ),
+            once=True,
+        )
+        ui.timer(
+            0.5,
+            lambda: renderer.render_chart(
+                containers["chart5_container"],
+                "income_vs_expenses",
+                "Income vs Expenses",
+                "Last 12 month incomes and expenses",
             ),
             once=True,
         )
