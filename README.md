@@ -1,11 +1,14 @@
-# Kanso – Your Minimal Money Tracker
+# Kanso – Stop Guessing. Start Knowing.
 
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/dstmrk/kanso)
 ![CI](https://github.com/dstmrk/kanso/workflows/CI/badge.svg)
 [![codecov](https://codecov.io/gh/dstmrk/kanso/branch/main/graph/badge.svg)](https://codecov.io/gh/dstmrk/kanso)
 ![GitHub](https://img.shields.io/github/license/dstmrk/kanso)
 
-**📚 [Full Documentation](https://dstmrk.github.io/kanso/)** • [Installation](https://dstmrk.github.io/kanso/installation/) • [Configuration](https://dstmrk.github.io/kanso/configuration/) • [Architecture](https://dstmrk.github.io/kanso/architecture/)
+> **Check your financial health in 5 minutes per month.**
+> See exactly where your money goes, spot trends before they become problems, and make confident decisions about your finances.
+
+**📚 [Full Documentation](https://dstmrk.github.io/kanso/)** • **[Features Overview](https://dstmrk.github.io/kanso/features/overview/)** • **[Quick Install](https://dstmrk.github.io/kanso/installation/)**
 
 <table>
   <tr>
@@ -18,24 +21,206 @@
   </tr>
 </table>
 
-**Kanso** is a minimalist, self-hostable web application designed to help you track your personal finances with clarity and calm. It leverages **Google Sheets** as the data source, and builds clean, interactive dashboards using **gspread**, **NiceGUI**, and **ECharts**.
+---
+
+## The Problem
+
+**You work hard. You earn money. But at the end of the month...**
+
+- 🤔 **"Where did it all go?"** - Money disappears. You can't pinpoint where.
+- 😟 **"Am I on track?"** - No idea if you're making progress or falling behind.
+- 📈 **"Is spending getting worse?"** - You suspect it is, but you can't prove it.
+- 😫 **"Spreadsheet fatigue"** - Manual calculations, no charts, exhausting.
+
+**The anxiety is real. The control is missing.**
 
 ---
 
-## 📑 Table of Contents
+## The Solution
 
-- [Why "Kanso"?](#-why-kanso)
-- [Features](#-features)
-- [Quick Start](#-quick-start)
-- [First-Time Setup](#-first-time-setup)
-- [Project Structure](#-project-structure)
-- [Testing](#-testing)
-- [Development](#️-development)
-- [Tech Stack](#-tech-stack)
-- [Documentation](#-documentation)
-- [Security](#-security)
-- [License](#-license)
-- [Support](#-support)
+**Kanso gives you clarity without complexity.**
+
+### Before Kanso:
+- Open 3 spreadsheets to see the full picture
+- Calculate net worth manually each month
+- Wonder if that Christmas spending was worse than last year
+- Feel anxious about money (but can't explain why)
+
+### With Kanso (5 minutes per month):
+1. **Open dashboard** → See net worth trend in 10 seconds
+2. **Check savings ratio** → Green = doing great, Yellow/Red = time to adjust
+3. **Spot spending patterns** → "Oh, I didn't realize I spend that much there"
+4. **Make one decision** → Cancel subscription, adjust budget, or celebrate progress
+
+**Result**: Confidence. Control. Calm.
+
+---
+
+## What You Get
+
+### 📊 Answer "Am I on track?" in 10 seconds
+Net worth up? ✅ Keep going.
+Savings ratio green? ✅ You're doing great.
+No spreadsheet archaeology needed.
+
+### 💸 Spot spending patterns before they become problems
+Year-over-year comparison reveals lifestyle inflation early.
+Merchant breakdown shows where money actually goes.
+Fix issues before they compound.
+
+### 📈 Watch your wealth grow (or catch it shrinking)
+Stacked bar chart shows exactly where wealth is accumulating.
+See assets grow and liabilities shrink over time.
+Track progress, not just account balances.
+
+### 🔒 Keep your financial data under your control
+Self-hosted on your infrastructure. No bank connections required.
+Your data stays in your Google Sheets (or local DB soon).
+No cloud service reads your transactions. Ever.
+
+---
+
+## Quick Start
+
+### Option 1: Docker (5 minutes)
+
+```bash
+# Download and start
+curl -o docker-compose.yml https://raw.githubusercontent.com/dstmrk/kanso/main/docker-compose.yml
+docker compose up -d
+
+# Open http://localhost:6789
+```
+
+**That's it.** Follow onboarding wizard to connect Google Sheets.
+
+### Option 2: Local Development
+
+```bash
+# Clone and install
+git clone https://github.com/dstmrk/kanso.git
+cd kanso
+uv sync
+
+# Run
+uv run python main.py
+
+# Open http://localhost:6789
+```
+
+📖 **[Detailed Installation Guide](https://dstmrk.github.io/kanso/installation/)** • **[Google Sheets Setup](https://dstmrk.github.io/kanso/google-sheets-setup/)**
+
+---
+
+## How It Works
+
+```
+📝 Your Google Sheet → 📊 Kanso Dashboard → ✅ Confident Decisions → 💰 Better Financial Health
+```
+
+**Simple**:
+
+1. **Keep data in Google Sheets** (edit anywhere, familiar interface)
+2. **Kanso visualizes automatically** (charts, calculations, trends)
+3. **You make informed decisions** (no guessing, no anxiety)
+
+---
+
+## Is Kanso For You?
+
+### ✅ You'll Love Kanso If...
+
+- You **already track finances** in spreadsheets (Kanso visualizes what you have)
+- You want **visibility without complexity** (4 KPIs, not 50-category budgets)
+- You prefer **monthly reviews** over daily transaction tracking
+- You value **data ownership** and self-hosting
+- You're **comfortable running Docker** (or asking AI to help you)
+
+### ❌ Kanso Might Not Be For You If...
+
+- You need **automatic bank sync** (Kanso doesn't connect to banks)
+- You want **envelope budgeting** or strict category limits
+- You expect **set-and-forget** automation (Kanso requires monthly data entry)
+- You need a **mobile-first app** (Kanso is web-based, mobile-responsive)
+
+**Honest assessment**: Kanso is for people who manually track finances and want better insights, not for people looking to automate everything.
+
+---
+
+## Features
+
+### 📊 Financial Insights
+- **Net worth tracking** with asset/liability breakdown over time
+- **Savings ratio** monitoring (color-coded: green = healthy, yellow/red = needs attention)
+- **Month-over-month** and **year-over-year** comparisons
+- **Cash flow** analysis (income vs expenses with automatic calculations)
+
+### 💸 Expense Analysis
+- **Year-over-year** spending comparison with forecast
+- **Merchant breakdown** (top 80% of spending + "Other")
+- **Expense type** analysis (recurring, essential, discretionary)
+- **Transaction history** with sorting and pagination
+
+### 🎨 User Experience
+- **5-second load** with skeleton placeholders
+- **Dark/light mode** toggle with persistent preferences
+- **Responsive design** works on desktop, tablet, mobile
+- **2-step onboarding** wizard for first-time setup
+
+### 🔐 Data & Privacy
+- **Self-hosted** - runs on your infrastructure
+- **Google Sheets backend** - your data stays in your control
+- **No bank connections** - you input what you want to track
+- **Smart caching** - 24h data refresh, manual refresh button available
+- **Encrypted storage** - credentials secure in browser storage
+
+### 🧪 Developer Experience
+- **322 unit tests** + **17 E2E tests** (comprehensive coverage)
+- **Type-safe** with mypy validation
+- **Smart CI/CD** - E2E tests run only when UI changes
+- **Docker-ready** - production container with multi-stage build
+- **Extensive documentation** - architecture, API reference, contributing guide
+
+---
+
+## Real-World Use Cases
+
+**Scenario 1: The "Where did it all go?" Mystery**
+
+**Problem**: You earn €4k/month, but account is always near zero.
+
+**Solution**: Kanso's expense breakdown shows:
+- 30% food delivery (you didn't realize)
+- €200/month subscriptions (you forgot about)
+- Spending grew 15% vs last year (lifestyle inflation)
+
+**Action**: Cook more, cancel 3 subscriptions, save €400/month.
+
+---
+
+**Scenario 2: The Homeowner's Progress Check**
+
+**Problem**: Paying mortgage for 2 years. Am I making progress?
+
+**Solution**: Net worth chart shows:
+- Assets (property) stable at €250k
+- Liabilities (mortgage) down from €200k → €190k
+- Net worth up €10k (it's working!)
+
+**Action**: Stay the course. Consider extra principal payments.
+
+---
+
+**Scenario 3: The Raise That Disappeared**
+
+**Problem**: Got 10% raise last year. Savings didn't increase. Where did money go?
+
+**Solution**: Year-over-year expense comparison shows:
+- Spending also up 10% (lifestyle inflation)
+- Dining out doubled (celebrating new income)
+- Savings ratio unchanged at 15%
+
+**Action**: Freeze lifestyle. Save 100% of next raise.
 
 ---
 
@@ -49,90 +234,18 @@ Your data stays in your Google Sheet. Kanso just makes it beautiful and easy to 
 
 ---
 
-## ✨ Features
+## 🧩 Tech Stack
 
-### Core Functionality
-- 📊 **Interactive Dashboards** - Beautiful ECharts visualizations for income, expenses, and net worth
-- 📈 **Trend Analysis** - Track financial trends over time with cumulative and monthly views
-- 💰 **Multi-Currency Support** - EUR, USD, GBP, CHF, JPY with automatic formatting
-- 🌓 **Dark/Light Mode** - Seamless theme switching with persistent preferences
-- 📱 **Responsive Design** - Works beautifully on desktop, tablet, and mobile
+**Built for reliability and clarity**:
 
-### Data Management
-- 📑 **Google Sheets Integration** - Your data stays in your own Google Sheet
-- 🔄 **Smart Refresh System** - Hash-based change detection with granular updates
-- ✅ **Data Validation** - Comprehensive validation for all financial data sheets
-- 💾 **Smart Caching** - Performance-optimized with intelligent cache invalidation
-- 📊 **MultiIndex Support** - Handle complex sheet structures with ease
+- **[Python 3.13](https://www.python.org/)** + **[NiceGUI](https://nicegui.io)** - Modern async web UI
+- **[pandas](https://pandas.pydata.org/)** + **[gspread](https://github.com/burnash/gspread)** - Data processing and Google Sheets integration
+- **[ECharts](https://echarts.apache.org/)** - Interactive data visualizations
+- **[Tailwind CSS](https://tailwindcss.com/)** + **[DaisyUI](https://daisyui.com/)** - Modern UI styling
+- **[Docker](https://www.docker.com/)** - Self-contained deployment
+- **[pytest](https://pytest.org/)** + **[Playwright](https://playwright.dev/)** - Comprehensive testing
 
-### User Experience
-- 🚀 **Zero-Config Onboarding** - 2-step setup wizard for first-time users
-- 🔐 **Secure Storage** - Credentials stored safely in encrypted browser storage
-- ⚡ **Skeleton Loading** - Smooth loading experience with placeholders
-- 🎯 **Settings Management** - Update credentials and preferences anytime
-- 📉 **Expense Breakdown** - Detailed category analysis for spending insights
-
-### Developer Experience
-- 🧪 **Comprehensive Testing** - Full unit and E2E test suite with Playwright
-- 🤖 **Smart CI/CD** - Intelligent E2E execution based on changed files
-- 🐳 **Docker Ready** - Production-ready containerization
-- 📝 **Type Safety** - Full mypy type checking
-- 🎨 **Code Quality** - Automated linting with ruff and black
-
----
-
-## 🚀 Quick Start
-
-### Option 1: Run Locally
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/dstmrk/kanso.git
-cd kanso
-
-# 2. Install uv (if not already installed)
-curl -LsSf https://astral.sh/uv/install.sh | sh
-# Windows: powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-
-# 3. Install dependencies
-uv sync
-
-# 4. Run the app
-uv run main.py
-```
-
-Visit http://localhost:6789 and complete the onboarding setup!
-
-### Option 2: Docker (Pre-built Image)
-
-```bash
-# 1. Create directory and download compose file
-mkdir kanso && cd kanso
-curl -o docker-compose.yml https://raw.githubusercontent.com/dstmrk/kanso/main/docker-compose.yml
-
-# 2. Start Kanso
-docker compose up -d
-
-# 3. Open http://localhost:6789
-```
-
-See **[Installation Guide](https://dstmrk.github.io/kanso/installation/)** for detailed instructions.
-
----
-
-## 🎯 First-Time Setup
-
-On your first visit, Kanso will guide you through a simple 2-step onboarding:
-
-1. **Welcome** - Introduction to the setup process
-2. **Storage Setup** - Configure Google Sheets credentials
-   - Paste your Google Service Account JSON credentials
-   - Enter your Google Sheet URL (e.g., `https://docs.google.com/spreadsheets/d/...`)
-   - Follow [this guide](https://docs.gspread.org/en/latest/oauth2.html#service-account) to create a service account
-
-Your credentials are stored securely in your browser's local storage and persist across sessions.
-
-After onboarding, your dashboard loads with skeleton placeholders while data is fetched from Google Sheets.
+**Not blockchain, not AI, not buzzwords. Just clear insights from your data.**
 
 ---
 
@@ -140,179 +253,99 @@ After onboarding, your dashboard loads with skeleton placeholders while data is 
 
 ```bash
 kanso/
-│
-├── main.py                      # Application entry point
-│
-├── app/                         # Application code
-│   ├── core/                   # Core utilities (config, validation, caching, monitoring)
-│   ├── logic/                  # Business logic (financial calculations)
-│   ├── services/               # External integrations (Google Sheets, data loading)
-│   └── ui/                     # UI components (pages, charts, navigation)
-│
-├── tests/                       # Test suite
-│   ├── unit/                   # Unit tests
-│   ├── e2e/                    # Playwright end-to-end tests
-│   └── conftest.py             # Test fixtures and configuration
-│
-├── docs/                        # Documentation and assets
-├── .github/workflows/           # CI/CD pipelines
-│
-├── .env.{dev,prod,test}        # Environment configurations
-├── Dockerfile                   # Container configuration
-└── pyproject.toml              # Python dependencies and tooling
+├── main.py                  # Application entry point
+├── app/
+│   ├── core/               # Core utilities (validation, caching, monitoring)
+│   ├── logic/              # Business logic (financial calculations)
+│   ├── services/           # External integrations (Google Sheets)
+│   └── ui/                 # UI components (pages, charts, navigation)
+├── tests/
+│   ├── unit/               # 322 unit tests
+│   └── e2e/                # 17 end-to-end tests
+├── docs/                   # Documentation (MkDocs)
+└── .github/workflows/      # CI/CD pipelines
 ```
 
-### Architecture
-
-- **Separation of Concerns**: Clean separation between UI, business logic, and data access
-- **Service Layer**: External integrations isolated in `services/`
-- **State Management**: Centralized state with intelligent caching
-- **Data Validation**: Non-blocking Pydantic validation for graceful error handling
-- **Performance Monitoring**: Decorator-based tracking for data operations
+**Clean architecture**: Separation of concerns, testable components, well-documented.
 
 ---
 
 ## 🧪 Testing
 
-Kanso has a comprehensive test suite covering both unit and end-to-end scenarios:
-
-### Test Coverage
-
-- **Unit Tests**: Covering core logic, services, and utilities
-- **E2E Tests**: Playwright tests for complete user flows (onboarding, settings)
-- **Coverage**: Focus on critical paths with automated coverage tracking
-
-### Running Tests
+Kanso has a comprehensive test suite covering critical paths:
 
 ```bash
-# Run all unit tests
+# Run unit tests (322 tests, ~6s)
 pytest -m "not e2e"
 
-# Run E2E tests (requires Playwright browsers)
+# Run E2E tests (17 tests, ~80s)
 playwright install --with-deps chromium
 pytest -m e2e --browser chromium
 
-# Run all tests
-pytest --browser chromium
-
-# Run with coverage report
+# Run with coverage
 pytest -m "not e2e" --cov=app --cov-report=html
 ```
 
-### CI/CD
-
-The project uses a **smart CI strategy** that automatically runs E2E tests when UI files change:
-
-- ✅ **Always**: Unit tests, linting, Docker build
-- 🎯 **Smart**: E2E tests run on `main` push or when UI/service files change
-- ⚡ **Fast**: ~2 min for most PRs, ~7 min when E2E tests run
-
-See [.github/workflows/README.md](./.github/workflows/README.md) for details.
-
----
-
-## 🛠️ Development
-
-### Setup Development Environment
-
-```bash
-# Clone and install
-git clone https://github.com/dstmrk/kanso.git
-cd kanso
-uv sync --all-extras  # Install dev dependencies
-
-# Run in development mode
-uv run main.py
-
-# Run linters
-uv run ruff check .
-uv run black --check .
-uv run mypy app --ignore-missing-imports
-
-# Auto-format code
-uv run black .
-```
-
-### Project Configuration
-
-- **Package Manager**: [uv](https://docs.astral.sh/uv/) for fast, reliable dependency management
-- **Linting**: [ruff](https://github.com/astral-sh/ruff) for fast Python linting
-- **Formatting**: [black](https://github.com/psf/black) for consistent code style
-- **Type Checking**: [mypy](https://mypy-lang.org/) for static type checking
-- **Testing**: [pytest](https://pytest.org/) + [Playwright](https://playwright.dev/) for E2E
-
-### Contributing
-
-Contributions are welcome! See **[CONTRIBUTING.md](./CONTRIBUTING.md)** for guidelines on:
-- Setting up your development environment
-- Running tests and linters
-- Commit message conventions
-- Pull request process
-
-For detailed contributing documentation, visit the **[Contributing Guide](https://dstmrk.github.io/kanso/contributing/)**.
-
----
-
-## 🧩 Tech Stack
-
-### Core Technologies
-- **[Python 3.13](https://www.python.org/)** - Modern Python with latest performance improvements
-- **[NiceGUI](https://nicegui.io)** - Pythonic web UI framework built on Vue/Quasar
-- **[gspread](https://github.com/burnash/gspread)** - Google Sheets API wrapper
-- **[pandas](https://pandas.pydata.org/)** - Data manipulation and analysis
-
-### Frontend
-- **[ECharts](https://echarts.apache.org/)** - Powerful data visualization library
-- **[Tailwind CSS](https://tailwindcss.com/)** (via DaisyUI) - Utility-first CSS framework
-- **[DaisyUI](https://daisyui.com/)** - Tailwind CSS component library
-
-### Development & Testing
-- **[pytest](https://pytest.org/)** - Python testing framework
-- **[Playwright](https://playwright.dev/)** - Browser automation for E2E tests
-- **[Pydantic](https://pydantic.dev/)** - Data validation using Python type hints
-- **[mypy](https://mypy-lang.org/)** - Static type checker
-- **[ruff](https://github.com/astral-sh/ruff)** - Fast Python linter
-- **[black](https://github.com/psf/black)** - Opinionated code formatter
-
-### DevOps
-- **[Docker](https://www.docker.com/)** - Containerization
-- **[GitHub Actions](https://github.com/features/actions)** - CI/CD automation
-- **[uv](https://docs.astral.sh/uv/)** - Fast Python package manager
+**CI/CD Strategy**: Smart execution based on changed files
+- ✅ **Always**: Unit tests, linting, type checking
+- 🎯 **Smart**: E2E tests run on `main` or when UI/service files change
+- ⚡ **Fast**: ~2 min for most PRs, ~7 min with E2E
 
 ---
 
 ## 📚 Documentation
 
-For comprehensive documentation, visit **[dstmrk.github.io/kanso](https://dstmrk.github.io/kanso/)**
+**Comprehensive guides for every use case**:
 
-Key documentation pages:
-- **[Installation Guide](https://dstmrk.github.io/kanso/installation/)** - Docker and local setup
-- **[Google Sheets Setup](https://dstmrk.github.io/kanso/google-sheets-setup/)** - Prepare your financial data
-- **[Configuration](https://dstmrk.github.io/kanso/configuration/)** - Environment variables and settings
-- **[Architecture](https://dstmrk.github.io/kanso/architecture/)** - Technical design and components
-- **[API Reference](https://dstmrk.github.io/kanso/api-reference/)** - Classes and methods documentation
-- **[Contributing](https://dstmrk.github.io/kanso/contributing/)** - How to contribute to Kanso
+- **[Features Overview](https://dstmrk.github.io/kanso/features/overview/)** - What can Kanso do?
+- **[Dashboard Guide](https://dstmrk.github.io/kanso/features/dashboard/)** - Understand the 4 key metrics
+- **[Net Worth Tracking](https://dstmrk.github.io/kanso/features/net-worth/)** - Asset/liability breakdown
+- **[Expense Analysis](https://dstmrk.github.io/kanso/features/expenses/)** - Find spending patterns
+- **[Installation](https://dstmrk.github.io/kanso/installation/)** - Docker and local setup
+- **[Google Sheets Setup](https://dstmrk.github.io/kanso/google-sheets-setup/)** - Prepare your data
+- **[Configuration](https://dstmrk.github.io/kanso/configuration/)** - Environment variables
+- **[Architecture](https://dstmrk.github.io/kanso/architecture/)** - Technical design
+- **[Contributing](https://dstmrk.github.io/kanso/contributing/)** - Development guide
 
-Additional resources:
-- **[CI/CD Workflow Guide](./.github/workflows/README.md)** - GitHub Actions workflow documentation
-- **[Security Policy](./SECURITY.md)** - Security guidelines and vulnerability reporting
+---
+
+## 🛠️ Development
+
+```bash
+# Setup
+git clone https://github.com/dstmrk/kanso.git
+cd kanso
+uv sync --all-extras
+
+# Run
+uv run python main.py
+
+# Lint
+uv run ruff check .
+uv run mypy app
+
+# Test
+pytest
+```
+
+**Contributing**: See **[CONTRIBUTING.md](./CONTRIBUTING.md)** for guidelines.
 
 ---
 
 ## 🔒 Security
 
-Security is a priority. Please review our [Security Policy](./SECURITY.md) for:
+Security is a priority. See **[SECURITY.md](./SECURITY.md)** for:
 - Supported versions
-- Vulnerability reporting process
-- Security best practices
+- Vulnerability reporting
+- Best practices
 
-**Never commit credentials or secrets.** Kanso stores credentials securely in encrypted browser storage.
+**Never commit credentials.** Kanso stores them securely in encrypted browser storage.
 
 ---
 
 ## 📄 License
 
-This project is licensed under the **MIT License** - see the [LICENSE](./LICENSE) file for details.
+MIT License - see **[LICENSE](./LICENSE)** for details.
 
 ---
 
@@ -320,10 +353,15 @@ This project is licensed under the **MIT License** - see the [LICENSE](./LICENSE
 
 - **Issues**: [GitHub Issues](https://github.com/dstmrk/kanso/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/dstmrk/kanso/discussions)
-- **Security**: See [SECURITY.md](./SECURITY.md)
+- **Security**: [SECURITY.md](./SECURITY.md)
 
 ---
 
 <p align="center">
-  Made with ❤️ and a focus on simplicity
+  <strong>Ready to stop guessing and start knowing?</strong><br/>
+  <a href="https://dstmrk.github.io/kanso/installation/">Get Started in 5 Minutes →</a>
+</p>
+
+<p align="center">
+  Made with ❤️ and a focus on <em>simplicity</em>
 </p>

@@ -1,5 +1,5 @@
 site_name: Kanso Documentation
-site_description: Personal finance tracking with calm and clarity
+site_description: Check your financial health in 5 minutes per month. See where your money goes, spot trends, make confident decisions.
 site_url: https://dstmrk.github.io/kanso/
 repo_url: https://github.com/dstmrk/kanso
 repo_name: dstmrk/kanso
@@ -43,6 +43,11 @@ theme:
 
 nav:
   - Home: index.md
+  - Features:
+      - Overview: features/overview.md
+      - Dashboard: features/dashboard.md
+      - Net Worth Tracking: features/net-worth.md
+      - Expense Analysis: features/expenses.md
   - Getting Started:
       - Installation: installation.md
       - Google Sheets Setup: google-sheets-setup.md
