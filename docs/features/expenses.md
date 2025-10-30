@@ -24,7 +24,7 @@
 
 From your dashboard navigation, access the **Expenses** page to see 3 key visualizations + full transaction history.
 
-###Chart 1: Year-over-Year Comparison
+### Chart 1: Year-over-Year Comparison
 
 **What It Shows**: This year's spending vs last year's spending, month-by-month cumulative, with forecast.
 
@@ -55,17 +55,6 @@ Result: You're spending less than last year. Great job!
 Question: Did income also increase 15%? If not, lifestyle inflation is eating savings.
 ```
 
-**Scenario 3: One-Time Spike**
-```
-2024 line: Mostly below 2023, but big spike in June
-Explanation: Check transaction table. Probably a planned large purchase (vacation, car repair).
-```
-
-**Forecast Use**:
-- Dotted line extends to December based on current trend
-- "If I keep spending at this rate, I'll hit €45k by year-end"
-- Helps plan Q4 spending adjustments
-
 ---
 
 ### Chart 2: Expenses by Merchant
@@ -77,17 +66,6 @@ Explanation: Check transaction table. Probably a planned large purchase (vacatio
 **How to Read It**:
 
 Shows **top merchants** until they represent **80% of total spending**, then groups rest as "Other".
-
-**Example**:
-```
-Grocery Store A: 25% (€3,750)
-Restaurant B: 15% (€2,250)
-Gas Station C: 12% (€1,800)
-Amazon: 10% (€1,500)
-Gym: 8% (€1,200)
-[... more merchants until 80% threshold]
-Other: 20% (€3,000) [hundreds of small transactions]
-```
 
 **Key Insights**:
 
@@ -112,11 +90,7 @@ Other: 20% (€3,000) [hundreds of small transactions]
 
 **Why It Matters**: Understand spending flexibility. Recurring expenses are hard to cut. One-time expenses are optional.
 
-**How to Read It**:
-
-Donut chart similar to merchants, but grouped by expense type.
-
-**Example Categories** (depends on your Google Sheets structure):
+**Example Categories**:
 ```
 Recurring: 45% (monthly subscriptions, insurance, rent)
 Essential: 30% (groceries, utilities, gas)
@@ -136,26 +110,6 @@ One-Time: 5% (car repair, appliance replacement)
 - Easy to cut temporarily if needed (savings push, emergency)
 - Lifestyle creep risk: discretionary becomes "necessary"
 
-**Real Use Cases**:
-
-**Scenario 1: Subscription Overload**
-```
-Recurring: 55%
-Action: List all subscriptions. Cancel 3 lowest-value ones. Save €50/month.
-```
-
-**Scenario 2: Impulse Spending**
-```
-Discretionary: 40%
-Action: Implement 48-hour rule for non-essential purchases. Reduce by 20%.
-```
-
-**Scenario 3: Emergency Fund Prep**
-```
-Essential: 35%, Discretionary: 30%
-Insight: If emergency, could cut discretionary entirely. Minimum survive-able monthly spend = Essential only.
-```
-
 ---
 
 ## Transaction History Table
@@ -173,20 +127,6 @@ Below the 3 charts, see **full transaction list** with sorting and pagination.
 - **Sortable**: Click column headers to sort (date, amount, etc.)
 - **Paginated**: 10 rows per page by default
 - **Searchable**: Find specific merchant or date range
-
-**Use Cases**:
-
-**1. Verify Chart Insights**:
-- "Chart says I spent €500 at Restaurant X. Let me check details."
-- Sort by merchant → Confirm frequency and amounts
-
-**2. Investigate Anomalies**:
-- "Why was June so expensive?"
-- Filter by date → See June transactions → Identify large one-time purchase
-
-**3. Monthly Review**:
-- "What did I spend on this month?"
-- View latest page → Spot any unexpected charges
 
 ---
 
@@ -382,7 +322,6 @@ Below the 3 charts, see **full transaction list** with sorting and pagination.
 **Team Detailed Tracking**:
 - "€2 × 5 days × 52 weeks = €520/year. Track it!"
 - Awareness changes behavior
-- Small expenses compound
 
 **Team Sanity Preserved**:
 - "Life is short. Don't obsess over coffee."

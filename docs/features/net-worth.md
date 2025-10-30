@@ -36,61 +36,12 @@ A **stacked bar chart** showing your financial position over time:
 
 ### How to Read It
 
-**Example Chart**:
-```
-Month:  Jan     Feb     Mar     Apr
-       [███]   [███]   [███]   [███]  ← Investments
-       [███]   [███]   [███]   [███]  ← Cash
-       [███]   [███]   [███]   [███]  ← Property
-       ─────   ─────   ─────   ─────  ← Zero line
-       [███]   [███]   [███]   [███]  ← Mortgage
-       [███]   [█]     [█]     [█]    ← Credit Card (shrinking!)
-```
-
 **What to Look For**:
 
 1. **Growing green sections**: Assets accumulating (good!)
 2. **Shrinking red sections**: Liabilities being paid off (great!)
 3. **Net distance from zero**: Getting further from zero line = wealth growing
 4. **Composition changes**: Which asset classes are growing? Which liabilities declining?
-
-### Real-World Insights
-
-**Example 1: The Investor**
-```
-Assets:
-- Cash: Stable €5k (emergency fund)
-- Investments: Growing from €20k → €35k (over 12 months)
-
-Liabilities:
-- None
-
-Result: Net worth +€15k. Investments doing the heavy lifting.
-```
-
-**Example 2: The Homeowner**
-```
-Assets:
-- Property: Stable €250k (home value)
-- Cash: €10k
-
-Liabilities:
-- Mortgage: Shrinking from €200k → €195k (monthly payments)
-
-Result: Net worth +€5k. Mortgage payoff creating slow, steady wealth.
-```
-
-**Example 3: The Debt Payoff Journey**
-```
-Assets:
-- Cash: Stable €3k
-
-Liabilities:
-- Student Loan: €30k → €25k (aggressive payoff)
-- Credit Card: €5k → €0 (paid off!)
-
-Result: Net worth +€10k. Liabilities down = wealth up, even without adding assets.
-```
 
 ---
 
@@ -107,7 +58,6 @@ Result: Net worth +€10k. Liabilities down = wealth up, even without adding ass
 - Property (home, investment real estate)
 - Vehicles
 - Business equity
-- Precious metals
 
 **What NOT to Track**:
 - Household items (furniture, clothes)
@@ -120,7 +70,6 @@ Result: Net worth +€10k. Liabilities down = wealth up, even without adding ass
 - **Investments**: Current market value (check brokerage account)
 - **Property**: Conservative estimate (Zillow, recent comparable sales)
 - **Vehicles**: Kelly Blue Book or similar
-- **Crypto**: Current exchange rate
 
 **Important**: Be consistent. Use same valuation method each month for accurate trends.
 
@@ -139,7 +88,6 @@ Result: Net worth +€10k. Liabilities down = wealth up, even without adding ass
 - Credit cards
 - Student loans
 - Personal loans
-- Medical debt
 
 **What NOT to Track**:
 - Upcoming bills (utilities, insurance) - these are expenses, not debt
@@ -150,8 +98,6 @@ Result: Net worth +€10k. Liabilities down = wealth up, even without adding ass
 - **Current outstanding balance**, not original loan amount
 - Include principal only (not future interest)
 - Update monthly after payments
-
-**Example**: €200k mortgage at start of year, €195k after 12 months of payments.
 
 ---
 
@@ -209,8 +155,6 @@ Three levers. Pull all of them.
 - Increase income (raise, side hustle, career advancement)
 - Let compound interest work (time in market)
 
-**Quick Win**: Automate savings. Transfer €X to investments every payday before you can spend it.
-
 ---
 
 ### Lever 2: Decrease Liabilities
@@ -221,8 +165,6 @@ Three levers. Pull all of them.
 - Avoid new debt (lifestyle inflation control)
 - Make extra principal payments when possible
 
-**Quick Win**: Snowball method. Pay off smallest debt first for psychological momentum.
-
 ---
 
 ### Lever 3: Optimize Both
@@ -230,7 +172,6 @@ Three levers. Pull all of them.
 **Advanced Strategies**:
 - Leverage low-interest debt for high-return investments (mortgage at 3% while earning 8% on stocks)
 - Balance debt payoff vs investment contributions (pay off >7% interest debt, invest if <4%)
-- Rebalance portfolio regularly (sell winners, buy losers)
 
 **Warning**: Don't optimize too early. If you have credit card debt, pay it off before worrying about investment allocation.
 
@@ -246,20 +187,6 @@ Three levers. Pull all of them.
 - Consistent tracking reveals trends
 
 **Don't obsess daily**: Net worth is a long-term metric. Daily checks add stress without value.
-
----
-
-### Data Entry Tips
-
-**For Assets**:
-- Log into each account once per month
-- Record exact balances (don't estimate)
-- Property: Update every 6-12 months (values don't change daily)
-
-**For Liabilities**:
-- Check loan statements after payment
-- Record remaining principal (not original amount)
-- Credit cards: Record after statement closes (not mid-cycle)
 
 ---
 
@@ -285,16 +212,6 @@ Three levers. Pull all of them.
 - What matters: Is the trend improving? Are you paying down debt faster than accumulating new debt?
 
 **Red flag**: Negative net worth **and** getting worse (adding debt without income growth).
-
----
-
-### "My property value dropped. Should I update it?"
-
-**Yes, but don't panic**:
-- Real estate fluctuates. Update to realistic value, but don't obsess.
-- Long-term, property appreciates. Short-term dips are normal.
-
-**When to worry**: If neighborhood is declining or major structural issues. Otherwise, ride it out.
 
 ---
 
