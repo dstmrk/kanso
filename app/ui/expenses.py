@@ -18,6 +18,7 @@ from app.services import utils
 from app.ui import charts, dock, header, styles
 from app.ui.common import get_user_preferences
 from app.ui.components.skeleton import render_chart_skeleton, render_table_skeleton
+from app.ui.data_loading import render_with_data_loading
 
 
 class ExpensesRenderer:
@@ -273,60 +274,16 @@ def render() -> None:
     renderer = ExpensesRenderer()
     containers = renderer.render_skeleton_ui()
 
-    # Check if expenses data is loaded
-    expenses_sheet = app.storage.general.get("expenses_sheet")
-
-    if not expenses_sheet:
-        # Data not loaded yet - start background loading
-        async def load_data_in_background():
-            """Load expenses data from Google Sheets in background."""
-            from app.services.data_loader import ensure_data_loaded
-
-            try:
-                success = await ensure_data_loaded()
-                if success:
-                    # Data loaded successfully - render components now
-                    await renderer.render_yoy_chart(containers["yoy_chart_container"])
-                    await renderer.render_merchant_chart(containers["merchant_chart_container"])
-                    await renderer.render_type_chart(containers["type_chart_container"])
-                    await renderer.render_expenses_table(containers["table_container"])
-                else:
-                    # Failed to load data - show error
-                    containers["table_container"].clear()
-                    with containers["table_container"]:
-                        ui.label(
-                            "Failed to load data. Please check your configuration in Advanced Settings."
-                        ).classes("text-center text-error text-lg")
-            except Exception as e:
-                containers["table_container"].clear()
-                with containers["table_container"]:
-                    ui.label(f"Error loading data: {str(e)}").classes(
-                        "text-center text-error text-lg"
-                    )
-
-        # Start loading data asynchronously (non-blocking)
-        ui.timer(0.1, load_data_in_background, once=True)
-    else:
-        # Data already loaded - render components immediately with timers
-        ui.timer(
-            0.5,
+    # Render components with automatic data loading
+    render_with_data_loading(
+        storage_keys=["expenses_sheet"],
+        render_functions=[
             lambda: renderer.render_yoy_chart(containers["yoy_chart_container"]),
-            once=True,
-        )
-        ui.timer(
-            0.5,
             lambda: renderer.render_merchant_chart(containers["merchant_chart_container"]),
-            once=True,
-        )
-        ui.timer(
-            0.5,
             lambda: renderer.render_type_chart(containers["type_chart_container"]),
-            once=True,
-        )
-        ui.timer(
-            0.5,
             lambda: renderer.render_expenses_table(containers["table_container"]),
-            once=True,
-        )
+        ],
+        error_container=containers["table_container"],
+    )
 
     dock.render()

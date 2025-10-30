@@ -13,6 +13,7 @@ from app.services.finance_service import FinanceService
 from app.ui import charts, dock, header, styles
 from app.ui.common import get_user_preferences
 from app.ui.components.skeleton import render_chart_skeleton, render_kpi_card_skeleton
+from app.ui.data_loading import render_with_data_loading
 
 
 class HomeRenderer:
@@ -246,106 +247,32 @@ def render() -> None:
     renderer = HomeRenderer()
     containers = renderer.render_skeleton_ui()
 
-    # Check if data needs to be loaded
-    assets_sheet = app.storage.general.get("assets_sheet")
-    liabilities_sheet = app.storage.general.get("liabilities_sheet")
-    expenses_sheet = app.storage.general.get("expenses_sheet")
-    incomes_sheet = app.storage.general.get("incomes_sheet")
-
-    if not assets_sheet or not liabilities_sheet or not expenses_sheet or not incomes_sheet:
-        # Data not loaded yet - start background loading
-        async def load_data_in_background():
-            """Load data from Google Sheets in background."""
-            from app.services.data_loader import ensure_data_loaded
-
-            try:
-                success = await ensure_data_loaded()
-                if success:
-                    # Data loaded successfully - render components now
-                    await renderer.render_kpi_cards(containers["kpi_container"])
-                    await renderer.render_chart(
-                        containers["chart1_container"], "net_worth", "Net Worth"
-                    )
-                    await renderer.render_chart(
-                        containers["chart2_container"],
-                        "asset_vs_liabilities",
-                        "Asset vs Liabilities",
-                    )
-                    await renderer.render_chart(
-                        containers["chart3_container"],
-                        "cash_flow",
-                        "Cash Flow",
-                        "Last 12 month cash flow",
-                    )
-                    await renderer.render_chart(
-                        containers["chart4_container"],
-                        "avg_expenses",
-                        "Avg Expenses",
-                        "Last 12 month expenses",
-                    )
-                    await renderer.render_chart(
-                        containers["chart5_container"],
-                        "income_vs_expenses",
-                        "Income vs Expenses",
-                        "Last 12 month incomes and expenses",
-                    )
-                else:
-                    # Failed to load data - show error
-                    containers["kpi_container"].clear()
-                    with containers["kpi_container"]:
-                        ui.label(
-                            "Failed to load data. Please check your configuration in Advanced Settings."
-                        ).classes("text-center text-error text-lg col-span-full")
-            except Exception as e:
-                containers["kpi_container"].clear()
-                with containers["kpi_container"]:
-                    ui.label(f"Error loading data: {str(e)}").classes(
-                        "text-center text-error text-lg col-span-full"
-                    )
-
-        # Start loading data asynchronously (non-blocking)
-        ui.timer(0.1, load_data_in_background, once=True)
-    else:
-        # Data already loaded - render components immediately with timers
-        ui.timer(0.5, lambda: renderer.render_kpi_cards(containers["kpi_container"]), once=True)
-        ui.timer(
-            0.5,
+    # Render components with automatic data loading
+    render_with_data_loading(
+        storage_keys=["assets_sheet", "liabilities_sheet", "expenses_sheet", "incomes_sheet"],
+        render_functions=[
+            lambda: renderer.render_kpi_cards(containers["kpi_container"]),
             lambda: renderer.render_chart(containers["chart1_container"], "net_worth", "Net Worth"),
-            once=True,
-        )
-        ui.timer(
-            0.5,
             lambda: renderer.render_chart(
                 containers["chart2_container"], "asset_vs_liabilities", "Asset vs Liabilities"
             ),
-            once=True,
-        )
-        ui.timer(
-            0.5,
             lambda: renderer.render_chart(
                 containers["chart3_container"], "cash_flow", "Cash Flow", "Last 12 month cash flow"
             ),
-            once=True,
-        )
-        ui.timer(
-            0.5,
             lambda: renderer.render_chart(
                 containers["chart4_container"],
                 "avg_expenses",
                 "Avg Expenses",
                 "Last 12 month expenses",
             ),
-            once=True,
-        )
-        ui.timer(
-            0.5,
             lambda: renderer.render_chart(
                 containers["chart5_container"],
                 "income_vs_expenses",
                 "Income vs Expenses",
                 "Last 12 month incomes and expenses",
             ),
-            once=True,
-        )
+        ],
+        error_container=containers["kpi_container"],
+    )
 
     dock.render()

@@ -5,6 +5,7 @@ from app.services.finance_service import FinanceService
 from app.ui import charts, dock, header
 from app.ui.common import get_user_preferences
 from app.ui.components.skeleton import render_large_chart_skeleton
+from app.ui.data_loading import render_with_data_loading
 
 
 async def load_net_worth_evolution_data():
@@ -55,9 +56,9 @@ def render() -> None:
                 ui.label("📊 Net Worth Data Table").classes("text-xl font-semibold text-gray-500")
                 ui.label("Coming in future versions").classes("text-sm text-gray-400")
 
-    # Load data asynchronously
-    async def render_chart():
-        """Render the chart with loaded data."""
+    # Render chart with automatic data loading
+    async def render_net_worth_chart():
+        """Render the net worth evolution chart with loaded data."""
         chart_data = await load_net_worth_evolution_data()
 
         # Clear skeleton and render chart
@@ -83,7 +84,10 @@ def render() -> None:
             ui.tooltip("Evolution by Asset / Asset Class")
             ui.echart(options=options, theme=prefs.echart_theme).classes("w-full h-full p-4")
 
-    # Trigger async data loading (delay to allow UI to fully render first)
-    ui.timer(0.5, render_chart, once=True)
+    render_with_data_loading(
+        storage_keys=["assets_sheet", "liabilities_sheet"],
+        render_functions=[render_net_worth_chart],
+        error_container=chart_container,
+    )
 
     dock.render()
