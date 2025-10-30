@@ -9,6 +9,8 @@ on:
 
 jobs:
   # Detect which files changed to decide which jobs to run
+  # Strategy: Skip tests/lint/docker for docs-only changes (.claude/, docs/, README.md, etc.)
+  # This saves CI time (~2-7 min) when only documentation is updated
   changes:
     runs-on: ubuntu-latest
     outputs:
@@ -16,6 +18,7 @@ jobs:
       code: ${{ steps.filter.outputs.code }}
       static: ${{ steps.filter.outputs.static }}
       infra: ${{ steps.filter.outputs.infra }}
+      docs: ${{ steps.filter.outputs.docs }}
     steps:
     - uses: actions/checkout@v5
     - uses: dorny/paths-filter@v3
@@ -46,6 +49,13 @@ jobs:
           # Static assets (images, logos, themes)
           static:
             - 'static/**'
+          # Documentation only (user-facing docs, AI context, README)
+          docs:
+            - 'docs/**'
+            - '.claude/**'
+            - 'README.md'
+            - 'CONTRIBUTING.md'
+            - 'mkdocs.yml'
 
   test-unit:
     runs-on: ubuntu-latest
