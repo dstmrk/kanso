@@ -342,15 +342,35 @@ Before/after screenshots.
 
 **Triggers**: Push to any branch, PR to main
 
+**Smart Path Filtering Strategy**:
+
+CI uses path filters to skip unnecessary jobs and save time:
+
+| Files Changed | Unit Tests | Lint | E2E Tests | Docker Build |
+|---------------|------------|------|-----------|--------------|
+| `app/`, `tests/`, `main.py`, `pyproject.toml` | ✅ Run | ✅ Run | ✅ (if UI changed) | ✅ Run |
+| `docs/`, `.claude/`, `README.md`, `mkdocs.yml` | ❌ Skip | ❌ Skip | ❌ Skip | ❌ Skip |
+| `static/**` (images, logos) | ❌ Skip | ❌ Skip | ✅ Run | ✅ Run |
+| `Dockerfile`, `docker-compose.yml` | ❌ Skip | ❌ Skip | ❌ Skip | ✅ Run |
+
+**Why this strategy?**
+- Documentation-only changes don't need code tests (saves ~2-7 min)
+- E2E tests only run when UI/services change (slow, ~80s)
+- Docker builds only when image might change
+
 **Steps**:
-1. **Always runs**:
+1. **Always runs** (if code changes):
    - Lint (ruff)
    - Type check (mypy)
    - Unit tests
 
 2. **Conditionally runs** (E2E tests):
-   - When: Push to `main` OR changes in `app/ui/`, `app/services/`, `tests/e2e/`, `main.py`
+   - When: Push to `main` OR changes in `app/ui/`, `app/services/`, `tests/e2e/`, `main.py`, `static/`
    - Why: E2E tests are slow, only run when UI might break
+
+3. **Conditionally runs** (Docker build):
+   - When: Changes in code, static assets, or infrastructure files
+   - Why: Only rebuild image if contents changed
 
 **Local equivalent**:
 ```bash
@@ -736,11 +756,21 @@ def foo(x: int) -> int:
 
 **Steps**:
 1. Update version in `pyproject.toml`
-2. Update `ROADMAP.md` (move completed version)
-3. Create git tag: `git tag v0.5.0`
-4. Push tag: `git push origin v0.5.0`
-5. CI builds and pushes Docker image
-6. Create GitHub release with changelog
+2. Update `ROADMAP.md` (move completed version) - **Note**: ROADMAP.md is internal, not committed to main
+3. Create release notes file (e.g., `RELEASE_NOTES_v0.5.0.md`)
+4. Create git tag: `git tag v0.5.0`
+5. Push tag: `git push origin v0.5.0`
+6. CI builds and pushes Docker image
+7. Create GitHub release manually:
+   - Copy content from RELEASE_NOTES_v0.x.x.md
+   - Paste into GitHub release UI
+   - Delete RELEASE_NOTES file locally (don't commit it)
+
+**Important**:
+- ❌ **Don't commit** `RELEASE_NOTES_*.md` files
+- ✅ **Do create** them temporarily for copying to GitHub
+- ✅ **Do delete** them after release is published
+- **Why**: Release notes are managed via GitHub Releases UI, not in repo
 
 **Future**: Automated semantic versioning post-v1.0
 
