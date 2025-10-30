@@ -11,6 +11,7 @@ from app.core.state_manager import state_manager
 from app.services import pages, utils
 from app.services.finance_service import FinanceService
 from app.ui import charts, dock, header, styles
+from app.ui.common import get_user_preferences
 
 
 class HomeRenderer:
@@ -159,41 +160,34 @@ class HomeRenderer:
                 ui.label("No data available").classes("text-center text-gray-500")
             return
 
-        user_agent_raw = app.storage.client.get("user_agent")
-        if user_agent_raw == "mobile":
-            user_agent: Literal["mobile", "desktop"] = "mobile"
-        else:
-            user_agent = "desktop"
-        echart_theme = app.storage.general.get("echarts_theme_url") or ""
-
-        # Get user currency preference (from general storage - shared across devices)
-        user_currency: str = app.storage.general.get("currency", utils.get_user_currency())
+        # Get user preferences using centralized utility
+        prefs = get_user_preferences()
 
         with container:
             ui.label(title).classes(styles.CHART_CARDS_LABEL_CLASSES)
 
             if chart_type == "net_worth":
                 options = charts.create_net_worth_chart_options(
-                    chart_data["net_worth_data"], user_agent, user_currency
+                    chart_data["net_worth_data"], prefs.user_agent, prefs.currency
                 )
             elif chart_type == "asset_vs_liabilities":
                 options = charts.create_asset_vs_liabilities_chart(
-                    chart_data["asset_vs_liabilities_data"], user_agent, user_currency
+                    chart_data["asset_vs_liabilities_data"], prefs.user_agent, prefs.currency
                 )
             elif chart_type == "cash_flow":
                 options = charts.create_cash_flow_options(
-                    chart_data["cash_flow_data"], user_agent, user_currency
+                    chart_data["cash_flow_data"], prefs.user_agent, prefs.currency
                 )
             elif chart_type == "avg_expenses":
                 options = charts.create_avg_expenses_options(
-                    chart_data["avg_expenses"], user_agent, user_currency
+                    chart_data["avg_expenses"], prefs.user_agent, prefs.currency
                 )
             elif chart_type == "income_vs_expenses":
                 options = charts.create_income_vs_expenses_options(
-                    chart_data["incomes_vs_expenses_data"], user_agent, user_currency
+                    chart_data["incomes_vs_expenses_data"], prefs.user_agent, prefs.currency
                 )
 
-            ui.echart(options=options, theme=echart_theme).classes(
+            ui.echart(options=options, theme=prefs.echart_theme).classes(
                 styles.CHART_CARDS_CHARTS_CLASSES
             )
 

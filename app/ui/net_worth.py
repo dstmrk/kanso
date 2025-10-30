@@ -1,11 +1,9 @@
-from typing import Literal
-
-from nicegui import app, ui
+from nicegui import ui
 
 from app.core.state_manager import state_manager
-from app.services import utils
 from app.services.finance_service import FinanceService
 from app.ui import charts, dock, header, styles
+from app.ui.common import get_user_preferences
 
 
 async def load_net_worth_evolution_data():
@@ -79,24 +77,18 @@ def render() -> None:
                 ui.label("No data available").classes("text-center text-gray-500 p-8")
             return
 
-        # Get user preferences
-        user_agent_raw = app.storage.client.get("user_agent")
-        if user_agent_raw == "mobile":
-            user_agent: Literal["mobile", "desktop"] = "mobile"
-        else:
-            user_agent = "desktop"
-        user_currency: str = app.storage.general.get("currency", utils.get_user_currency())
-        echart_theme = app.storage.general.get("echarts_theme_url") or ""
+        # Get user preferences using centralized utility
+        prefs = get_user_preferences()
 
         # Create chart options
         options = charts.create_net_worth_evolution_by_class_options(
-            chart_data, user_agent, user_currency
+            chart_data, prefs.user_agent, prefs.currency
         )
 
         with chart_container:
             ui.label("Net Worth Evolution").classes("text-2xl font-bold p-4")
             ui.tooltip("Evolution by Asset / Asset Class")
-            ui.echart(options=options, theme=echart_theme).classes("w-full h-full p-4")
+            ui.echart(options=options, theme=prefs.echart_theme).classes("w-full h-full p-4")
 
     # Trigger async data loading (delay to allow UI to fully render first)
     ui.timer(0.5, render_chart, once=True)

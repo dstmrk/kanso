@@ -1,6 +1,7 @@
 """Expenses page UI with transaction table and visualizations."""
 
-from typing import Any, Literal
+from collections.abc import Callable
+from typing import Any
 
 from nicegui import app, ui
 
@@ -15,6 +16,7 @@ from app.core.state_manager import state_manager
 from app.logic.finance_calculator import FinanceCalculator
 from app.services import utils
 from app.ui import charts, dock, header, styles
+from app.ui.common import get_user_preferences
 
 
 class ExpensesRenderer:
@@ -128,163 +130,111 @@ class ExpensesRenderer:
                 """,
             )
 
-    async def render_yoy_chart(self, container: ui.card) -> None:
-        """Render year-over-year expenses comparison chart."""
-        # Clear skeleton and render chart
+    async def _render_chart_generic(
+        self,
+        container: ui.card,
+        title: str,
+        tooltip_text: str,
+        computation_key: str,
+        compute_fn: Callable[[Any], Any],
+        chart_options_fn: Callable[..., dict[str, Any]],
+        data_validation_key: str | None = None,
+    ) -> None:
+        """Generic chart rendering with common logic extracted.
+
+        Consolidates the repeated pattern of:
+        - Clearing container
+        - Loading data from storage
+        - Computing/caching results
+        - Getting user preferences
+        - Rendering chart or error message
+
+        Args:
+            container: UI card container to render into
+            title: Chart title to display
+            tooltip_text: Tooltip text for the chart
+            computation_key: Cache key for state_manager
+            compute_fn: Function to compute chart data (receives expenses sheet)
+            chart_options_fn: Function to create ECharts options
+            data_validation_key: Optional key to validate data exists (e.g., "months")
+        """
         container.clear()
 
-        # Load expenses and calculate YoY data
+        # Load expenses sheet from storage
         expenses_sheet_str = app.storage.general.get("expenses_sheet")
         if not expenses_sheet_str:
             with container:
-                ui.label("Year-over-Year Expenses").classes(styles.CHART_CARDS_LABEL_CLASSES)
-                ui.tooltip("Cumulative + Forecast until EoY")
+                ui.label(title).classes(styles.CHART_CARDS_LABEL_CLASSES)
+                ui.tooltip(tooltip_text)
                 ui.label("No data available").classes("text-center text-gray-500 p-8")
             return
 
-        def compute_yoy_data():
+        # Compute or retrieve cached data
+        def compute_wrapper():
             expenses_sheet = utils.read_json(expenses_sheet_str)
             calculator = FinanceCalculator(expenses_df=expenses_sheet)
-            return calculator.get_expenses_yoy_comparison()
+            return compute_fn(calculator)
 
-        yoy_data = await state_manager.get_or_compute(
+        data = await state_manager.get_or_compute(
             user_storage_key="expenses_sheet",
-            computation_key="expenses_yoy_comparison_v2",  # Changed to force cache refresh
-            compute_fn=compute_yoy_data,
+            computation_key=computation_key,
+            compute_fn=compute_wrapper,
             ttl_seconds=86400,
         )
 
-        if not yoy_data or not yoy_data.get("months"):
+        # Validate data
+        if not data or (data_validation_key and not data.get(data_validation_key)):
             with container:
-                ui.label("Year-over-Year Expenses").classes(styles.CHART_CARDS_LABEL_CLASSES)
-                ui.tooltip("Cumulative + Forecast until EoY")
+                ui.label(title).classes(styles.CHART_CARDS_LABEL_CLASSES)
+                ui.tooltip(tooltip_text)
                 ui.label("No data available").classes("text-center text-gray-500 p-8")
             return
 
-        user_agent_raw = app.storage.client.get("user_agent")
-        user_agent: Literal["mobile", "desktop"]
-        if user_agent_raw == "mobile":
-            user_agent = "mobile"
-        else:
-            user_agent = "desktop"
-        echart_theme = app.storage.general.get("echarts_theme_url") or ""
+        # Get user preferences using centralized utility
+        prefs = get_user_preferences()
 
-        # Get user currency preference (from general storage - shared across devices)
-        user_currency: str = app.storage.general.get("currency", utils.get_user_currency())
+        # Create chart options
+        options = chart_options_fn(data, prefs.user_agent, prefs.currency)
 
-        # Create chart options for YoY comparison
-        options = charts.create_expenses_yoy_comparison_options(yoy_data, user_agent, user_currency)
-
+        # Render chart
         with container:
-            ui.label("Year-over-Year Expenses").classes(styles.CHART_CARDS_LABEL_CLASSES)
-            ui.tooltip("Cumulative + Forecast until EoY")
-            ui.echart(options=options, theme=echart_theme).classes("h-96 w-full")
+            ui.label(title).classes(styles.CHART_CARDS_LABEL_CLASSES)
+            ui.tooltip(tooltip_text)
+            ui.echart(options=options, theme=prefs.echart_theme).classes("h-96 w-full")
+
+    async def render_yoy_chart(self, container: ui.card) -> None:
+        """Render year-over-year expenses comparison chart."""
+        await self._render_chart_generic(
+            container=container,
+            title="Year-over-Year Expenses",
+            tooltip_text="Cumulative + Forecast until EoY",
+            computation_key="expenses_yoy_comparison_v2",
+            compute_fn=lambda calc: calc.get_expenses_yoy_comparison(),
+            chart_options_fn=charts.create_expenses_yoy_comparison_options,
+            data_validation_key="months",
+        )
 
     async def render_merchant_chart(self, container: ui.card) -> None:
         """Render expenses by merchant donut chart."""
-        # Clear skeleton and render chart
-        container.clear()
-
-        # Load expenses and calculate merchant distribution
-        expenses_sheet_str = app.storage.general.get("expenses_sheet")
-        if not expenses_sheet_str:
-            with container:
-                ui.label("Expenses by Merchant").classes(styles.CHART_CARDS_LABEL_CLASSES)
-                ui.tooltip("Expenses of last 12 months")
-                ui.label("No data available").classes("text-center text-gray-500 p-8")
-            return
-
-        def compute_merchant_data():
-            expenses_sheet = utils.read_json(expenses_sheet_str)
-            calculator = FinanceCalculator(expenses_df=expenses_sheet)
-            return calculator.get_expenses_by_merchant_last_12_months()
-
-        merchant_data = await state_manager.get_or_compute(
-            user_storage_key="expenses_sheet",
+        await self._render_chart_generic(
+            container=container,
+            title="Expenses by Merchant",
+            tooltip_text="Expenses of last 12 months",
             computation_key="expenses_by_merchant_v1",
-            compute_fn=compute_merchant_data,
-            ttl_seconds=86400,
+            compute_fn=lambda calc: calc.get_expenses_by_merchant_last_12_months(),
+            chart_options_fn=charts.create_expenses_by_merchant_options,
         )
-
-        if not merchant_data:
-            with container:
-                ui.label("Expenses by Merchant").classes(styles.CHART_CARDS_LABEL_CLASSES)
-                ui.tooltip("Expenses of last 12 months")
-                ui.label("No data available").classes("text-center text-gray-500 p-8")
-            return
-
-        user_agent_raw = app.storage.client.get("user_agent")
-        user_agent: Literal["mobile", "desktop"]
-        if user_agent_raw == "mobile":
-            user_agent = "mobile"
-        else:
-            user_agent = "desktop"
-        echart_theme = app.storage.general.get("echarts_theme_url") or ""
-
-        # Get user currency preference
-        user_currency: str = app.storage.general.get("currency", utils.get_user_currency())
-
-        # Create chart options for merchant distribution
-        options = charts.create_expenses_by_merchant_options(
-            merchant_data, user_agent, user_currency
-        )
-
-        with container:
-            ui.label("Expenses by Merchant").classes(styles.CHART_CARDS_LABEL_CLASSES)
-            ui.tooltip("Expenses of last 12 months")
-            ui.echart(options=options, theme=echart_theme).classes("h-96 w-full")
 
     async def render_type_chart(self, container: ui.card) -> None:
         """Render expenses by type donut chart."""
-        # Clear skeleton and render chart
-        container.clear()
-
-        # Load expenses and calculate type distribution
-        expenses_sheet_str = app.storage.general.get("expenses_sheet")
-        if not expenses_sheet_str:
-            with container:
-                ui.label("Expenses by Type").classes(styles.CHART_CARDS_LABEL_CLASSES)
-                ui.tooltip("Expenses of last 12 months")
-                ui.label("No data available").classes("text-center text-gray-500 p-8")
-            return
-
-        def compute_type_data():
-            expenses_sheet = utils.read_json(expenses_sheet_str)
-            calculator = FinanceCalculator(expenses_df=expenses_sheet)
-            return calculator.get_expenses_by_type_last_12_months()
-
-        type_data = await state_manager.get_or_compute(
-            user_storage_key="expenses_sheet",
+        await self._render_chart_generic(
+            container=container,
+            title="Expenses by Type",
+            tooltip_text="Expenses of last 12 months",
             computation_key="expenses_by_type_v1",
-            compute_fn=compute_type_data,
-            ttl_seconds=86400,
+            compute_fn=lambda calc: calc.get_expenses_by_type_last_12_months(),
+            chart_options_fn=charts.create_expenses_by_type_options,
         )
-
-        if not type_data:
-            with container:
-                ui.label("Expenses by Type").classes(styles.CHART_CARDS_LABEL_CLASSES)
-                ui.tooltip("Expenses of last 12 months")
-                ui.label("No data available").classes("text-center text-gray-500 p-8")
-            return
-
-        user_agent_raw = app.storage.client.get("user_agent")
-        user_agent: Literal["mobile", "desktop"]
-        if user_agent_raw == "mobile":
-            user_agent = "mobile"
-        else:
-            user_agent = "desktop"
-        echart_theme = app.storage.general.get("echarts_theme_url") or ""
-
-        # Get user currency preference
-        user_currency: str = app.storage.general.get("currency", utils.get_user_currency())
-
-        # Create chart options for type distribution
-        options = charts.create_expenses_by_type_options(type_data, user_agent, user_currency)
-
-        with container:
-            ui.label("Expenses by Type").classes(styles.CHART_CARDS_LABEL_CLASSES)
-            ui.tooltip("Expenses of last 12 months")
-            ui.echart(options=options, theme=echart_theme).classes("h-96 w-full")
 
     def render_skeleton_ui(self) -> dict[str, Any]:
         """Render skeleton UI structure with loading placeholders."""
