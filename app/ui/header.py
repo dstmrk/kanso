@@ -158,14 +158,31 @@ def render() -> None:
     # Left drawer for navigation
     with ui.left_drawer(elevated=True, value=False).classes("bg-base-100") as left_drawer:
         with ui.element("ul").classes("menu w-full"):
+            # Dashboard - main entry point
             with ui.element("li"):
                 with ui.element("a").on("click", lambda: ui.navigate.to(pages.HOME_PAGE)):
                     ui.html(styles.HOME_SVG, sanitize=False)
                     ui.label("Dashboard")
-            # with ui.element("li"):
-            #     with ui.element("a").on("click", lambda: ui.navigate.to(pages.EXPENSES_PAGE)):
-            #         ui.html(styles.EXPENSES_SVG)
-            #         ui.label("Expenses")
+
+            # Insights - collapsible section with detail pages
+            with ui.element("li"):
+                with ui.element("details"):
+                    with ui.element("summary"):
+                        ui.html(styles.INSIGHTS_SVG, sanitize=False)
+                        ui.label("Insights")
+                    with ui.element("ul"):
+                        with ui.element("li"):
+                            with ui.element("a").on(
+                                "click", lambda: ui.navigate.to(pages.NET_WORTH_PAGE)
+                            ):
+                                ui.html(styles.NET_WORTH_SVG, sanitize=False)
+                                ui.label("Net Worth")
+                        with ui.element("li"):
+                            with ui.element("a").on(
+                                "click", lambda: ui.navigate.to(pages.EXPENSES_PAGE)
+                            ):
+                                ui.html(styles.EXPENSES_SVG, sanitize=False)
+                                ui.label("Expenses")
 
     # Right drawer for user settings
     with ui.right_drawer(elevated=True, value=False).classes("bg-base-100") as right_drawer:

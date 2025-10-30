@@ -312,6 +312,38 @@ def create_avg_expenses_options(
     }
 
 
+def create_expenses_by_merchant_options(
+    merchant_data: dict[str, float], user_agent: Literal["mobile", "desktop"], currency: str = "USD"
+) -> dict[str, Any]:
+    """Create donut chart for expenses by merchant (last 12 months).
+
+    Args:
+        merchant_data: Dictionary mapping merchant names to expense amounts
+        user_agent: mobile or desktop for sizing
+        currency: Currency code for formatting
+
+    Returns:
+        ECharts donut chart options
+    """
+    return create_avg_expenses_options(merchant_data, user_agent, currency)
+
+
+def create_expenses_by_type_options(
+    type_data: dict[str, float], user_agent: Literal["mobile", "desktop"], currency: str = "USD"
+) -> dict[str, Any]:
+    """Create donut chart for expenses by type (last 12 months).
+
+    Args:
+        type_data: Dictionary mapping type names to expense amounts
+        user_agent: mobile or desktop for sizing
+        currency: Currency code for formatting
+
+    Returns:
+        ECharts donut chart options
+    """
+    return create_avg_expenses_options(type_data, user_agent, currency)
+
+
 def create_income_vs_expenses_options(
     income_vs_expenses_data: dict[str, Any],
     user_agent: Literal["mobile", "desktop"],
@@ -350,6 +382,97 @@ def create_income_vs_expenses_options(
                 "emphasis": {"focus": "self"},
             },
         ],
+    }
+
+
+def create_expenses_yoy_comparison_options(
+    yoy_data: dict[str, Any],
+    user_agent: Literal["mobile", "desktop"],
+    currency: str = "USD",
+) -> dict[str, Any]:
+    """Create year-over-year expenses comparison chart options.
+
+    Creates a chart with:
+    - Current year actual data (solid line)
+    - Current year projection (dashed line) based on avg monthly expenses
+    - Previous year data (solid line)
+
+    Args:
+        yoy_data: Dictionary with months, current_year, current_year_projected, previous_year
+        user_agent: mobile or desktop for sizing
+        currency: Currency code for formatting
+
+    Returns:
+        ECharts line chart options with three series (actual, projected, previous year)
+    """
+    current_year_label = yoy_data.get("current_year_label", "Current Year")
+    previous_year_label = yoy_data.get("previous_year_label", "Previous Year")
+    last_valid_month = yoy_data.get("last_valid_month", 12)
+
+    # Prepare projected data: start from last valid month to connect the lines
+    projected_data = yoy_data.get("current_year_projected", [])
+    current_data = yoy_data.get("current_year", [])
+
+    # For smooth connection, add the last valid point to the start of projected series
+    projected_with_connection = [None] * 12
+    if last_valid_month > 0 and last_valid_month < 12:
+        # Add connection point at last valid month
+        projected_with_connection[last_valid_month - 1] = current_data[last_valid_month - 1]
+        # Add projected points
+        for i in range(last_valid_month, 12):
+            projected_with_connection[i] = projected_data[i]
+
+    series = [
+        {
+            "name": current_year_label,
+            "type": "line",
+            "data": current_data,
+            "smooth": True,
+            "lineStyle": {"width": 3, "color": "#005eaa"},
+            "itemStyle": {"color": "#005eaa"},
+            "emphasis": {"focus": "series"},
+            "connectNulls": False,  # Don't connect across null values
+        },
+        {
+            "name": f"{current_year_label} (Projected)",
+            "type": "line",
+            "data": projected_with_connection,
+            "smooth": True,
+            "lineStyle": {"width": 3, "color": "#005eaa", "type": "dashed"},
+            "itemStyle": {"color": "#005eaa"},
+            "emphasis": {"focus": "series"},
+            "connectNulls": False,
+        },
+        {
+            "name": previous_year_label,
+            "type": "line",
+            "data": yoy_data.get("previous_year", []),
+            "smooth": True,
+            "lineStyle": {"width": 2, "color": "#64748b"},  # Solid line, not dashed
+            "itemStyle": {"color": "#64748b"},
+            "emphasis": {"focus": "series"},
+        },
+    ]
+
+    return {
+        "legend": {
+            "data": [current_year_label, f"{current_year_label} (Projected)", previous_year_label],
+            "top": "0%",
+            "left": "center",
+        },
+        "tooltip": {"trigger": "axis", **ChartOptionsBuilder.get_common_tooltip(currency)},
+        "grid": ChartOptionsBuilder.get_common_grid(),
+        "xAxis": {
+            "type": "category",
+            "data": yoy_data.get("months", []),
+            "axisLabel": {"fontSize": ChartOptionsBuilder.get_font_size(user_agent)},
+        },
+        "yAxis": {
+            "type": "value",
+            "axisLabel": ChartOptionsBuilder.get_currency_axis_label(user_agent, currency),
+            "splitLine": {"show": False},
+        },
+        "series": series,
     }
 
 

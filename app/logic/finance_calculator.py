@@ -34,7 +34,9 @@ from app.core.constants import (
     COL_CATEGORY,
     COL_DATE,
     COL_DATE_DT,
+    COL_MERCHANT,
     COL_NET_WORTH_PARSED,
+    COL_TYPE,
     DATE_FORMAT_DISPLAY,
     DATE_FORMAT_STORAGE,
     MONTHS_IN_YEAR,
@@ -1075,6 +1077,100 @@ class FinanceCalculator:
             for k, v in ef_last_12.groupby(COL_CATEGORY)[COL_AMOUNT_PARSED].sum().to_dict().items()
         }
 
+    @track_performance("get_expenses_by_merchant_last_12_months")
+    def get_expenses_by_merchant_last_12_months(
+        self, cumulative_threshold: float = 0.8
+    ) -> dict[str, float]:
+        """Get expenses by merchant for last 12 months, showing merchants up to threshold.
+
+        Uses a cumulative threshold approach: shows individual merchants until their
+        cumulative sum reaches the specified percentage of total expenses. This adapts
+        to data distribution - showing more merchants when expenses are spread out,
+        and fewer when concentrated.
+
+        Args:
+            cumulative_threshold: Cumulative percentage threshold (default 0.8 = 80%)
+
+        Returns:
+            Dictionary mapping merchant names to total expense amounts.
+            Merchants up to cumulative threshold shown individually, rest as "Other".
+            Empty dict if expenses_df is not available or COL_MERCHANT not present.
+
+        Example:
+            {'Amazon': 2000.0, 'Grocery Store': 1500.0, ..., 'Other': 500.0}
+        """
+        if (
+            self.processed_expenses_df is None
+            or COL_MERCHANT not in self.processed_expenses_df.columns
+        ):
+            return {}
+
+        ef: pd.DataFrame = self.processed_expenses_df
+        latest_date: pd.Timestamp = ef[COL_DATE_DT].max()
+        start_date: pd.Timestamp = (latest_date - pd.DateOffset(months=MONTHS_IN_YEAR - 1)).replace(
+            day=1
+        )
+
+        ef_last_12: pd.DataFrame = ef[
+            (ef[COL_DATE_DT] >= start_date) & (ef[COL_DATE_DT] <= latest_date)
+        ]
+
+        # Group by merchant and sum
+        merchant_totals = (
+            ef_last_12.groupby(COL_MERCHANT)[COL_AMOUNT_PARSED].sum().sort_values(ascending=False)
+        )
+
+        # Calculate cumulative threshold
+        total_expenses = merchant_totals.sum()
+        threshold_amount = total_expenses * cumulative_threshold
+        cumulative_sum = 0.0
+
+        result: dict[str, float] = {}
+        other_total = 0.0
+
+        for merchant, amount in merchant_totals.items():
+            if cumulative_sum < threshold_amount:
+                result[merchant] = float(amount)
+                cumulative_sum += amount
+            else:
+                other_total += amount
+
+        # Add "Other" category if there are remaining expenses
+        if other_total > 0:
+            result["Other"] = float(other_total)
+
+        return result
+
+    @track_performance("get_expenses_by_type_last_12_months")
+    def get_expenses_by_type_last_12_months(self) -> dict[str, float]:
+        """Get expenses by type for last 12 months.
+
+        Returns:
+            Dictionary mapping type names to total expense amounts,
+            or empty dict if expenses_df is not available or COL_TYPE not present
+
+        Example:
+            {'Fixed': 15000.0, 'Variable': 9000.0, 'One-time': 2000.0}
+        """
+        if self.processed_expenses_df is None or COL_TYPE not in self.processed_expenses_df.columns:
+            return {}
+
+        ef: pd.DataFrame = self.processed_expenses_df
+        latest_date: pd.Timestamp = ef[COL_DATE_DT].max()
+        start_date: pd.Timestamp = (latest_date - pd.DateOffset(months=MONTHS_IN_YEAR - 1)).replace(
+            day=1
+        )
+
+        ef_last_12: pd.DataFrame = ef[
+            (ef[COL_DATE_DT] >= start_date) & (ef[COL_DATE_DT] <= latest_date)
+        ]
+
+        # Convert numpy scalars to float
+        return {
+            k: float(v)
+            for k, v in ef_last_12.groupby(COL_TYPE)[COL_AMOUNT_PARSED].sum().to_dict().items()
+        }
+
     @track_performance("get_incomes_vs_expenses")
     def get_incomes_vs_expenses(self) -> dict[str, list[Any]]:
         """Get income vs expenses data for charting last 12 months.
@@ -1117,4 +1213,125 @@ class FinanceCalculator:
             "dates": expense_data[COL_DATE_DT].dt.strftime(DATE_FORMAT_STORAGE).tolist(),
             "incomes": incomes,
             "expenses": [-x for x in expense_data["total_expenses"].tolist()],  # Negative for chart
+        }
+
+    @track_performance("get_expenses_yoy_comparison")
+    def get_expenses_yoy_comparison(self) -> dict[str, Any]:
+        """Get year-over-year expenses comparison (cumulative by month).
+
+        Compares current year spending vs previous year on a month-by-month cumulative basis.
+
+        Returns:
+            Dictionary with:
+                - months: List of month labels (Jan, Feb, Mar, ...)
+                - current_year: List of cumulative expenses for current year
+                - previous_year: List of cumulative expenses for previous year
+                - current_year_label: Year label (e.g., "2025")
+                - previous_year_label: Year label (e.g., "2024")
+
+        Example:
+            {
+                'months': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                'current_year': [1000.0, 2200.0, 3500.0, 4800.0, 6100.0, 7400.0, 0, 0, 0, 0, 0, 0],
+                'previous_year': [950.0, 2100.0, 3400.0, 4700.0, 6000.0, 7300.0, 8600.0, 9900.0, 11200.0, 12500.0, 13800.0, 15100.0],
+                'current_year_label': '2025',
+                'previous_year_label': '2024'
+            }
+        """
+        # Get monthly expense totals
+        monthly_expenses = self._get_monthly_expenses_totals()
+        if monthly_expenses is None or monthly_expenses.empty:
+            return {
+                "months": [],
+                "current_year": [],
+                "previous_year": [],
+                "current_year_label": "",
+                "previous_year_label": "",
+            }
+
+        # Get current year and previous year
+        latest_date = monthly_expenses[COL_DATE_DT].max()
+        current_year = latest_date.year
+        previous_year = current_year - 1
+
+        # Month labels
+        month_labels = [
+            "Jan",
+            "Feb",
+            "Mar",
+            "Apr",
+            "May",
+            "Jun",
+            "Jul",
+            "Aug",
+            "Sep",
+            "Oct",
+            "Nov",
+            "Dec",
+        ]
+
+        # Filter data for current and previous year
+        current_year_data = monthly_expenses[monthly_expenses[COL_DATE_DT].dt.year == current_year]
+        previous_year_data = monthly_expenses[
+            monthly_expenses[COL_DATE_DT].dt.year == previous_year
+        ]
+
+        # Calculate cumulative expenses by month for both years
+        current_year_cumulative: list[float | None] = []
+        previous_year_cumulative: list[float] = []
+
+        # Find last valid month in current year (month with actual data)
+        last_valid_month = 0
+        if not current_year_data.empty:
+            last_valid_month = current_year_data[COL_DATE_DT].dt.month.max()
+
+        for month in range(1, 13):
+            # Current year cumulative (only up to last valid month)
+            current_month_data = current_year_data[current_year_data[COL_DATE_DT].dt.month <= month]
+            current_cumulative = (
+                current_month_data["total_expenses"].sum() if not current_month_data.empty else 0.0
+            )
+            # Only append data up to last valid month, None for future months
+            if month <= last_valid_month:
+                current_year_cumulative.append(current_cumulative)
+            else:
+                current_year_cumulative.append(None)
+
+            # Previous year cumulative
+            previous_month_data = previous_year_data[
+                previous_year_data[COL_DATE_DT].dt.month <= month
+            ]
+            previous_cumulative = (
+                previous_month_data["total_expenses"].sum()
+                if not previous_month_data.empty
+                else 0.0
+            )
+            previous_year_cumulative.append(previous_cumulative)
+
+        # Calculate projected expenses for remaining months based on avg monthly expenses
+        current_year_projected: list[float | None] = [None] * 12
+        if last_valid_month < 12 and last_valid_month > 0:
+            # Get last 12 months of expense data for average calculation
+            last_12_months = monthly_expenses.iloc[-MONTHS_IN_YEAR:]
+            avg_monthly_expense = (
+                last_12_months["total_expenses"].mean() if not last_12_months.empty else 0.0
+            )
+
+            # Start projection from last valid cumulative value
+            last_cumulative = current_year_cumulative[last_valid_month - 1]
+            if last_cumulative is not None:
+                # Project future months
+                for month in range(last_valid_month + 1, 13):
+                    months_ahead = month - last_valid_month
+                    projected_cumulative = last_cumulative + (avg_monthly_expense * months_ahead)
+                    current_year_projected[month - 1] = projected_cumulative
+
+        return {
+            "months": month_labels,
+            "current_year": current_year_cumulative,
+            "current_year_projected": current_year_projected,
+            "previous_year": previous_year_cumulative,
+            "current_year_label": str(current_year),
+            "previous_year_label": str(previous_year),
+            "last_valid_month": last_valid_month,
         }

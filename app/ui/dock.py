@@ -5,6 +5,7 @@ from app.ui import styles
 
 ITEMS = [
     (pages.HOME_PAGE, "Home", styles.HOME_SVG),
+    (pages.NET_WORTH_PAGE, "Net Worth", styles.NET_WORTH_SVG),
     (pages.EXPENSES_PAGE, "Expenses", styles.EXPENSES_SVG),
 ]
 

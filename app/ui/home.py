@@ -237,8 +237,13 @@ class HomeRenderer:
             chart5_container,
         ]:
             with container:
+                # Title skeleton
                 ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(
-                    "w-full h-80 rounded-lg"
+                    "w-48 h-6 rounded mb-4"
+                )
+                # Chart skeleton
+                ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(
+                    "w-full h-64 rounded-lg"
                 )
 
         return {

@@ -42,15 +42,14 @@ def render() -> None:
         )
 
         with chart_container:
-            # Header with title
-            ui.label("Net Worth Evolution by Asset Class").classes("text-2xl font-bold p-4")
-
-            # Skeleton loader
-            chart_skeleton = ui.column().classes("w-full h-full p-4")
-            with chart_skeleton:
-                ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(
-                    "w-full h-full rounded-lg"
-                )
+            # Title skeleton
+            ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(
+                "w-64 h-8 rounded mb-4 ml-4 mt-4"
+            )
+            # Chart skeleton
+            ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(
+                "w-full flex-grow rounded-lg mx-4 mb-4"
+            )
 
         # Placeholder section - future tables
         with (
@@ -65,18 +64,18 @@ def render() -> None:
                 ui.label("📊 Net Worth Data Table").classes("text-xl font-semibold text-gray-500")
                 ui.label("Coming in future versions").classes("text-sm text-gray-400")
 
-    dock.render()
-
     # Load data asynchronously
     async def render_chart():
         """Render the chart with loaded data."""
         chart_data = await load_net_worth_evolution_data()
 
         # Clear skeleton and render chart
-        chart_skeleton.clear()
+        chart_container.clear()
 
         if not chart_data or not chart_data.get("dates"):
-            with chart_skeleton:
+            with chart_container:
+                ui.label("Net Worth Evolution").classes("text-2xl font-bold p-4")
+                ui.tooltip("Evolution by Asset / Asset Class")
                 ui.label("No data available").classes("text-center text-gray-500 p-8")
             return
 
@@ -94,8 +93,12 @@ def render() -> None:
             chart_data, user_agent, user_currency
         )
 
-        with chart_skeleton:
-            ui.echart(options=options, theme=echart_theme).classes("w-full h-full")
+        with chart_container:
+            ui.label("Net Worth Evolution").classes("text-2xl font-bold p-4")
+            ui.tooltip("Evolution by Asset / Asset Class")
+            ui.echart(options=options, theme=echart_theme).classes("w-full h-full p-4")
 
-    # Trigger async data loading
-    ui.timer(0.1, render_chart, once=True)
+    # Trigger async data loading (delay to allow UI to fully render first)
+    ui.timer(0.5, render_chart, once=True)
+
+    dock.render()
