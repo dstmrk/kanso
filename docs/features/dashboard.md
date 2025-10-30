@@ -19,24 +19,21 @@ As of 2024-10
 ```
 
 - **Positive number**: You own more than you owe (assets > liabilities)
-- **Negative number**: You owe more than you own (not uncommon when young with student loans/mortgage)
+- **Negative number**: You owe more than you own (not uncommon with student loans/mortgage)
 - **Trend**: More important than absolute number. Growing = good, shrinking = needs attention.
 
-**Real Examples**:
-
-- **€15,000 → €18,000** (3 months): Great! You're building wealth
-- **€80,000 → €78,000** (1 month): Check why. Car purchase? Investment loss? Expected or concerning?
-- **-€20,000 → -€15,000** (6 months): Paying off debt faster than accumulating new debt. Progress!
-
-**Click Action**: Takes you to Net Worth detail page for full asset/liability breakdown.
+**Examples**:
+- **€15,000 → €18,000** (3 months): Great! Building wealth
+- **€80,000 → €78,000** (1 month): Check why. Car purchase? Investment loss?
+- **-€20,000 → -€15,000** (6 months): Paying debt faster than accumulating new. Progress!
 
 ---
 
 ### 2. MoM Δ (Month-over-Month Change): "Did I grow this month?"
 
-**What It Shows**: How much your net worth changed compared to last month, both in percentage and absolute amount.
+**What It Shows**: How much your net worth changed vs last month (% and absolute amount).
 
-**Why It Matters**: Short-term progress check. Tells you if your recent financial decisions are working.
+**Why It Matters**: Short-term progress check. Tells you if your recent decisions are working.
 
 **How to Read It**:
 ```
@@ -45,13 +42,7 @@ MoM Δ: +3.2%
 ```
 
 - **Green (positive)**: Net worth increased. You're saving more than spending or investments grew.
-- **Red (negative)**: Net worth decreased. Large purchase? Market downturn? Expected or not?
-
-**Typical Patterns**:
-
-- **Consistent +2-5%**: Excellent saving habits, steady income
-- **Occasional -10%**: Large purchase (car, vacation). Check if planned.
-- **Volatile ±5%**: Investment-heavy portfolio or irregular income
+- **Red (negative)**: Net worth decreased. Large purchase? Market downturn?
 
 **When to Worry**: Consistent negative months without explanation (uncontrolled spending or income drop).
 
@@ -59,9 +50,9 @@ MoM Δ: +3.2%
 
 ### 3. YoY Δ (Year-over-Year Change): "Am I better off than last year?"
 
-**What It Shows**: Net worth change compared to same month last year. Removes seasonal fluctuations.
+**What It Shows**: Net worth change vs same month last year. Removes seasonal fluctuations.
 
-**Why It Matters**: Long-term trajectory. Smooths out monthly noise (Christmas spending, vacation months, bonuses).
+**Why It Matters**: Long-term trajectory. Smooths out monthly noise (Christmas, vacations, bonuses).
 
 **How to Read It**:
 ```
@@ -69,16 +60,11 @@ YoY Δ: +12.5%
 +€5,120 compared to last year
 ```
 
-- **+10-20%**: Strong financial progress
+**Benchmarks**:
+- **+10-20%**: Strong progress
 - **+5-10%**: Steady improvement
-- **0-5%**: Slow growth or break-even
-- **Negative**: Serious issue unless explainable (job change, major life event)
-
-**Typical Patterns**:
-
-- **December low, January high**: Bonus month effect
-- **Consistent growth**: Disciplined saving and/or investment gains
-- **Stagnant**: Income = expenses, no net saving
+- **0-5%**: Slow growth / break-even
+- **Negative**: Issue unless explainable (job change, major life event)
 
 **Key Insight**: If MoM is volatile but YoY is positive, you're doing fine. Short-term fluctuations average out.
 
@@ -86,7 +72,7 @@ YoY Δ: +12.5%
 
 ### 4. Avg Saving Ratio: "What % of income am I keeping?"
 
-**What It Shows**: Average percentage of monthly income saved over the last 12 months.
+**What It Shows**: Average % of monthly income saved over last 12 months.
 
 **Why It Matters**: The #1 predictor of long-term wealth. High income doesn't matter if you spend it all.
 
@@ -97,10 +83,9 @@ Avg Saving Ratio: 32%
 ```
 
 **Color Coding**:
-
-- **Green (>40%)**: Excellent saving habits. Building wealth fast.
+- **Green (>40%)**: Excellent. Building wealth fast.
 - **Yellow (20-40%)**: Healthy range. Making progress.
-- **Red (<20%)**: Warning zone. Little to no wealth accumulation.
+- **Red (<20%)**: Warning zone. Little wealth accumulation.
 
 **Benchmarks by Life Stage**:
 
@@ -111,12 +96,6 @@ Avg Saving Ratio: 32%
 | **High Earner** | 40-60% | Lifestyle inflation controlled, wealth compounds |
 | **Pre-Retirement** | 50%+ | Final push before income drops |
 
-**Real Examples**:
-
-- **18% → 25%** (6 months): Raised income or cut unnecessary expenses. Great progress!
-- **45% → 20%** (1 month): Large purchase pulled savings down. Normal if planned.
-- **Stuck at 10%** (12 months): Spending = income. Needs lifestyle adjustment or income boost.
-
 ---
 
 ## The 5 Dashboard Charts
@@ -126,8 +105,6 @@ Below the 4 KPI cards, you'll see 5 charts that provide deeper context.
 ### Chart 1: Net Worth (Top Row, Left)
 
 **What It Shows**: Your net worth over time. Simple line chart.
-
-**Use Case**: See the big picture. Is the trend line pointing up? Any concerning dips?
 
 **What to Look For**:
 - **Steady upward slope**: You're winning
@@ -140,8 +117,6 @@ Below the 4 KPI cards, you'll see 5 charts that provide deeper context.
 
 **What It Shows**: Two stacked bars - one for assets, one for liabilities. Shows composition.
 
-**Use Case**: Understand where wealth is stored and where debt lives.
-
 **Example Insights**:
 - "Most assets in cash? Time to invest."
 - "Liabilities growing? Check if intentional (mortgage) or concerning (credit cards)."
@@ -152,23 +127,19 @@ Below the 4 KPI cards, you'll see 5 charts that provide deeper context.
 
 **What It Shows**: Income (green) vs Expenses (red) bars over time. The gap = savings.
 
-**Use Case**: Spot income/expense trends. Widening gap = saving more. Narrowing gap = lifestyle inflation.
-
 **Red Flags**:
-- Expenses consistently above income (red taller than green)
+- Expenses consistently above income
 - Income stable but expenses creeping up (lifestyle inflation)
 
 **Green Flags**:
 - Growing gap (income rising faster than expenses)
-- Stable expenses despite income growth (controlled lifestyle)
+- Stable expenses despite income growth
 
 ---
 
 ### Chart 4: Avg Expenses (Bottom Row, Middle)
 
 **What It Shows**: Average expenses by category (last 12 months).
-
-**Use Case**: See where money goes on average. Identify categories to optimize.
 
 **Common Surprises**:
 - "I didn't realize I spend that much on [category]"
@@ -179,8 +150,6 @@ Below the 4 KPI cards, you'll see 5 charts that provide deeper context.
 ### Chart 5: Income vs Expenses (Bottom Row, Right)
 
 **What It Shows**: Monthly income and expenses side-by-side.
-
-**Use Case**: Month-by-month comparison. See seasonal patterns.
 
 **Typical Patterns**:
 - December spike (holidays)
@@ -222,11 +191,11 @@ Below the 4 KPI cards, you'll see 5 charts that provide deeper context.
 ### "My net worth dropped 10% this month. Is that bad?"
 
 **Depends**:
-- **Planned large purchase** (car, vacation, home down payment)? Normal.
+- **Planned large purchase** (car, vacation, down payment)? Normal.
 - **Investment market drop**? Temporary, will recover.
 - **Unexpected overspending**? Time to investigate expense breakdown.
 
-**Check**: Look at expense charts. Did one category spike?
+---
 
 ### "My saving ratio is 5%. How do I improve it?"
 
@@ -237,13 +206,15 @@ Three levers:
 
 **Start here**: Review Avg Expenses chart. Which category could you reduce 20%?
 
+---
+
 ### "I have positive net worth but negative cash flow. How?"
 
 **Explanation**: Assets are growing (investments appreciating, property value up) but monthly expenses exceed income.
 
 **Is it bad?**: Depends. If short-term (between jobs, sabbatical), okay. If long-term, unsustainable.
 
-**Fix**: Either increase income or reduce expenses to turn cash flow positive.
+---
 
 ### "Should I focus on MoM or YoY?"
 

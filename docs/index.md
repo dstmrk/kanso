@@ -48,14 +48,9 @@
 
 **Kanso gives you clarity without complexity.**
 
-### Before Kanso:
-- Open 3 spreadsheets to see full picture
-- Calculate net worth manually each month
-- Wonder if that Christmas spending was worse than last year
-- Feel anxious about money (but can't explain why)
+Open your dashboard once a month. In 5 minutes you'll:
 
-### With Kanso (5 minutes per month):
-1. **Open dashboard** → See net worth trend in 10 seconds
+1. **See net worth trend** → Answer "Am I on track?" in 10 seconds
 2. **Check savings ratio** → Green = doing great, Yellow/Red = time to adjust
 3. **Spot spending patterns** → "Oh, I didn't realize I spend that much there"
 4. **Make one decision** → Cancel subscription, adjust budget, or celebrate progress
@@ -78,13 +73,13 @@
 
     [:octicons-arrow-right-24: See Dashboard Features](features/dashboard.md)
 
-- :material-chart-box: **Spot spending patterns before they become problems**
+- :material-chart-box: **Spot spending patterns before they compound**
 
     ---
 
     Year-over-year comparison reveals lifestyle inflation early.<br/>
     Merchant breakdown shows where money actually goes.<br/>
-    Fix issues before they compound.
+    Fix issues while they're small.
 
     [:octicons-arrow-right-24: Explore Expense Analysis](features/expenses.md)
 
@@ -103,7 +98,7 @@
     ---
 
     Self-hosted on your infrastructure. No bank connections required.<br/>
-    Your data stays in your Google Sheets (or local DB soon).<br/>
+    Your data stays in your Google Sheets.<br/>
     No cloud service reads your transactions. Ever.
 
     [:octicons-arrow-right-24: Quick Installation](installation.md)
@@ -184,75 +179,17 @@ graph LR
 
 ---
 
-## Real-World Use Cases
-
-**Scenario 1: The "Where did it all go?" Mystery**
-
-**Problem**: You earn €4k/month, but account is always near zero. Where does money go?
-
-**Solution**: Kanso's expense breakdown shows:
-- 30% food delivery (you didn't realize)
-- €200/month subscriptions (you forgot about)
-- Spending grew 15% vs last year (lifestyle inflation)
-
-**Action**: Cook more, cancel 3 subscriptions, save €400/month.
-
----
-
-**Scenario 2: The Homeowner's Progress Check**
-
-**Problem**: Paying mortgage for 2 years. Am I making progress or treading water?
-
-**Solution**: Net worth chart shows:
-- Assets (property) stable at €250k
-- Liabilities (mortgage) down from €200k → €190k
-- Net worth up €10k (it's working!)
-
-**Action**: Stay the course. Consider extra principal payments.
-
----
-
-**Scenario 3: The Raise That Disappeared**
-
-**Problem**: Got 10% raise last year. Savings didn't increase. Where did money go?
-
-**Solution**: Year-over-year expense comparison shows:
-- Spending also up 10% (lifestyle inflation)
-- Dining out doubled (celebrating new income)
-- Savings ratio unchanged at 15%
-
-**Action**: Freeze lifestyle. Save 100% of next raise.
-
----
-
 ## Why Self-Hosted?
 
 **Your financial data is private. Keep it that way.**
 
-### Kanso's Approach:
 - **Run on your infrastructure** (home server, VPS, or local machine)
 - **Connect to your Google Sheets** (using your own API credentials)
 - **No cloud middleman** reading your transactions
 - **No subscription fees** forever
+- **No telemetry** - your usage patterns stay private
 
-### What Kanso Never Sees:
-- Your transaction data (stays in your Google Sheets)
-- Your bank account credentials (no bank connections)
-- Your usage patterns (no telemetry)
-
-**Philosophy**: Your financial data should be as private as your medical records. Self-hosting ensures that.
-
----
-
-## Technical Foundation
-
-Built for reliability and clarity:
-
-- **Python + NiceGUI**: Modern async architecture, snappy UI
-- **Google Sheets backend**: Edit from any device, zero lock-in
-- **Docker deployment**: Self-contained, easy updates
-- **Comprehensive testing**: 322 unit tests + 17 E2E tests
-- **Type-safe**: mypy validation ensures correctness
+Built with: Python + NiceGUI (async), Google Sheets backend, Docker deployment, comprehensive testing.
 
 **Not blockchain, not AI, not buzzwords. Just clear insights from your data.**
 
