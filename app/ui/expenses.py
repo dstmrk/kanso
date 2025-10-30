@@ -113,7 +113,7 @@ class ExpensesRenderer:
                 columns=columns,
                 rows=rows,
                 row_key="Date",
-                pagination={"rowsPerPage": 20, "sortBy": "date", "descending": True},
+                pagination={"rowsPerPage": 10, "sortBy": "date", "descending": True},
             ).classes("w-full")
 
             # Custom cell rendering for amount with currency format
@@ -178,9 +178,7 @@ class ExpensesRenderer:
         with container:
             ui.label("Year-over-Year Expenses").classes(styles.CHART_CARDS_LABEL_CLASSES)
             ui.tooltip("Cumulative + Forecast until EoY")
-            ui.echart(options=options, theme=echart_theme).classes(
-                styles.CHART_CARDS_CHARTS_CLASSES
-            )
+            ui.echart(options=options, theme=echart_theme).classes("h-96 w-full")
 
     async def render_merchant_chart(self, container: ui.card) -> None:
         """Render expenses by merchant donut chart."""
@@ -234,9 +232,7 @@ class ExpensesRenderer:
         with container:
             ui.label("Expenses by Merchant").classes(styles.CHART_CARDS_LABEL_CLASSES)
             ui.tooltip("Expenses of last 12 months")
-            ui.echart(options=options, theme=echart_theme).classes(
-                styles.CHART_CARDS_CHARTS_CLASSES
-            )
+            ui.echart(options=options, theme=echart_theme).classes("h-96 w-full")
 
     async def render_type_chart(self, container: ui.card) -> None:
         """Render expenses by type donut chart."""
@@ -288,9 +284,7 @@ class ExpensesRenderer:
         with container:
             ui.label("Expenses by Type").classes(styles.CHART_CARDS_LABEL_CLASSES)
             ui.tooltip("Expenses of last 12 months")
-            ui.echart(options=options, theme=echart_theme).classes(
-                styles.CHART_CARDS_CHARTS_CLASSES
-            )
+            ui.echart(options=options, theme=echart_theme).classes("h-96 w-full")
 
     def render_skeleton_ui(self) -> dict[str, Any]:
         """Render skeleton UI structure with loading placeholders."""
@@ -310,9 +304,9 @@ class ExpensesRenderer:
             ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(
                 "w-48 h-6 rounded mb-4"
             )
-            # Chart skeleton
+            # Chart skeleton - increased height for better visualization
             ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(
-                "w-full h-64 rounded-lg"
+                "w-full h-96 rounded-lg"
             )
 
         with merchant_chart_container:
@@ -320,9 +314,9 @@ class ExpensesRenderer:
             ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(
                 "w-48 h-6 rounded mb-4"
             )
-            # Chart skeleton
+            # Chart skeleton - increased height for better visualization
             ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(
-                "w-full h-64 rounded-lg"
+                "w-full h-96 rounded-lg"
             )
 
         with type_chart_container:
@@ -330,9 +324,9 @@ class ExpensesRenderer:
             ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(
                 "w-48 h-6 rounded mb-4"
             )
-            # Chart skeleton
+            # Chart skeleton - increased height for better visualization
             ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(
-                "w-full h-64 rounded-lg"
+                "w-full h-96 rounded-lg"
             )
 
         # Initialize table container with skeleton

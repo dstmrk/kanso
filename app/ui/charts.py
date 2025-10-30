@@ -301,11 +301,11 @@ def create_avg_expenses_options(
         "tooltip": {"trigger": "item", **ChartOptionsBuilder.get_common_tooltip(currency)},
         "series": {
             "type": "pie",
-            "radius": [50, "80%"],
-            "avoidLabelOverlap": "false",
+            "radius": ["35%", "65%"],  # Reduced radius for larger chart size
+            "avoidLabelOverlap": False,
             "itemStyle": {"borderRadius": 5, "borderColor": "#fff", "borderWidth": 1},
-            "label": {"minAngle": 5, "fontSize": ChartOptionsBuilder.get_font_size(user_agent)},
-            "labelLine": {"show": "false"},
+            "label": {"show": False},  # Hide labels, use tooltip only
+            "labelLine": {"show": False},  # Hide label lines
             "data": data,
             "emphasis": {"focus": "self"},
         },
@@ -461,7 +461,7 @@ def create_expenses_yoy_comparison_options(
             "left": "center",
         },
         "tooltip": {"trigger": "axis", **ChartOptionsBuilder.get_common_tooltip(currency)},
-        "grid": ChartOptionsBuilder.get_common_grid(),
+        "grid": {"left": "15%", "right": "5%", "top": "15%", "bottom": "15%"},
         "xAxis": {
             "type": "category",
             "data": yoy_data.get("months", []),

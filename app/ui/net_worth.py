@@ -34,11 +34,11 @@ def render() -> None:
     header.render()
 
     with ui.column().classes("w-full px-4 mt-4 space-y-4 main-content"):
-        # Main chart container - 40vh height
+        # Main chart container - 60vh height for better visualization
         chart_container = (
             ui.card()
             .classes("w-full max-w-screen-xl mx-auto bg-base-100 shadow-md")
-            .style("height: 40vh; min-height: 300px;")
+            .style("height: 60vh; min-height: 400px;")
         )
 
         with chart_container:
