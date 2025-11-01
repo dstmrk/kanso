@@ -9,11 +9,21 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 # Set working directory
 WORKDIR /app
 
-# Copy dependency files
+# Enable bytecode compilation for production performance
+ENV UV_COMPILE_BYTECODE=1
+
+# Use copy mode for reliable container behavior
+ENV UV_LINK_MODE=copy
+
+# Copy dependency files first (better layer caching)
 COPY pyproject.toml uv.lock ./
 
-# Install dependencies (no dev dependencies for production)
-RUN uv sync --frozen --no-dev --no-install-project
+# Install dependencies with cache mount for faster builds
+# --frozen: Use exact versions from lock file
+# --no-dev: Skip dev dependencies
+# --no-install-project: Only install dependencies, not the project itself
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-install-project
 
 # Production stage: Minimal runtime image
 FROM python:3.13-slim
