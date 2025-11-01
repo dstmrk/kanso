@@ -3,8 +3,8 @@
 # Build stage: Install dependencies
 FROM python:3.13-slim AS builder
 
-# Install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+# Install uv (uvx not needed for dependency installation)
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/
 
 # Set working directory
 WORKDIR /app
