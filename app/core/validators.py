@@ -33,9 +33,11 @@ Example:
     True
 """
 
+import json
 import logging
+import re
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
@@ -408,3 +410,140 @@ def validate_dataframe_structure(
         logger.error(f"Validation failed with {len(errors)} error(s)")
 
     return is_valid, errors
+
+
+# =============================================================================
+# Google Sheets Setup Validation
+# =============================================================================
+# The following functions validate user input for Google Sheets configuration
+# during onboarding and in settings. They are used by both onboarding.py and
+# user.py to avoid code duplication.
+
+
+def clean_google_sheets_url(url: str) -> str:
+    """Extract clean Google Sheets URL with only the workbook ID.
+
+    Removes query parameters, fragments, and trailing paths that users often
+    copy accidentally (e.g., ?gid=123#gid=456, /edit?usp=sharing).
+
+    Args:
+        url: Raw Google Sheets URL (possibly with extra parameters)
+
+    Returns:
+        Cleaned URL in format: https://docs.google.com/spreadsheets/d/{ID}/edit
+
+    Raises:
+        ValueError: If URL doesn't contain a valid workbook ID
+
+    Examples:
+        >>> clean_google_sheets_url("https://docs.google.com/spreadsheets/d/ABC123/edit?gid=0#gid=0")
+        'https://docs.google.com/spreadsheets/d/ABC123/edit'
+        >>> clean_google_sheets_url("https://docs.google.com/spreadsheets/d/ABC123/edit?usp=sharing")
+        'https://docs.google.com/spreadsheets/d/ABC123/edit'
+    """
+    # Extract workbook ID using regex
+    # Pattern: /d/{WORKBOOK_ID}/
+    pattern = r"https://docs\.google\.com/spreadsheets/d/([a-zA-Z0-9-_]+)"
+    match = re.search(pattern, url)
+
+    if not match:
+        raise ValueError(
+            "Could not extract workbook ID from URL. "
+            "Expected format: https://docs.google.com/spreadsheets/d/WORKBOOK_ID/..."
+        )
+
+    workbook_id = match.group(1)
+
+    # Reconstruct clean URL
+    return f"https://docs.google.com/spreadsheets/d/{workbook_id}/edit"
+
+
+def validate_google_sheets_url(url: str) -> tuple[bool, str]:
+    """Validate Google Sheets URL format.
+
+    Args:
+        url: URL string to validate
+
+    Returns:
+        Tuple of (is_valid, error_message)
+        - If valid: (True, "")
+        - If invalid: (False, "Error message explaining why")
+
+    Examples:
+        >>> validate_google_sheets_url("https://docs.google.com/spreadsheets/d/ABC123/edit")
+        (True, '')
+        >>> validate_google_sheets_url("https://example.com")
+        (False, 'Invalid Google Sheets URL format')
+    """
+    if not url or not isinstance(url, str):
+        return (False, "URL is required")
+
+    if not url.startswith("https://docs.google.com/spreadsheets/"):
+        return (False, "Invalid Google Sheets URL format")
+
+    # Try to extract workbook ID
+    pattern = r"https://docs\.google\.com/spreadsheets/d/([a-zA-Z0-9-_]+)"
+    if not re.search(pattern, url):
+        return (
+            False,
+            "Could not find workbook ID in URL. Expected format: "
+            "https://docs.google.com/spreadsheets/d/WORKBOOK_ID/...",
+        )
+
+    return (True, "")
+
+
+def validate_google_credentials_json(
+    credentials_json: str,
+) -> tuple[Literal[True], dict] | tuple[Literal[False], str]:
+    """Validate Google Service Account credentials JSON.
+
+    Args:
+        credentials_json: Raw JSON string containing service account credentials
+
+    Returns:
+        - If valid: (True, parsed_json_dict)
+        - If invalid: (False, error_message)
+
+    Examples:
+        >>> valid_json = '{"type": "service_account", "project_id": "test"}'
+        >>> validate_google_credentials_json(valid_json)
+        (True, {'type': 'service_account', 'project_id': 'test'})
+        >>> validate_google_credentials_json("invalid json")
+        (False, 'Invalid JSON format: ...')
+    """
+    if not credentials_json or not isinstance(credentials_json, str):
+        return (False, "Credentials JSON is required")
+
+    # Try to parse JSON
+    try:
+        json_data = json.loads(credentials_json)
+    except json.JSONDecodeError as e:
+        return (False, f"Invalid JSON format: {str(e)}")
+
+    # Check if it's a dict
+    if not isinstance(json_data, dict):
+        return (False, "Credentials JSON must be an object (not array or primitive)")
+
+    # Validate it looks like a service account credential
+    if "type" not in json_data:
+        return (False, "Missing 'type' field in credentials JSON")
+
+    if json_data.get("type") != "service_account":
+        return (
+            False,
+            f"Invalid credential type: '{json_data.get('type')}'. " "Expected 'service_account'",
+        )
+
+    # Check for other required fields (basic check)
+    required_fields = ["project_id", "private_key_id", "private_key", "client_email"]
+    missing_fields = [field for field in required_fields if field not in json_data]
+
+    if missing_fields:
+        return (
+            False,
+            f"Missing required fields in service account JSON: {', '.join(missing_fields)}",
+        )
+
+    # All good
+    return (True, json_data)

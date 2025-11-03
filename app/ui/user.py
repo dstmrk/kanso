@@ -1,10 +1,26 @@
 from nicegui import app, ui
 
+from app.core.validators import (
+    clean_google_sheets_url,
+    validate_google_credentials_json,
+    validate_google_sheets_url,
+)
 from app.services.utils import get_user_currency
 from app.ui import dock, header, styles
 
 # Currency options with symbol and code only
-CURRENCY_OPTIONS = {"EUR": "€ EUR", "USD": "$ USD", "GBP": "£ GBP", "CHF": "Fr CHF", "JPY": "¥ JPY"}
+CURRENCY_OPTIONS = {
+    "EUR": "€ EUR",
+    "USD": "$ USD",
+    "GBP": "£ GBP",
+    "CHF": "Fr CHF",
+    "JPY": "¥ JPY",
+    "CAD": "C$ CAD",
+    "AUD": "A$ AUD",
+    "CNY": "¥ CNY",
+    "INR": "₹ INR",
+    "BRL": "R$ BRL",
+}
 
 
 def render() -> None:
@@ -161,28 +177,30 @@ def render() -> None:
                     ui.notify("✗ Please enter a Google Sheet URL", type="negative")
                     return
 
-                # Validate credentials JSON
+                # Validate credentials JSON using centralized validator
+                is_valid_creds, creds_result = validate_google_credentials_json(credentials_content)
+                if not is_valid_creds:
+                    ui.notify(f"✗ {creds_result}", type="negative")
+                    return
+
+                json_data = creds_result  # creds_result is the parsed JSON dict
+
+                # Validate and clean URL using centralized validators
+                is_valid_url, url_error = validate_google_sheets_url(url_value)
+                if not is_valid_url:
+                    ui.notify(f"✗ {url_error}", type="negative")
+                    return
+
+                # Clean URL to extract only workbook ID (removes query params, fragments)
                 try:
-                    json_data = json.loads(credentials_content)
-                except json.JSONDecodeError:
-                    ui.notify("✗ Invalid JSON! Please check the format.", type="negative")
-                    return
-
-                # Validate it looks like a service account credential
-                if "type" not in json_data or json_data.get("type") != "service_account":
-                    ui.notify(
-                        "✗ This doesn't look like a service account credential", type="negative"
-                    )
-                    return
-
-                # Validate URL format (basic check for Google Sheets URL)
-                if not url_value.startswith("https://docs.google.com/spreadsheets/"):
-                    ui.notify("✗ Invalid Google Sheets URL format", type="negative")
+                    clean_url = clean_google_sheets_url(url_value)
+                except ValueError as e:
+                    ui.notify(f"✗ {str(e)}", type="negative")
                     return
 
                 # Data is valid - save to general storage (shared across devices)
                 app.storage.general["google_credentials_json"] = credentials_content
-                app.storage.general["custom_workbook_url"] = url_value
+                app.storage.general["custom_workbook_url"] = clean_url
 
                 # Clear all cached sheets and computed data to force reload with new data
                 from app.core.state_manager import state_manager
@@ -198,7 +216,7 @@ def render() -> None:
                         # Also invalidate all computed cache for this storage key
                         state_manager.invalidate_cache(sheet_key)
 
-                # Now test the connection
+                # Now test the connection with cleaned URL
                 try:
                     from app.services.google_sheets import GoogleSheetService
 
@@ -208,8 +226,8 @@ def render() -> None:
                         tmp_path = Path(tmp.name)
 
                     try:
-                        # Try to connect (don't need to store the service)
-                        GoogleSheetService(tmp_path, url_value)
+                        # Try to connect with cleaned URL
+                        GoogleSheetService(tmp_path, clean_url)
                         ui.notify("✓ Configuration saved and connection verified!", type="positive")
                     finally:
                         # Clean up temp file

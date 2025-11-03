@@ -1,5 +1,12 @@
 from nicegui import app, ui
 
+from app.core.validators import (
+    clean_google_sheets_url,
+    validate_google_credentials_json,
+    validate_google_sheets_url,
+)
+from app.services import utils
+
 
 def render() -> None:
     """Render the onboarding page with stepper for first-time setup."""
@@ -22,11 +29,11 @@ def render() -> None:
 
                 step2 = ui.element("li").classes("step")
                 with step2:
-                    ui.label("Credentials")
+                    ui.label("Currency")
 
                 step3 = ui.element("li").classes("step")
                 with step3:
-                    ui.label("Configuration")
+                    ui.label("Google Sheets")
 
             # Content card
             with ui.card().classes("w-full p-8"):
@@ -56,13 +63,71 @@ def render() -> None:
                             "btn bg-secondary hover:bg-secondary/80 text-secondary-content"
                         )
 
-                # Step 2: Credentials
+                # Step 2: Currency Selection
                 step2_content = ui.column().classes("w-full hidden")
                 with step2_content:
-                    ui.label("📋 Google Service Account Credentials").classes(
-                        "text-2xl font-bold mb-4"
+                    ui.label("💱 Currency Preference").classes("text-2xl font-bold mb-4")
+
+                    ui.label(
+                        "Select your preferred currency for displaying amounts throughout the app."
+                    ).classes("text-base mb-4")
+
+                    # Auto-detect currency from browser locale
+                    detected_currency = "USD"  # Fallback default
+
+                    async def detect_and_set_currency():
+                        """Detect browser locale and set currency automatically."""
+                        # Get browser locale via JavaScript
+                        browser_locale = await ui.run_javascript("navigator.language")
+                        if browser_locale:
+                            detected = utils.get_currency_from_browser_locale(browser_locale)
+                            currency_select.value = detected
+
+                    currency_select = ui.select(
+                        label="Currency",
+                        options={
+                            "EUR": "🇪🇺 Euro (€)",
+                            "USD": "🇺🇸 US Dollar ($)",
+                            "GBP": "🇬🇧 British Pound (£)",
+                            "JPY": "🇯🇵 Japanese Yen (¥)",
+                            "CHF": "🇨🇭 Swiss Franc (Fr)",
+                            "CAD": "🇨🇦 Canadian Dollar (C$)",
+                            "AUD": "🇦🇺 Australian Dollar (A$)",
+                            "CNY": "🇨🇳 Chinese Yuan (¥)",
+                            "INR": "🇮🇳 Indian Rupee (₹)",
+                            "BRL": "🇧🇷 Brazilian Real (R$)",
+                        },
+                        value=detected_currency,
+                    ).classes("w-full")
+
+                    # Trigger auto-detection after UI is ready
+                    ui.timer(0.1, detect_and_set_currency, once=True)
+
+                    ui.label("You can change this later in settings.").classes(
+                        "text-sm mt-4 opacity-70"
                     )
 
+                    with ui.row().classes("w-full justify-between mt-8"):
+                        ui.button("← Back", on_click=lambda: go_to_step(1)).classes(
+                            "btn btn-outline"
+                        )
+                        ui.button("Next →", on_click=lambda: go_to_step(3)).classes(
+                            "btn bg-secondary hover:bg-secondary/80 text-secondary-content"
+                        )
+
+                # Step 3: Google Sheets Configuration (Credentials + Sheet URL)
+                step3_content = ui.column().classes("w-full hidden")
+                with step3_content:
+                    ui.label("📋 Google Sheets Configuration").classes("text-2xl font-bold mb-4")
+
+                    ui.label(
+                        "Connect Kanso to your Google Sheet with your financial data."
+                    ).classes("text-base mb-4")
+
+                    # Credentials section
+                    ui.label("1. Service Account Credentials").classes(
+                        "text-lg font-semibold mt-4 mb-2"
+                    )
                     ui.label(
                         "You need a service account JSON file from Google Cloud to access your spreadsheet."
                     ).classes("text-base mb-2")
@@ -82,22 +147,11 @@ def render() -> None:
                             value="",
                         )
                         .classes("w-full font-mono text-sm")
-                        .style("min-height: 300px")
+                        .style("min-height: 250px")
                     )
 
-                    with ui.row().classes("w-full justify-between mt-8"):
-                        ui.button("← Back", on_click=lambda: go_to_step(1)).classes(
-                            "btn btn-outline"
-                        )
-                        ui.button("Next →", on_click=lambda: go_to_step(3)).classes(
-                            "btn bg-secondary hover:bg-secondary/80 text-secondary-content"
-                        )
-
-                # Step 3: Sheet URL & Save
-                step3_content = ui.column().classes("w-full hidden")
-                with step3_content:
-                    ui.label("🔗 Google Sheet Configuration").classes("text-2xl font-bold mb-4")
-
+                    # Sheet URL section
+                    ui.label("2. Google Sheet URL").classes("text-lg font-semibold mt-6 mb-2")
                     ui.label(
                         "Enter the URL of your Google Sheet where your financial data is stored."
                     ).classes("text-base mb-4")
@@ -157,8 +211,9 @@ def render() -> None:
                 # Get values directly from inputs
                 credentials_content = credentials_textarea.value.strip()
                 url = url_input.value.strip()
+                selected_currency = currency_select.value
 
-                # Validate both are present
+                # Validate all fields are present
                 if not credentials_content:
                     ui.notify("✗ Please paste the credentials JSON", type="negative")
                     return
@@ -167,28 +222,35 @@ def render() -> None:
                     ui.notify("✗ Please enter a Google Sheet URL", type="negative")
                     return
 
-                # Validate credentials JSON
+                if not selected_currency:
+                    ui.notify("✗ Please select a currency", type="negative")
+                    return
+
+                # Validate credentials JSON using centralized validator
+                is_valid_creds, creds_result = validate_google_credentials_json(credentials_content)
+                if not is_valid_creds:
+                    ui.notify(f"✗ {creds_result}", type="negative")
+                    return
+
+                json_data = creds_result  # creds_result is the parsed JSON dict
+
+                # Validate and clean URL using centralized validators
+                is_valid_url, url_error = validate_google_sheets_url(url)
+                if not is_valid_url:
+                    ui.notify(f"✗ {url_error}", type="negative")
+                    return
+
+                # Clean URL to extract only workbook ID (removes query params, fragments)
                 try:
-                    json_data = json.loads(credentials_content)
-                except json.JSONDecodeError:
-                    ui.notify("✗ Invalid JSON! Please check the format.", type="negative")
-                    return
-
-                # Validate it looks like a service account credential
-                if "type" not in json_data or json_data.get("type") != "service_account":
-                    ui.notify(
-                        "✗ This doesn't look like a service account credential", type="negative"
-                    )
-                    return
-
-                # Validate URL format
-                if not url.startswith("https://docs.google.com/spreadsheets/"):
-                    ui.notify("✗ Invalid Google Sheets URL format", type="negative")
+                    clean_url = clean_google_sheets_url(url)
+                except ValueError as e:
+                    ui.notify(f"✗ {str(e)}", type="negative")
                     return
 
                 # Save to general storage (shared across devices)
                 app.storage.general["google_credentials_json"] = credentials_content
-                app.storage.general["custom_workbook_url"] = url
+                app.storage.general["custom_workbook_url"] = clean_url
+                app.storage.general["currency"] = selected_currency
                 app.storage.general["onboarding_completed"] = True
 
                 # Quick validation test (non-blocking)
@@ -200,8 +262,8 @@ def render() -> None:
                         tmp.flush()
                         tmp_path = Path(tmp.name)
 
-                        # Test connection (don't need to store the service)
-                        GoogleSheetService(tmp_path, url)
+                        # Test connection with cleaned URL
+                        GoogleSheetService(tmp_path, clean_url)
                         ui.notify(
                             "✓ Configuration saved! Redirecting to dashboard...", type="positive"
                         )

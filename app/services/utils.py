@@ -100,11 +100,11 @@ def get_user_currency() -> str:
     """Get currency code from user locale with fallback to USD.
 
     Attempts to detect currency from system locale. Only returns currency if
-    it's one of the main supported currencies: EUR, USD, GBP, CHF, JPY.
+    it's one of the supported currencies (10 total).
     Otherwise returns USD as safe default.
 
     Returns:
-        Currency code string (one of: EUR, USD, GBP, CHF, JPY)
+        Currency code string (EUR, USD, GBP, CHF, JPY, CAD, AUD, CNY, INR, BRL)
 
     Example:
         >>> # On system with EUR locale
@@ -126,6 +126,92 @@ def get_user_currency() -> str:
         return currency if currency in supported_currencies else "USD"
     except Exception:
         return "USD"
+
+
+def get_currency_from_browser_locale(browser_locale: str | None) -> str:
+    """Map browser locale string to currency code.
+
+    Uses language and region from browser locale (e.g., 'en-US', 'pt-BR') to
+    determine the most appropriate currency. Falls back to USD if locale is
+    unknown or not mappable to supported currencies.
+
+    Args:
+        browser_locale: Browser locale string (e.g., 'en-US', 'pt-BR', 'ja-JP')
+
+    Returns:
+        Currency code string (EUR, USD, GBP, CHF, JPY, CAD, AUD, CNY, INR, BRL)
+
+    Example:
+        >>> get_currency_from_browser_locale('en-US')
+        'USD'
+        >>> get_currency_from_browser_locale('pt-BR')
+        'BRL'
+        >>> get_currency_from_browser_locale('de-DE')
+        'EUR'
+    """
+    if not browser_locale:
+        return "USD"
+
+    # Normalize to lowercase for easier matching
+    locale_lower = browser_locale.lower()
+
+    # Exact locale matches (region-specific)
+    locale_map = {
+        # English variants
+        "en-us": "USD",
+        "en-ca": "CAD",
+        "en-gb": "GBP",
+        "en-au": "AUD",
+        "en-in": "INR",
+        # Eurozone countries
+        "de-de": "EUR",  # Germany
+        "de-at": "EUR",  # Austria
+        "fr-fr": "EUR",  # France
+        "it-it": "EUR",  # Italy
+        "es-es": "EUR",  # Spain
+        "nl-nl": "EUR",  # Netherlands
+        "pt-pt": "EUR",  # Portugal
+        "fi-fi": "EUR",  # Finland
+        "ie-ie": "EUR",  # Ireland
+        "be-be": "EUR",  # Belgium
+        # Swiss locales
+        "de-ch": "CHF",
+        "fr-ch": "CHF",
+        "it-ch": "CHF",
+        # Asian currencies
+        "ja-jp": "JPY",
+        "zh-cn": "CNY",
+        "zh-sg": "CNY",  # Singapore Chinese often use CNY
+        "hi-in": "INR",
+        # Americas
+        "pt-br": "BRL",
+        "fr-ca": "CAD",
+    }
+
+    # Try exact match first
+    if locale_lower in locale_map:
+        return locale_map[locale_lower]
+
+    # Fallback: match by language code only (before the hyphen)
+    language = locale_lower.split("-")[0] if "-" in locale_lower else locale_lower
+    language_fallback = {
+        "en": "USD",  # English defaults to USD
+        "de": "EUR",  # German defaults to EUR (most German speakers in EU)
+        "fr": "EUR",  # French defaults to EUR (France is largest French-speaking country in EU)
+        "es": "EUR",  # Spanish defaults to EUR (Spain, not Latin America)
+        "it": "EUR",  # Italian defaults to EUR
+        "nl": "EUR",  # Dutch defaults to EUR
+        "pt": "EUR",  # Portuguese defaults to EUR (Portugal, not Brazil)
+        "ja": "JPY",  # Japanese
+        "zh": "CNY",  # Chinese
+        "hi": "INR",  # Hindi
+    }
+
+    if language in language_fallback:
+        return language_fallback[language]
+
+    # Ultimate fallback
+    return "USD"
 
 
 def format_percentage(value: float, currency: str = "USD") -> str:

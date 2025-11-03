@@ -77,6 +77,41 @@ CURRENCY_FORMATS: dict[str, CurrencyFormat] = {
         decimal_sep="",  # No decimal separator
         has_decimals=False,
     ),
+    "CAD": CurrencyFormat(
+        symbol="C$",
+        position="before",
+        thousands_sep=",",
+        decimal_sep=".",
+        has_decimals=True,
+    ),
+    "AUD": CurrencyFormat(
+        symbol="A$",
+        position="before",
+        thousands_sep=",",
+        decimal_sep=".",
+        has_decimals=True,
+    ),
+    "CNY": CurrencyFormat(
+        symbol="¥",
+        position="before",
+        thousands_sep=",",
+        decimal_sep=".",
+        has_decimals=True,
+    ),
+    "INR": CurrencyFormat(
+        symbol="₹",
+        position="before",
+        thousands_sep=",",
+        decimal_sep=".",
+        has_decimals=True,
+    ),
+    "BRL": CurrencyFormat(
+        symbol="R$",
+        position="before",
+        thousands_sep=".",
+        decimal_sep=",",
+        has_decimals=True,
+    ),
 }
 
 
@@ -84,7 +119,7 @@ def get_currency_format(currency: str) -> CurrencyFormat:
     """Get currency format configuration.
 
     Args:
-        currency: Currency code (EUR, USD, GBP, CHF, JPY)
+        currency: Currency code (EUR, USD, GBP, CHF, JPY, CAD, AUD, CNY, INR, BRL)
 
     Returns:
         CurrencyFormat instance for the currency
@@ -104,10 +139,10 @@ def get_currency_symbol(currency: str) -> str:
     """Get currency symbol for given currency code.
 
     Args:
-        currency: Currency code (EUR, USD, GBP, CHF, JPY)
+        currency: Currency code (EUR, USD, GBP, CHF, JPY, CAD, AUD, CNY, INR, BRL)
 
     Returns:
-        Currency symbol string (€, $, £, Fr, ¥)
+        Currency symbol string (€, $, £, Fr, ¥, C$, A$, ₹, R$)
 
     Example:
         >>> get_currency_symbol("EUR")
@@ -120,10 +155,10 @@ def get_supported_currencies() -> list[str]:
     """Get list of all supported currency codes.
 
     Returns:
-        List of currency code strings
+        List of currency code strings (10 currencies)
 
     Example:
         >>> get_supported_currencies()
-        ['EUR', 'USD', 'GBP', 'CHF', 'JPY']
+        ['EUR', 'USD', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'CNY', 'INR', 'BRL']
     """
     return list(CURRENCY_FORMATS.keys())

@@ -131,7 +131,7 @@ class DataFrameProcessor:
 
 #### `monetary_parsing.py`
 Currency detection and value parsing:
-- Multi-currency support (EUR, USD, GBP, CHF, JPY)
+- Multi-currency support for major world currencies
 - Automatic format detection (1.234,56 vs 1,234.56)
 - Robust error handling
 
