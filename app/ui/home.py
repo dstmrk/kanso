@@ -72,16 +72,16 @@ class HomeRenderer:
         with container:
             net_worth_value = utils.format_currency(kpi_data["net_worth"], user_currency)
             mom_variation_percentage_value = utils.format_percentage(
-                kpi_data["mom_variation_percentage"], user_currency
+                abs(kpi_data["mom_variation_percentage"]), user_currency
             )
             mom_variation_absolute_value = utils.format_currency(
-                kpi_data["mom_variation_absolute"], user_currency
+                abs(kpi_data["mom_variation_absolute"]), user_currency
             )
             yoy_variation_percentage_value = utils.format_percentage(
-                kpi_data["yoy_variation_percentage"], user_currency
+                abs(kpi_data["yoy_variation_percentage"]), user_currency
             )
             yoy_variation_absolute_value = utils.format_currency(
-                kpi_data["yoy_variation_absolute"], user_currency
+                abs(kpi_data["yoy_variation_absolute"]), user_currency
             )
             avg_saving_ratio_percentage_value = utils.format_percentage(
                 kpi_data["avg_saving_ratio_percentage"], user_currency
