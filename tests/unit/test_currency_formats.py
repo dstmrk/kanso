@@ -19,6 +19,11 @@ class TestCurrencyFormats:
         assert "GBP" in CURRENCY_FORMATS
         assert "CHF" in CURRENCY_FORMATS
         assert "JPY" in CURRENCY_FORMATS
+        assert "CAD" in CURRENCY_FORMATS
+        assert "AUD" in CURRENCY_FORMATS
+        assert "CNY" in CURRENCY_FORMATS
+        assert "INR" in CURRENCY_FORMATS
+        assert "BRL" in CURRENCY_FORMATS
 
     def test_currency_format_is_frozen(self):
         """CurrencyFormat instances should be immutable (frozen)."""
@@ -74,6 +79,51 @@ class TestCurrencyFormats:
         assert fmt.decimal_sep == ""
         assert fmt.has_decimals is False
 
+    def test_cad_format(self):
+        """CAD should have correct formatting configuration."""
+        fmt = CURRENCY_FORMATS["CAD"]
+        assert fmt.symbol == "C$"
+        assert fmt.position == "before"
+        assert fmt.thousands_sep == ","
+        assert fmt.decimal_sep == "."
+        assert fmt.has_decimals is True
+
+    def test_aud_format(self):
+        """AUD should have correct formatting configuration."""
+        fmt = CURRENCY_FORMATS["AUD"]
+        assert fmt.symbol == "A$"
+        assert fmt.position == "before"
+        assert fmt.thousands_sep == ","
+        assert fmt.decimal_sep == "."
+        assert fmt.has_decimals is True
+
+    def test_cny_format(self):
+        """CNY should have correct formatting configuration."""
+        fmt = CURRENCY_FORMATS["CNY"]
+        assert fmt.symbol == "¥"
+        assert fmt.position == "before"
+        assert fmt.thousands_sep == ","
+        assert fmt.decimal_sep == "."
+        assert fmt.has_decimals is True
+
+    def test_inr_format(self):
+        """INR should have correct formatting configuration."""
+        fmt = CURRENCY_FORMATS["INR"]
+        assert fmt.symbol == "₹"
+        assert fmt.position == "before"
+        assert fmt.thousands_sep == ","
+        assert fmt.decimal_sep == "."
+        assert fmt.has_decimals is True
+
+    def test_brl_format(self):
+        """BRL should have correct formatting configuration."""
+        fmt = CURRENCY_FORMATS["BRL"]
+        assert fmt.symbol == "R$"
+        assert fmt.position == "before"
+        assert fmt.thousands_sep == "."
+        assert fmt.decimal_sep == ","
+        assert fmt.has_decimals is True
+
 
 class TestGetCurrencyFormat:
     """Tests for get_currency_format function."""
@@ -86,7 +136,7 @@ class TestGetCurrencyFormat:
 
     def test_get_all_currencies(self):
         """Should be able to get all supported currencies."""
-        for code in ["EUR", "USD", "GBP", "CHF", "JPY"]:
+        for code in ["EUR", "USD", "GBP", "CHF", "JPY", "CAD", "AUD", "CNY", "INR", "BRL"]:
             fmt = get_currency_format(code)
             assert isinstance(fmt, CurrencyFormat)
 
@@ -109,6 +159,11 @@ class TestGetCurrencySymbol:
         assert get_currency_symbol("GBP") == "£"
         assert get_currency_symbol("CHF") == "Fr"
         assert get_currency_symbol("JPY") == "¥"
+        assert get_currency_symbol("CAD") == "C$"
+        assert get_currency_symbol("AUD") == "A$"
+        assert get_currency_symbol("CNY") == "¥"
+        assert get_currency_symbol("INR") == "₹"
+        assert get_currency_symbol("BRL") == "R$"
 
     def test_unknown_currency_fallback(self):
         """Should fallback to USD symbol for unknown currencies."""
@@ -131,8 +186,13 @@ class TestGetSupportedCurrencies:
         assert "GBP" in currencies
         assert "CHF" in currencies
         assert "JPY" in currencies
+        assert "CAD" in currencies
+        assert "AUD" in currencies
+        assert "CNY" in currencies
+        assert "INR" in currencies
+        assert "BRL" in currencies
 
-    def test_returns_five_currencies(self):
-        """Should return exactly 5 supported currencies."""
+    def test_returns_ten_currencies(self):
+        """Should return exactly 10 supported currencies."""
         currencies = get_supported_currencies()
-        assert len(currencies) == 5
+        assert len(currencies) == 10

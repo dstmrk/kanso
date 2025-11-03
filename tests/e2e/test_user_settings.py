@@ -25,12 +25,15 @@ class TestUserSettingsPage:
 
         # Complete onboarding
         page.goto("/onboarding")
+        # Step 1: Welcome
         page.locator('button:has-text("Get Started")').click()
-        page.locator("textarea").fill(json.dumps(sample_credentials))
+        # Step 2: Currency (just click Next to use default)
         page.locator('button:has-text("Next")').click()
+        # Step 3: Google Sheets Configuration (credentials + URL)
+        page.locator("textarea").fill(json.dumps(sample_credentials))
         page.locator('input[placeholder*="spreadsheets"]').fill(sample_sheet_url)
         page.locator('button:has-text("Save & Test Configuration")').click()
-        page.wait_for_url(re.compile(r".*/home$"), timeout=10000)
+        page.wait_for_url(re.compile(r".*/home$|.*/$"), timeout=10000)
 
     def test_access_user_settings_page(self, page: Page):
         """Test that user can access the settings page."""

@@ -34,22 +34,20 @@ class TestOnboardingFlow:
         # Click "Get Started" button
         page.locator('button:has-text("Get Started")').click()
 
-        # Step 2: Credentials page should be visible
-        expect(page.locator("text=Google Service Account Credentials")).to_be_visible()
-        expect(page.locator("textarea")).to_be_visible()
+        # Step 2: Currency selection should be visible
+        expect(page.locator("text=Currency Preference")).to_be_visible()
 
-        # Check that we can't go to step 3 without filling credentials
-        # (Next button should be visible)
+        # Check that currency selector and Next button are visible
         expect(page.locator('button:has-text("Next")')).to_be_visible()
 
     def test_credentials_validation(self, page: Page):
         """Test that credentials are validated correctly."""
         page.goto("/onboarding")
 
-        # Navigate to step 2
+        # Navigate to step 2 (Currency)
         page.locator('button:has-text("Get Started")').click()
 
-        # Navigate to step 3 without filling credentials
+        # Navigate to step 3 (Google Sheets Config)
         page.locator('button:has-text("Next")').click()
 
         # Try to save without credentials (this triggers validation)
@@ -64,10 +62,10 @@ class TestOnboardingFlow:
         # Test invalid JSON in a fresh onboarding session
         page.goto("/onboarding")
         page.locator('button:has-text("Get Started")').click()
+        page.locator('button:has-text("Next")').click()
 
         # Fill in invalid JSON
         page.locator("textarea").fill("invalid json {")
-        page.locator('button:has-text("Next")').click()
 
         # Try to save with invalid JSON
         page.locator('button:has-text("Save & Test Configuration")').click()
@@ -103,18 +101,19 @@ class TestOnboardingFlow:
         expect(page.locator("text=Welcome to Kanso")).to_be_visible()
         page.locator('button:has-text("Get Started")').click()
 
-        # Step 2: Credentials
-        expect(page.locator("text=Google Service Account Credentials")).to_be_visible()
+        # Step 2: Currency Selection
+        expect(page.locator("text=Currency Preference")).to_be_visible()
+
+        # Currency should be auto-detected (default USD or browser locale)
+        # Just proceed to next step
+        page.locator('button:has-text("Next")').click()
+
+        # Step 3: Google Sheets Configuration (Credentials + URL)
+        expect(page.locator("text=Google Sheets Configuration")).to_be_visible()
 
         # Fill in valid credentials JSON
         credentials_json = json.dumps(sample_credentials, indent=2)
         page.locator("textarea").fill(credentials_json)
-
-        # Click Next
-        page.locator('button:has-text("Next")').click()
-
-        # Step 3: Configuration
-        expect(page.locator("text=Google Sheet Configuration")).to_be_visible()
 
         # Fill in URL
         page.locator('input[placeholder*="spreadsheets"]').fill(sample_sheet_url)
@@ -123,7 +122,7 @@ class TestOnboardingFlow:
         page.locator('button:has-text("Save & Test Configuration")').click()
 
         # Should be redirected to home page (redirect happens immediately, notification is too brief to check)
-        expect(page).to_have_url(re.compile(r".*/home$"), timeout=10000)
+        expect(page).to_have_url(re.compile(r".*/home$|.*/$"), timeout=10000)
 
     def test_onboarding_completed_users_redirected_to_home(
         self, page: Page, sample_credentials: dict, sample_sheet_url: str
@@ -140,8 +139,10 @@ class TestOnboardingFlow:
 
         page.goto("/onboarding")
         page.locator('button:has-text("Get Started")').click()
-        page.locator("textarea").fill(json.dumps(sample_credentials))
+        # Step 2: Currency (just click Next to use default)
         page.locator('button:has-text("Next")').click()
+        # Step 3: Credentials + URL
+        page.locator("textarea").fill(json.dumps(sample_credentials))
         page.locator('input[placeholder*="spreadsheets"]').fill(sample_sheet_url)
         page.locator('button:has-text("Save & Test Configuration")').click()
 
@@ -159,9 +160,9 @@ class TestOnboardingFlow:
         """Test that back button works correctly in onboarding."""
         page.goto("/onboarding")
 
-        # Go to step 2
+        # Go to step 2 (Currency)
         page.locator('button:has-text("Get Started")').click()
-        expect(page.locator("text=Google Service Account Credentials")).to_be_visible()
+        expect(page.locator("text=Currency Preference")).to_be_visible()
 
         # Click Back button (use first visible one, as there might be multiple in different steps)
         page.locator('button:has-text("← Back")').first.click()
