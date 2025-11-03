@@ -188,7 +188,7 @@ docs: rewrite README with benefit-driven approach
 - ✅ Google Sheets integration with 24h caching
 - ✅ Advanced visualizations (net worth evolution, YoY comparison, merchant breakdown)
 - ✅ Benefit-driven documentation
-- ✅ Multi-currency support (EUR, USD, GBP, CHF, JPY)
+- ✅ Multi-currency support with browser locale auto-detection
 - ✅ Dark/light mode
 
 **Next Focus**: v0.6.0 - Data Tables & UI Improvements

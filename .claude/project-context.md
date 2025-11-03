@@ -140,7 +140,7 @@ kanso/
 - ✅ Core financial tracking (income, expenses, assets, liabilities)
 - ✅ Interactive dashboard with 4 KPIs + 5 charts
 - ✅ Google Sheets integration with 24h smart caching
-- ✅ Multi-currency support (EUR, USD, GBP, CHF, JPY)
+- ✅ Multi-currency support with browser locale auto-detection
 - ✅ Dark/light mode toggle with persistence
 - ✅ Advanced visualizations:
   - Net worth evolution (stacked bar chart)
