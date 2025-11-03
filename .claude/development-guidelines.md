@@ -203,6 +203,78 @@ uv run pytest -m e2e -v
 pkill -f "python main.py"
 ```
 
+### ⚠️ CRITICAL: Always Update Tests After Changes
+
+**When you change UI flows, features, or add functionality, ALWAYS update both unit and E2E tests.**
+
+**Common scenarios requiring test updates**:
+
+1. **Onboarding flow changes**:
+   - Changed step order → Update `tests/e2e/test_onboarding.py`
+   - Added/removed steps → Update all test navigation sequences
+   - Changed field names/labels → Update locators in E2E tests
+
+2. **Settings page changes**:
+   - Added configuration options → Update `tests/e2e/test_user_settings.py`
+   - Changed validation logic → Update validation tests
+
+3. **New currencies/options**:
+   - Added currencies → Update `tests/unit/test_currency_formats.py`
+   - Changed count expectations → Update assertions (e.g., `assert len == 10`)
+
+4. **API/business logic changes**:
+   - New calculations → Add unit tests
+   - Changed return types → Update all dependent tests
+   - New validation rules → Add validation tests
+
+**Test update checklist**:
+```bash
+# 1. Identify affected test files
+grep -r "old_feature_name" tests/
+
+# 2. Update unit tests
+# - Add tests for new functionality
+# - Update expectations for changed behavior
+# - Add new test cases for edge cases
+
+# 3. Update E2E tests
+# - Update navigation sequences
+# - Update element locators (text, IDs, classes)
+# - Update assertions for new UI elements
+
+# 4. Run tests locally
+uv run pytest -m "not e2e" -v  # Unit tests
+uv run pytest -m e2e -v        # E2E tests
+
+# 5. Fix failures
+# - Don't ignore test failures
+# - Update tests to match new behavior
+# - Ensure all tests pass before committing
+```
+
+**Example: v0.6.0 Currency Support Changes**
+
+When we added 5 new currencies and reorganized onboarding:
+
+1. ✅ Updated `test_currency_formats.py`:
+   - Changed `assert len == 5` → `assert len == 10`
+   - Added tests for CAD, AUD, CNY, INR, BRL
+   - Updated all currency iteration loops
+
+2. ✅ Updated `test_onboarding.py`:
+   - Added Step 2 (Currency Selection) navigation
+   - Updated all test flows: Step 1 → Step 2 (Currency) → Step 3 (Sheets)
+   - Updated element locators ("Currency Preference" instead of "Credentials")
+
+3. ✅ Updated `test_user_settings.py`:
+   - Updated fixture to include currency step in onboarding
+   - Ensured all tests using `setup_user` fixture work correctly
+
+**Why this is critical**:
+- ❌ Without test updates: CI fails, blocks merges
+- ❌ Ignoring failures: Technical debt, false confidence
+- ✅ With test updates: Confidence in changes, regression prevention
+
 ### Test Coverage
 
 **Target**: 90%+ for business logic (app/logic/, app/core/)
@@ -804,6 +876,7 @@ def foo(x: int) -> int:
 ### ✅ Always Do
 
 - Run tests before committing
+- **Update tests when changing UI flows or features** (see Testing section)
 - Use type hints on all functions
 - Write unit tests for business logic
 - Follow conventional commit format
