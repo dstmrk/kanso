@@ -3,7 +3,7 @@ services:
     image: ghcr.io/dstmrk/kanso:latest
     container_name: kanso
     ports:
-      - "6789:6789"  # Host:Container - Change host port if 6789 is taken (e.g., "8080:6789")
+      - "9525:9525"  # Host:Container - Change host port if 9525 is taken (e.g., "8080:9525")
     environment:
       # Application environment - tells main.py which .env file to load
       # Defaults in .env.prod are used automatically
@@ -21,7 +21,7 @@ services:
     restart: unless-stopped
 
     healthcheck:
-      test: ["CMD", "/app/.venv/bin/python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:6789')"]
+      test: ["CMD", "/app/.venv/bin/python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9525')"]
       interval: 30s
       timeout: 10s
       retries: 3

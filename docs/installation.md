@@ -36,7 +36,7 @@ services:
   kanso:
     image: ghcr.io/dstmrk/kanso:latest
     ports:
-      - "6789:6789"  # Change host port if needed (e.g., "8080:6789")
+      - "9525:9525"  # Change host port if needed (e.g., "8080:9525")
     environment:
       - APP_ENV=prod
     volumes:
@@ -53,7 +53,7 @@ docker compose up -d
 This will:
 
 1. Pull the latest Kanso Docker image
-2. Start the application on port 6789
+2. Start the application on port 9525
 3. Create a persistent volume for data storage
 
 ### Step 3: Access the Application
@@ -61,7 +61,7 @@ This will:
 Open your browser and navigate to:
 
 ```
-http://localhost:6789
+http://localhost:9525
 ```
 
 You'll see the onboarding wizard on first launch.
@@ -84,7 +84,7 @@ To **change the port**, modify the port mapping (not environment variables):
 
 ```yaml
 ports:
-  - "8080:6789"  # Access on http://localhost:8080
+  - "8080:9525"  # Access on http://localhost:8080
 ```
 
 ## Local Development Setup
@@ -109,7 +109,7 @@ uv sync
 uv run python main.py
 ```
 
-The application will start on `http://localhost:6789`.
+The application will start on `http://localhost:9525`.
 
 !!! tip "Development Environment"
     For development, use `.env.dev` which enables debug mode and hot-reload:
@@ -150,14 +150,14 @@ After completing onboarding, you'll be redirected to the dashboard.
 
 ### Port Already in Use
 
-If port 6789 is already taken on your host machine, change the **host port** (left side) in `docker-compose.yml`:
+If port 9525 is already taken on your host machine, change the **host port** (left side) in `docker-compose.yml`:
 
 ```yaml
 ports:
-  - "8080:6789"  # Access on http://localhost:8080 instead
+  - "8080:9525"  # Access on http://localhost:8080 instead
 ```
 
-The container always uses port 6789 internally.
+The container always uses port 9525 internally.
 
 ### Docker Compose Issues
 
@@ -185,7 +185,7 @@ chmod 755 ./kanso-data
 
 ### Browser Storage Issues
 
-Clear browser storage and cookies for `localhost:6789` if you see authentication issues.
+Clear browser storage and cookies for `localhost:9525` if you see authentication issues.
 
 ## Updating Kanso
 

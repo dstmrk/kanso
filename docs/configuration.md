@@ -22,7 +22,7 @@ LOG_LEVEL=WARNING
 RELOAD=false
 
 # Application port
-APP_PORT=6789
+APP_PORT=9525
 
 # Application title
 APP_TITLE="kanso - your minimal money tracker"
@@ -70,7 +70,7 @@ ROOT_PATH=
 
 **Purpose:** HTTP port for the web server
 
-**Default:** `6789`
+**Default:** `9525`
 
 **Example:**
 ```bash
@@ -200,7 +200,7 @@ services:
   kanso:
     build: .
     ports:
-      - "${APP_PORT:-6789}:6789"
+      - "${APP_PORT:-9525}:9525"
     environment:
       - APP_ENV=${APP_ENV:-prod}
       - LOG_LEVEL=${LOG_LEVEL:-WARNING}
@@ -208,7 +208,7 @@ services:
       - ./kanso-data:/app/data  # Persistent storage
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6789/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:9525/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -240,7 +240,7 @@ Bind to specific network interface:
 
 ```yaml
 ports:
-  - "127.0.0.1:6789:6789"  # Localhost only
+  - "127.0.0.1:9525:9525"  # Localhost only
 ```
 
 Use with reverse proxy (nginx, Caddy) for HTTPS.
@@ -255,7 +255,7 @@ server {
     server_name kanso.yourdomain.com;
 
     location / {
-        proxy_pass http://localhost:6789;
+        proxy_pass http://localhost:9525;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -290,17 +290,17 @@ services:
 
 **Fix:**
 1. Check browser privacy settings
-2. Allow local storage for `localhost:6789`
+2. Allow local storage for `localhost:9525`
 3. Try incognito/private mode to test
 
 ### Port Already in Use
 
-**Cause:** Another service using port 6789
+**Cause:** Another service using port 9525
 
 **Fix:**
 ```bash
 # Check what's using the port
-lsof -i :6789
+lsof -i :9525
 
 # Change port in .env
 APP_PORT=8080

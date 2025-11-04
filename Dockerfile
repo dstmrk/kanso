@@ -43,11 +43,11 @@ RUN useradd -m -u 1000 kanso && \
 USER kanso
 
 # Expose default port
-EXPOSE 6789
+EXPOSE 9525
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD /app/.venv/bin/python -c "import urllib.request; urllib.request.urlopen('http://localhost:6789')"
+    CMD /app/.venv/bin/python -c "import urllib.request; urllib.request.urlopen('http://localhost:9525')"
 
 # Default command
 # Note: main.py automatically loads .env.{APP_ENV} based on APP_ENV environment variable

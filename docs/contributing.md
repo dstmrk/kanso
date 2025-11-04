@@ -90,7 +90,7 @@ This enables debug mode, hot-reload, and verbose logging.
 # Start the application
 uv run python main.py
 
-# Open http://localhost:6789
+# Open http://localhost:9525
 ```
 
 ## Development Workflow

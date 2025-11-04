@@ -133,7 +133,7 @@ graph LR
     curl -o docker-compose.yml https://raw.githubusercontent.com/dstmrk/kanso/main/docker-compose.yml
     docker compose up -d
 
-    # Open http://localhost:6789
+    # Open http://localhost:9525
     ```
 
     **That's it.** Follow onboarding wizard to connect Google Sheets.
@@ -151,7 +151,7 @@ graph LR
     # Run
     uv run python main.py
 
-    # Open http://localhost:6789
+    # Open http://localhost:9525
     ```
 
     [:octicons-arrow-right-24: Development Setup](contributing.md)

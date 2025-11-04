@@ -38,7 +38,7 @@ Since Kanso is self-hosted and handles sensitive financial data, please follow t
 - ✅ Use **HTTPS** if exposing Kanso to the internet (reverse proxy with SSL/TLS)
 - ✅ Restrict access via **firewall rules** or **VPN**
 - ✅ Consider using **authentication layer** (e.g., authelia, basic auth via reverse proxy)
-- ✅ Don't expose port 6789 directly to the internet
+- ✅ Don't expose port 9525 directly to the internet
 
 ### Docker Security
 - ✅ Kanso runs as **non-root user** in Docker (user `kanso`, UID 1000)

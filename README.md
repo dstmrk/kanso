@@ -93,7 +93,7 @@ Self-hosted on your infrastructure. No bank connections. Your data stays in Goog
 curl -o docker-compose.yml https://raw.githubusercontent.com/dstmrk/kanso/main/docker-compose.yml
 docker compose up -d
 
-# Open http://localhost:6789
+# Open http://localhost:9525
 ```
 
 **That's it.** Follow onboarding wizard to connect Google Sheets.
@@ -104,7 +104,7 @@ docker compose up -d
 git clone https://github.com/dstmrk/kanso.git
 cd kanso
 uv sync
-uv run python main.py  # Open http://localhost:6789
+uv run python main.py  # Open http://localhost:9525
 ```
 
 📖 **[Installation Guide](https://dstmrk.github.io/kanso/installation/)** • **[Google Sheets Setup](https://dstmrk.github.io/kanso/google-sheets-setup/)**

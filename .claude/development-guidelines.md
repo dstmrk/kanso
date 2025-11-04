@@ -27,7 +27,7 @@ uv sync --all-extras
 uv run python main.py
 
 # Open browser
-# http://localhost:6789
+# http://localhost:9525
 ```
 
 ---
@@ -184,7 +184,7 @@ from playwright.sync_api import Page, expect
 @pytest.mark.e2e
 def test_dashboard_loads_successfully(page: Page):
     # Navigate
-    page.goto("http://localhost:6789")
+    page.goto("http://localhost:9525")
 
     # Assert critical elements present
     expect(page.locator("text=Net Worth")).to_be_visible()
@@ -480,10 +480,10 @@ uv run pytest -m "not e2e"
 docker build -t kanso:local .
 
 # Run container
-docker run -p 6789:8080 kanso:local
+docker run -p 9525:8080 kanso:local
 
 # Open browser
-# http://localhost:6789
+# http://localhost:9525
 ```
 
 ### Debugging
@@ -691,7 +691,7 @@ uv run mkdocs serve
    # tests/e2e/test_navigation.py
    @pytest.mark.e2e
    def test_new_page_accessible(page: Page):
-       page.goto("http://localhost:6789")
+       page.goto("http://localhost:9525")
        page.click("text=New Page")
        expect(page.locator("text=New Page")).to_be_visible()
    ```
@@ -789,12 +789,12 @@ async def fetch_expensive_data() -> pd.DataFrame:
 uv sync
 ```
 
-#### "Port 6789 already in use"
+#### "Port 9525 already in use"
 
 **Solution**: Kill existing process
 ```bash
 # Find process
-lsof -i :6789
+lsof -i :9525
 
 # Kill it
 kill -9 <PID>
@@ -848,6 +848,46 @@ def foo(x: int) -> int:
 
 ---
 
+## Release Process
+
+### Version Management
+
+**Single Source of Truth**: `app/core/constants.py`
+
+```python
+APP_VERSION = "0.6.0"  # Update this for new releases
+```
+
+**Where it's used automatically**:
+- Settings → About tab (shows "Kanso v{VERSION}")
+- Future: API responses, logs, error reports
+
+**When to update**:
+- At the start of a new version cycle
+- Before creating a git tag for release
+
+**Steps for new release**:
+
+```bash
+# 1. Update version in constants.py
+# Edit app/core/constants.py: APP_VERSION = "0.7.0"
+
+# 2. Update CHANGELOG.md (if exists) with release notes
+
+# 3. Commit
+git commit -am "chore: bump version to 0.7.0"
+
+# 4. Create git tag
+git tag -a v0.7.0 -m "Release v0.7.0"
+
+# 5. Push with tags
+git push && git push --tags
+```
+
+**Important**: Never update version strings in multiple places. Always use the constant from `app/core/constants.py`.
+
+---
+
 ## Getting Help
 
 ### Internal Resources
@@ -877,6 +917,7 @@ def foo(x: int) -> int:
 
 - Run tests before committing
 - **Update tests when changing UI flows or features** (see Testing section)
+- **Update version in `app/core/constants.py` for new releases**
 - Use type hints on all functions
 - Write unit tests for business logic
 - Follow conventional commit format
