@@ -196,6 +196,8 @@ uv run mypy app
 
 **Contributing**: See **[CONTRIBUTING.md](./CONTRIBUTING.md)** for detailed guidelines, test strategy, and CI/CD info.
 
+**Want to help?** We welcome contributions! Check [open issues](https://github.com/dstmrk/kanso/issues) or start a [discussion](https://github.com/dstmrk/kanso/discussions) if you have ideas.
+
 ---
 
 ## 📄 License & Support
