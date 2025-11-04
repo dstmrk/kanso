@@ -10,7 +10,7 @@ from app.core.validators import (
 from app.services import pages
 from app.services.data_loader import refresh_all_data
 from app.services.utils import get_user_currency
-from app.ui import dock, header, styles
+from app.ui import header, styles
 
 
 def render() -> None:
@@ -369,5 +369,3 @@ def render() -> None:
                         ):
                             ui.html(styles.HEART_SVG, sanitize=False)
                             ui.label("Support")
-
-    dock.render()

@@ -129,11 +129,12 @@ def render() -> None:
 
     # Header mobile
     with ui.header().classes("bg-secondary p-2 md:hidden"):
-        with ui.row().classes("w-full items-center justify-between"):
-            # Hamburger menu icon (toggle drawer)
+        with ui.row().classes("w-full items-center relative"):
+            # Hamburger menu icon (toggle drawer) - left side
             hamburger = ui.button(icon="menu").props("flat color=white")
             hamburger.on("click", left_drawer.toggle)
 
-            # Logo Kanso (clickable to go home)
-            with ui.link(target=pages.HOME_PAGE).classes("no-underline"):
-                ui.html(styles.LOGO_SVG, sanitize=False)
+            # Logo Kanso (clickable to go home) - absolutely centered
+            with ui.element("div").classes("absolute left-1/2 -translate-x-1/2"):
+                with ui.link(target=pages.HOME_PAGE).classes("no-underline"):
+                    ui.html(styles.LOGO_SVG, sanitize=False)

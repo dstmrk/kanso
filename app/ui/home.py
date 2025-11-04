@@ -10,7 +10,7 @@ from app.core.constants import (
 from app.core.state_manager import state_manager
 from app.services import pages, utils
 from app.services.finance_service import FinanceService
-from app.ui import charts, dock, header, styles
+from app.ui import charts, header, styles
 from app.ui.common import get_user_preferences
 from app.ui.components.skeleton import render_chart_skeleton, render_kpi_card_skeleton
 from app.ui.data_loading import render_with_data_loading
@@ -273,5 +273,3 @@ def render() -> None:
         ],
         error_container=containers["kpi_container"],
     )
-
-    dock.render()

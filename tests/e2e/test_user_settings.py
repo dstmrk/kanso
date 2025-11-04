@@ -46,17 +46,6 @@ class TestSettingsPage:
         expect(page.get_by_text("Data", exact=True).first).to_be_visible()
         expect(page.get_by_text("About", exact=True).first).to_be_visible()
 
-    def test_user_route_redirects_to_settings(self, page: Page):
-        """Test that /user route redirects to /settings for backward compatibility."""
-        # Navigate to old /user route
-        page.goto("/user")
-
-        # Should redirect to /settings
-        expect(page).to_have_url(re.compile(r".*/settings$"))
-
-        # Verify settings page content is displayed (check for tabs)
-        expect(page.get_by_text("Account", exact=True).first).to_be_visible()
-
     def test_theme_toggle(self, page: Page):
         """Test that theme toggle works correctly."""
         page.goto("/settings")

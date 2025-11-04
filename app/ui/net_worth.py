@@ -3,7 +3,7 @@ from nicegui import ui
 from app.core.constants import CACHE_TTL_SHORT_SECONDS
 from app.core.state_manager import state_manager
 from app.services.finance_service import FinanceService
-from app.ui import charts, dock, header
+from app.ui import charts, header
 from app.ui.common import get_user_preferences
 from app.ui.components.skeleton import render_large_chart_skeleton
 from app.ui.data_loading import render_with_data_loading
@@ -45,18 +45,37 @@ def render() -> None:
 
         render_large_chart_skeleton(chart_container)
 
-        # Placeholder section - future tables
+        # Mobile-only message for data tables (hidden on desktop/tablet)
         with (
             ui.card()
             .classes(
-                "w-full max-w-screen-xl mx-auto p-8 flex items-center justify-center bg-base-100 shadow-md"
+                "w-full max-w-screen-xl mx-auto p-6 flex items-center justify-center bg-base-100 shadow-md md:hidden"
+            )
+            .style("min-height: 200px;")
+        ):
+            with ui.column().classes("items-center gap-3 text-center"):
+                ui.icon("table_chart", size="56px").classes("text-base-content/40")
+                ui.label("Where's my data table?").classes(
+                    "text-xl font-semibold text-base-content"
+                )
+                ui.label("Data tables are visible on desktop and tablet only").classes(
+                    "text-sm text-base-content/60"
+                )
+
+        # Desktop/tablet placeholder - future tables (hidden on mobile)
+        with (
+            ui.card()
+            .classes(
+                "hidden md:flex w-full max-w-screen-xl mx-auto p-8 items-center justify-center bg-base-100 shadow-md"
             )
             .style("min-height: 200px;")
         ):
             with ui.column().classes("items-center gap-2"):
-                ui.icon("table_chart", size="64px").classes("text-gray-400")
-                ui.label("📊 Net Worth Data Table").classes("text-xl font-semibold text-gray-500")
-                ui.label("Coming in future versions").classes("text-sm text-gray-400")
+                ui.icon("table_chart", size="64px").classes("text-base-content/40")
+                ui.label("Net Worth Data Table").classes(
+                    "text-xl font-semibold text-base-content/70"
+                )
+                ui.label("Coming in future versions").classes("text-sm text-base-content/60")
 
     # Render chart with automatic data loading
     async def render_net_worth_chart():
@@ -92,5 +111,3 @@ def render() -> None:
         render_functions=[render_net_worth_chart],
         error_container=chart_container,
     )
-
-    dock.render()

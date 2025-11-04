@@ -4,6 +4,27 @@
 
 ---
 
+## Pre-1.0 Philosophy
+
+**Clean Code > Backward Compatibility**
+
+Until v1.0, Kanso prioritizes:
+- ✅ **Minimal, clean codebase** - Remove unused/deprecated code immediately
+- ✅ **Fast iteration** - Breaking changes are acceptable
+- ✅ **Learning from mistakes** - Refactor without regret
+- ❌ **No backward compatibility** - Deprecated routes/features get deleted, not redirected
+
+**Why**: Pre-1.0 is about finding the right architecture. Maintaining compatibility with old decisions slows progress.
+
+**Examples**:
+- Deprecated `/user` route? Delete it completely, don't redirect to `/settings`
+- Old function signatures? Update them everywhere, don't keep wrapper functions
+- Renamed constants? Search-replace everywhere, don't keep aliases
+
+**Post-1.0**: Strict semver, careful deprecation cycles, migration guides. But not now.
+
+---
+
 ## Getting Started
 
 ### Prerequisites

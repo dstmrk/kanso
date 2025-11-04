@@ -16,7 +16,18 @@ def render() -> None:
         ui.navigate.to("/home")
         return
 
-    with ui.column().classes("w-full min-h-screen flex items-center justify-center p-4"):
+    # Mobile-only message (hidden on desktop/tablet)
+    with ui.column().classes("w-full min-h-screen flex items-center justify-center p-6 md:hidden"):
+        with ui.card().classes("max-w-md p-8"):
+            with ui.column().classes("items-center gap-4 text-center"):
+                ui.icon("desktop_windows", size="56px").classes("text-base-content/40")
+                ui.label("Desktop Required").classes("text-2xl font-bold text-base-content")
+                ui.label(
+                    "Kanso's onboarding is currently optimized for desktop and tablet browsers."
+                ).classes("text-base text-base-content/70")
+
+    # Desktop/tablet wizard (visible by default, hidden on mobile <768px)
+    with ui.column().classes("w-full min-h-screen items-center justify-center p-4 max-md:hidden"):
         with ui.column().classes("w-full max-w-4xl"):
             # Header
             ui.label("Welcome to Kanso").classes("text-4xl font-bold text-center mb-2")
@@ -130,13 +141,17 @@ def render() -> None:
                             new_tab=True,
                         ).classes("text-sm text-primary underline")
 
+                    # Credentials textarea label (external, theme-aware)
+                    ui.label("Paste your credentials JSON here").classes(
+                        "text-base-content font-semibold mt-4"
+                    )
+
                     credentials_textarea = (
                         ui.textarea(
-                            label="Paste your credentials JSON here",
                             placeholder='{\n  "type": "service_account",\n  "project_id": "...",\n  ...\n}',
                             value="",
                         )
-                        .classes("w-full font-mono text-sm")
+                        .classes("w-full font-mono text-sm mt-2")
                         .style("min-height: 250px")
                     )
 
@@ -146,11 +161,13 @@ def render() -> None:
                         "Enter the URL of your Google Sheet where your financial data is stored."
                     ).classes("text-base mb-4")
 
+                    # Sheet URL input label (external, theme-aware)
+                    ui.label("Google Sheet URL").classes("text-base-content font-semibold mt-4")
+
                     url_input = ui.input(
-                        label="Google Sheet URL",
                         placeholder="https://docs.google.com/spreadsheets/d/...",
                         value="",
-                    ).classes("w-full")
+                    ).classes("w-full mt-2")
 
                     with ui.row().classes("w-full justify-between mt-8"):
                         ui.button("← Back", on_click=lambda: go_to_step(2)).classes(

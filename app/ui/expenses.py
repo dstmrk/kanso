@@ -17,7 +17,7 @@ from app.core.constants import (
 from app.core.state_manager import state_manager
 from app.logic.finance_calculator import FinanceCalculator
 from app.services import utils
-from app.ui import charts, dock, header, styles
+from app.ui import charts, header, styles
 from app.ui.common import get_user_preferences
 from app.ui.components.skeleton import render_chart_skeleton, render_table_skeleton
 from app.ui.data_loading import render_with_data_loading
@@ -79,65 +79,95 @@ class ExpensesRenderer:
         # Get user currency preference (from general storage - shared across devices)
         user_currency: str = app.storage.general.get("currency", utils.get_user_currency())
 
+        # Mobile-only message (hidden on desktop/tablet)
         with container:
-            ui.label(f"All Transactions ({expenses_data['total_count']})").classes(
-                "text-xl font-semibold mb-4"
-            )
+            with (
+                ui.card()
+                .classes(
+                    "w-full max-w-screen-xl mx-auto p-6 flex items-center justify-center bg-base-100 shadow-md md:hidden"
+                )
+                .style("min-height: 200px;")
+            ):
+                with ui.column().classes("items-center gap-3 text-center"):
+                    ui.icon("table_chart", size="56px").classes("text-base-content/40")
+                    ui.label("Where's my data table?").classes(
+                        "text-xl font-semibold text-base-content"
+                    )
+                    ui.label("Data tables are visible on desktop and tablet only").classes(
+                        "text-sm text-base-content/60"
+                    )
 
-            # Create table with all transactions
-            columns: list[dict[str, Any]] = [
-                {"name": "date", "label": "Date", "field": COL_DATE, "align": "left"},
-                {"name": "merchant", "label": "Merchant", "field": COL_MERCHANT, "align": "left"},
-                {
-                    "name": "amount",
-                    "label": "Amount",
-                    "field": COL_AMOUNT_PARSED,
-                    "align": "right",
-                    "sortable": True,
-                },
-                {"name": "category", "label": "Category", "field": COL_CATEGORY, "align": "left"},
-                {"name": "type", "label": "Type", "field": COL_TYPE, "align": "left"},
-            ]
-
-            rows = []
-            for transaction in expenses_data["transactions"]:
-                # Format amount with currency
-                amount_value = transaction.get(COL_AMOUNT_PARSED, 0)
-                formatted_amount = utils.format_currency(amount_value, user_currency)
-
-                rows.append(
-                    {
-                        COL_DATE: transaction.get(COL_DATE, ""),
-                        COL_MERCHANT: transaction.get(COL_MERCHANT, ""),
-                        COL_AMOUNT_PARSED: amount_value,
-                        "amount_display": formatted_amount,
-                        COL_CATEGORY: transaction.get(COL_CATEGORY, ""),
-                        COL_TYPE: transaction.get(COL_TYPE, ""),
-                    }
+        # Desktop/tablet table (hidden on mobile)
+        with container:
+            with ui.column().classes("hidden md:block w-full"):
+                ui.label(f"All Transactions ({expenses_data['total_count']})").classes(
+                    "text-xl font-semibold mb-4"
                 )
 
-            table = ui.table(
-                columns=columns,
-                rows=rows,
-                row_key="Date",
-                pagination={
-                    "rowsPerPage": TABLE_ROWS_PER_PAGE_DEFAULT,
-                    "sortBy": "date",
-                    "descending": True,
-                },
-            ).classes("w-full")
+                # Create table with all transactions
+                columns: list[dict[str, Any]] = [
+                    {"name": "date", "label": "Date", "field": COL_DATE, "align": "left"},
+                    {
+                        "name": "merchant",
+                        "label": "Merchant",
+                        "field": COL_MERCHANT,
+                        "align": "left",
+                    },
+                    {
+                        "name": "amount",
+                        "label": "Amount",
+                        "field": COL_AMOUNT_PARSED,
+                        "align": "right",
+                        "sortable": True,
+                    },
+                    {
+                        "name": "category",
+                        "label": "Category",
+                        "field": COL_CATEGORY,
+                        "align": "left",
+                    },
+                    {"name": "type", "label": "Type", "field": COL_TYPE, "align": "left"},
+                ]
 
-            # Custom cell rendering for amount with currency format
-            table.add_slot(
-                "body-cell-amount",
-                r"""
-                <q-td :props="props">
-                    <div class="text-right font-mono">
-                        {{ props.row.amount_display }}
-                    </div>
-                </q-td>
-                """,
-            )
+                rows = []
+                for transaction in expenses_data["transactions"]:
+                    # Format amount with currency
+                    amount_value = transaction.get(COL_AMOUNT_PARSED, 0)
+                    formatted_amount = utils.format_currency(amount_value, user_currency)
+
+                    rows.append(
+                        {
+                            COL_DATE: transaction.get(COL_DATE, ""),
+                            COL_MERCHANT: transaction.get(COL_MERCHANT, ""),
+                            COL_AMOUNT_PARSED: amount_value,
+                            "amount_display": formatted_amount,
+                            COL_CATEGORY: transaction.get(COL_CATEGORY, ""),
+                            COL_TYPE: transaction.get(COL_TYPE, ""),
+                        }
+                    )
+
+                table = ui.table(
+                    columns=columns,
+                    rows=rows,
+                    row_key="Date",
+                    pagination={
+                        "rowsPerPage": TABLE_ROWS_PER_PAGE_DEFAULT,
+                        "sortBy": "date",
+                        "descending": True,
+                    },
+                ).classes("w-full")
+
+                # Custom cell rendering for amount with currency format
+                table.add_slot(
+                    "body-cell-amount",
+                    r"""
+                    <q-td :props="props">
+                        <div class="text-right font-mono">
+                            {{ props.row.amount_display }}
+                        </div>
+                    </q-td>
+                    """,
+                )
 
     async def _render_chart_generic(
         self,
@@ -286,5 +316,3 @@ def render() -> None:
         ],
         error_container=containers["table_container"],
     )
-
-    dock.render()

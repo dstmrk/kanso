@@ -417,7 +417,7 @@ def validate_dataframe_structure(
 # =============================================================================
 # The following functions validate user input for Google Sheets configuration
 # during onboarding and in settings. They are used by both onboarding.py and
-# user.py to avoid code duplication.
+# settings.py to avoid code duplication.
 
 
 def clean_google_sheets_url(url: str) -> str:
