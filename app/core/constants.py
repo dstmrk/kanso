@@ -4,6 +4,40 @@ This module contains all hardcoded strings, numbers, and configuration values
 used throughout the application to improve maintainability and consistency.
 """
 
+# === Application Metadata ===
+
+APP_VERSION = "0.6.0"
+
+# === Currency Configuration ===
+
+# Currency options with full display names (for onboarding)
+CURRENCY_OPTIONS_FULL = {
+    "EUR": "🇪🇺 Euro (€)",
+    "USD": "🇺🇸 US Dollar ($)",
+    "GBP": "🇬🇧 British Pound (£)",
+    "JPY": "🇯🇵 Japanese Yen (¥)",
+    "CHF": "🇨🇭 Swiss Franc (Fr)",
+    "CAD": "🇨🇦 Canadian Dollar (C$)",
+    "AUD": "🇦🇺 Australian Dollar (A$)",
+    "CNY": "🇨🇳 Chinese Yuan (¥)",
+    "INR": "🇮🇳 Indian Rupee (₹)",
+    "BRL": "🇧🇷 Brazilian Real (R$)",
+}
+
+# Currency options with symbol and code only (for settings dropdown)
+CURRENCY_OPTIONS_SHORT = {
+    "EUR": "€ EUR",
+    "USD": "$ USD",
+    "GBP": "£ GBP",
+    "CHF": "Fr CHF",
+    "JPY": "¥ JPY",
+    "CAD": "C$ CAD",
+    "AUD": "A$ AUD",
+    "CNY": "¥ CNY",
+    "INR": "₹ INR",
+    "BRL": "R$ BRL",
+}
+
 # === DataFrame Column Names ===
 
 # Common columns across sheets

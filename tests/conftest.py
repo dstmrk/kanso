@@ -27,7 +27,7 @@ def app_server(storage_dir):
     """
     import shutil
 
-    port = 8765  # Use a different port to avoid conflicts
+    port = 7590  # Use a different port to avoid conflicts
     project_root = Path(__file__).parent.parent
 
     # Clean up NiceGUI storage before starting server to ensure clean state

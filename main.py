@@ -13,7 +13,7 @@ from app.core.monitoring import metrics_collector
 from app.core.state_manager import state_manager
 from app.services import pages, utils
 from app.services.google_sheets import GoogleSheetService
-from app.ui import expenses, home, logout, net_worth, onboarding, styles, user
+from app.ui import expenses, home, logout, net_worth, onboarding, settings, styles
 
 # === Load environment first ===
 APP_ROOT = Path(__file__).parent
@@ -170,6 +170,13 @@ HEAD_HTML: str = """
   .main-content { padding-bottom: 4.5rem; } /* ~72px */
   .nav-icon { width: 20px; height: 20px; display:block; margin: 0 auto; }
   .btm-label { display:block; font-size:11px; margin-top:4px; color:inherit; }
+
+  /* Remove scroll from tab panels (NiceGUI adds .scroll class automatically) */
+  .q-tab-panels .q-panel.scroll {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+  }
 </style>
 """
 
@@ -330,11 +337,17 @@ def net_worth_page():
     net_worth.render()
 
 
+@ui.page(pages.SETTINGS_PAGE, title=app_config.title)
+def settings_page():
+    """Settings page with tabs for Account, Data, and About."""
+    ensure_theme_setup()
+    settings.render()
+
+
 @ui.page(pages.USER_PAGE, title=app_config.title)
 def user_page():
-    """Advanced settings page for data management and configuration."""
-    ensure_theme_setup()
-    user.render()
+    """Deprecated: Redirect to settings page for backward compatibility."""
+    ui.navigate.to(pages.SETTINGS_PAGE)
 
 
 @ui.page(pages.LOGOUT_PAGE, title=app_config.title)

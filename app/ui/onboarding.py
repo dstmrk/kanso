@@ -1,5 +1,6 @@
 from nicegui import app, ui
 
+from app.core.constants import CURRENCY_OPTIONS_FULL
 from app.core.validators import (
     clean_google_sheets_url,
     validate_google_credentials_json,
@@ -85,18 +86,7 @@ def render() -> None:
 
                     currency_select = ui.select(
                         label="Currency",
-                        options={
-                            "EUR": "🇪🇺 Euro (€)",
-                            "USD": "🇺🇸 US Dollar ($)",
-                            "GBP": "🇬🇧 British Pound (£)",
-                            "JPY": "🇯🇵 Japanese Yen (¥)",
-                            "CHF": "🇨🇭 Swiss Franc (Fr)",
-                            "CAD": "🇨🇦 Canadian Dollar (C$)",
-                            "AUD": "🇦🇺 Australian Dollar (A$)",
-                            "CNY": "🇨🇳 Chinese Yuan (¥)",
-                            "INR": "🇮🇳 Indian Rupee (₹)",
-                            "BRL": "🇧🇷 Brazilian Real (R$)",
-                        },
+                        options=CURRENCY_OPTIONS_FULL,
                         value=detected_currency,
                     ).classes("w-full")
 

@@ -1,95 +1,8 @@
 from nicegui import app, ui
 
-from app.core.state_manager import state_manager
 from app.services import pages
-from app.services.data_loader import refresh_all_data
 from app.services.utils import format_timestamp_relative
 from app.ui import styles
-
-
-def render_refresh_button() -> None:
-    """Render data refresh button."""
-
-    async def refresh_data() -> None:
-        """Force refresh all data from Google Sheets and clear cache."""
-        # Show loading state
-        with ui.dialog() as loading_dialog, ui.card():
-            ui.label("Refreshing data from Google Sheets...")
-            ui.spinner(size="lg")
-
-        loading_dialog.open()
-
-        try:
-            # Refresh data from Google Sheets
-            results = await refresh_all_data()
-
-            # Close loading dialog
-            loading_dialog.close()
-
-            # Clear cache after successful refresh
-            state_manager.invalidate_cache()
-
-            # Show results dialog
-            with ui.dialog() as result_dialog, ui.card().classes("gap-4"):
-                ui.label("Data Refresh Complete").classes("text-xl font-bold")
-
-                # Check if there was an error
-                if "error" in results:
-                    ui.label(f"Error: {results['error']}").classes("text-error")
-                else:
-                    # Show summary
-                    summary = f"✓ {results['updated_count']} sheet(s) updated"
-                    if results["unchanged_count"] > 0:
-                        summary += f"\n• {results['unchanged_count']} sheet(s) unchanged"
-                    if results["failed_count"] > 0:
-                        summary += f"\n✗ {results['failed_count']} sheet(s) failed"
-
-                    ui.label(summary).classes("whitespace-pre-line")
-
-                    # Show details in expandable section
-                    if results["details"]:
-                        with ui.expansion("Details", icon="info").classes("w-full"):
-                            for _sheet_name, changed, message in results["details"]:
-                                status_icon = (
-                                    "✓" if changed else "•" if "No changes" in message else "✗"
-                                )
-                                ui.label(f"{status_icon} {message}").classes("text-sm")
-
-                # Close button
-                ui.button("Close", on_click=result_dialog.close).props("flat")
-
-            result_dialog.open()
-
-        except Exception as e:
-            loading_dialog.close()
-            ui.notify(f"Failed to refresh data: {str(e)}", type="negative")
-
-    with (
-        ui.element("button")
-        .on("click", refresh_data)
-        .classes("btn bg-secondary hover:bg-secondary/80 text-secondary-content w-full")
-    ):
-        ui.label("Refresh Data")
-
-
-def render_advanced_settings_button() -> None:
-    """Render advanced settings button."""
-    with (
-        ui.element("button")
-        .on("click", lambda: ui.navigate.to(pages.USER_PAGE))
-        .classes("btn btn-outline w-full")
-    ):
-        ui.label("Advanced Settings")
-
-
-def render_logout_button() -> None:
-    """Render logout button."""
-    with (
-        ui.element("button")
-        .on("click", lambda: ui.navigate.to(pages.LOGOUT_PAGE))
-        .classes("btn btn-outline btn-error w-full")
-    ):
-        ui.label("Logout")
 
 
 def render_last_refresh_timestamp() -> None:
@@ -97,8 +10,8 @@ def render_last_refresh_timestamp() -> None:
 
     Only shows the timestamp section when data has been loaded at least once.
     """
-    # Container that will hold the timestamp UI (or stay empty)
-    container = ui.column().classes("w-full mt-auto pt-4")
+    # Container that will hold the timestamp UI (or stay empty) - compact spacing
+    container = ui.column().classes("w-full mt-auto pt-2")
 
     # Track if UI has been rendered
     ui_rendered = {"value": False}
@@ -117,9 +30,9 @@ def render_last_refresh_timestamp() -> None:
         if not ui_rendered["value"]:
             # First time rendering - create UI structure
             with container:
-                ui.separator()
-                # Title with clock icon
-                with ui.row().classes("items-center gap-1 mt-2"):
+                ui.separator().classes("mb-1")
+                # Title with clock icon - compact
+                with ui.row().classes("items-center gap-1 mt-1"):
                     ui.html(styles.CLOCK_SVG, sanitize=False).classes("text-base-content/70")
                     ui.label("Last Data Refresh").classes(
                         "text-xs font-semibold text-base-content/70"
@@ -154,67 +67,73 @@ def render_last_refresh_timestamp() -> None:
 
 
 def render() -> None:
-    """Render the navigation header with hamburger menu and user settings sidebar."""
+    """Render the navigation header with hamburger menu and consolidated left drawer."""
     # Left drawer for navigation
     with ui.left_drawer(elevated=True, value=False).classes("bg-base-100") as left_drawer:
-        with ui.element("ul").classes("menu w-full"):
-            # Dashboard - main entry point
-            with ui.element("li"):
-                with ui.element("a").on("click", lambda: ui.navigate.to(pages.HOME_PAGE)):
-                    ui.html(styles.HOME_SVG, sanitize=False)
-                    ui.label("Dashboard")
+        with ui.column().classes("w-full h-full"):
+            # Navigation menu
+            with ui.element("ul").classes("menu w-full"):
+                # Dashboard - main entry point
+                with ui.element("li"):
+                    with ui.element("a").on("click", lambda: ui.navigate.to(pages.HOME_PAGE)):
+                        ui.html(styles.HOME_SVG, sanitize=False)
+                        ui.label("Dashboard")
 
-            # Insights - collapsible section with detail pages
-            with ui.element("li"):
-                with ui.element("details"):
-                    with ui.element("summary"):
-                        ui.html(styles.INSIGHTS_SVG, sanitize=False)
-                        ui.label("Insights")
-                    with ui.element("ul"):
-                        with ui.element("li"):
-                            with ui.element("a").on(
-                                "click", lambda: ui.navigate.to(pages.NET_WORTH_PAGE)
-                            ):
-                                ui.html(styles.NET_WORTH_SVG, sanitize=False)
-                                ui.label("Net Worth")
-                        with ui.element("li"):
-                            with ui.element("a").on(
-                                "click", lambda: ui.navigate.to(pages.EXPENSES_PAGE)
-                            ):
-                                ui.html(styles.EXPENSES_SVG, sanitize=False)
-                                ui.label("Expenses")
+                # Insights - collapsible section with detail pages
+                with ui.element("li"):
+                    with ui.element("details"):
+                        with ui.element("summary"):
+                            ui.html(styles.INSIGHTS_SVG, sanitize=False)
+                            ui.label("Insights")
+                        with ui.element("ul"):
+                            with ui.element("li"):
+                                with ui.element("a").on(
+                                    "click", lambda: ui.navigate.to(pages.NET_WORTH_PAGE)
+                                ):
+                                    ui.html(styles.NET_WORTH_SVG, sanitize=False)
+                                    ui.label("Net Worth")
+                            with ui.element("li"):
+                                with ui.element("a").on(
+                                    "click", lambda: ui.navigate.to(pages.EXPENSES_PAGE)
+                                ):
+                                    ui.html(styles.EXPENSES_SVG, sanitize=False)
+                                    ui.label("Expenses")
 
-    # Right drawer for user settings
-    with ui.right_drawer(elevated=True, value=False).classes("bg-base-100") as right_drawer:
-        with ui.column().classes("w-full h-full p-4 gap-6"):
-            # Header
-            ui.label("User Settings").classes("text-2xl font-bold")
-            ui.separator()
+            # Spacer to push settings and timestamp to bottom
+            ui.space()
 
-            # Settings content
-            render_refresh_button()
-            render_advanced_settings_button()
-            render_logout_button()
+            # Settings link at bottom (before timestamp) - compact spacing
+            with ui.column().classes("w-full px-2 pb-2"):
+                ui.separator().classes("mb-2")
+                with ui.element("ul").classes("menu w-full p-0"):
+                    with ui.element("li"):
+                        with ui.element("a").on(
+                            "click", lambda: ui.navigate.to(pages.SETTINGS_PAGE)
+                        ):
+                            ui.html(styles.SETTINGS_SVG, sanitize=False)
+                            ui.label("Settings")
 
-            # Last refresh timestamp at bottom
-            render_last_refresh_timestamp()
+                # Last refresh timestamp at very bottom
+                render_last_refresh_timestamp()
 
     # Header desktop
     with ui.header().classes("bg-secondary p-2 mobile-hide"):
-        with ui.row().classes("w-full items-center justify-between text-2xl"):
-            with ui.row().classes("items-center gap-x-1 cursor-pointer") as title_left:
+        with ui.row().classes("w-full items-center gap-4"):
+            # Hamburger menu icon (toggle drawer)
+            hamburger = ui.button(icon="menu").props("flat color=white")
+            hamburger.on("click", left_drawer.toggle)
+
+            # Logo Kanso (clickable to go home)
+            with ui.link(target=pages.HOME_PAGE).classes("no-underline"):
                 ui.html(styles.LOGO_SVG, sanitize=False)
-            title_left.props('tabindex="0" role="button" aria-label="Toggle menu"')
-            title_left.on("click", left_drawer.toggle)
-            profile_picture = ui.html(styles.PROFILE_SVG, sanitize=False).classes(
-                "avatar cursor-pointer"
-            )
-            profile_picture.on("click", right_drawer.toggle)
 
     # Header mobile
     with ui.header().classes("bg-secondary p-2 md:hidden"):
-        with ui.row().classes("w-full justify-center"):
-            with ui.row().classes("items-center gap-x-1 cursor-pointer") as title_center:
+        with ui.row().classes("w-full items-center justify-between"):
+            # Hamburger menu icon (toggle drawer)
+            hamburger = ui.button(icon="menu").props("flat color=white")
+            hamburger.on("click", left_drawer.toggle)
+
+            # Logo Kanso (clickable to go home)
+            with ui.link(target=pages.HOME_PAGE).classes("no-underline"):
                 ui.html(styles.LOGO_SVG, sanitize=False)
-            title_center.props('tabindex="0" role="button" aria-label="Go home"')
-            title_center.on("click", lambda: ui.navigate.to(pages.HOME_PAGE))

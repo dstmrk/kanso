@@ -1,4 +1,4 @@
-"""E2E tests for the user settings page."""
+"""E2E tests for the settings page."""
 
 import json
 import re
@@ -9,8 +9,8 @@ from playwright.sync_api import Page, expect
 pytestmark = pytest.mark.e2e
 
 
-class TestUserSettingsPage:
-    """Test the user settings page functionality."""
+class TestSettingsPage:
+    """Test the settings page functionality."""
 
     @pytest.fixture(autouse=True)
     def setup_user(self, page: Page, sample_credentials: dict, sample_sheet_url: str):
@@ -35,19 +35,31 @@ class TestUserSettingsPage:
         page.locator('button:has-text("Save & Test Configuration")').click()
         page.wait_for_url(re.compile(r".*/home$|.*/$"), timeout=10000)
 
-    def test_access_user_settings_page(self, page: Page):
+    def test_access_settings_page(self, page: Page):
         """Test that user can access the settings page."""
-        # Navigate to user settings (this might be through a menu or direct URL)
+        # Navigate to settings page
+        page.goto("/settings")
+
+        # Check that settings page is displayed with tab structure
+        # Use simple text locators for tabs
+        expect(page.get_by_text("Account", exact=True).first).to_be_visible()
+        expect(page.get_by_text("Data", exact=True).first).to_be_visible()
+        expect(page.get_by_text("About", exact=True).first).to_be_visible()
+
+    def test_user_route_redirects_to_settings(self, page: Page):
+        """Test that /user route redirects to /settings for backward compatibility."""
+        # Navigate to old /user route
         page.goto("/user")
 
-        # Check that settings page is displayed (use first to avoid ambiguity with menu items)
-        expect(page.locator("text=Advanced Settings").first).to_be_visible()
-        expect(page.locator("text=Appearance")).to_be_visible()
-        expect(page.locator("text=Google Sheets Configuration")).to_be_visible()
+        # Should redirect to /settings
+        expect(page).to_have_url(re.compile(r".*/settings$"))
+
+        # Verify settings page content is displayed (check for tabs)
+        expect(page.get_by_text("Account", exact=True).first).to_be_visible()
 
     def test_theme_toggle(self, page: Page):
         """Test that theme toggle works correctly."""
-        page.goto("/user")
+        page.goto("/settings")
 
         # Find the theme toggle
         theme_toggle = page.locator('input[type="checkbox"].toggle')
@@ -68,7 +80,7 @@ class TestUserSettingsPage:
 
     def test_currency_selector(self, page: Page):
         """Test that currency can be changed."""
-        page.goto("/user")
+        page.goto("/settings")
 
         # Find and click the currency dropdown button
         currency_dropdown = page.locator(".dropdown .btn-outline")
@@ -99,7 +111,12 @@ class TestUserSettingsPage:
             "**/sheets.googleapis.com/**", lambda route: route.fulfill(status=200, body="{}")
         )
 
-        page.goto("/user")
+        page.goto("/settings")
+
+        # Click on Data tab to access Google Sheets configuration
+        data_tab = page.get_by_text("Data", exact=True).first
+        data_tab.click()
+        page.wait_for_timeout(500)
 
         # Find credentials textarea
         credentials_textarea = page.locator("textarea").first
@@ -126,7 +143,12 @@ class TestUserSettingsPage:
 
     def test_invalid_credentials_update(self, page: Page):
         """Test that invalid credentials show appropriate error."""
-        page.goto("/user")
+        page.goto("/settings")
+
+        # Click on Data tab
+        data_tab = page.get_by_text("Data", exact=True).first
+        data_tab.click()
+        page.wait_for_timeout(500)
 
         # Find credentials textarea
         credentials_textarea = page.locator("textarea").first
@@ -142,7 +164,12 @@ class TestUserSettingsPage:
 
     def test_credentials_visible_to_user(self, page: Page, sample_credentials: dict):
         """Test that saved credentials are visible in the textarea."""
-        page.goto("/user")
+        page.goto("/settings")
+
+        # Click on Data tab
+        data_tab = page.get_by_text("Data", exact=True).first
+        data_tab.click()
+        page.wait_for_timeout(500)
 
         # Find credentials textarea
         credentials_textarea = page.locator("textarea").first
@@ -162,7 +189,12 @@ class TestUserSettingsPage:
 
     def test_missing_url_validation(self, page: Page, sample_credentials: dict):
         """Test that missing URL shows error."""
-        page.goto("/user")
+        page.goto("/settings")
+
+        # Click on Data tab
+        data_tab = page.get_by_text("Data", exact=True).first
+        data_tab.click()
+        page.wait_for_timeout(500)
 
         # Clear URL input
         url_input = page.locator('input[placeholder*="spreadsheets"]')
@@ -176,7 +208,12 @@ class TestUserSettingsPage:
 
     def test_invalid_url_format_validation(self, page: Page):
         """Test that invalid URL format shows error."""
-        page.goto("/user")
+        page.goto("/settings")
+
+        # Click on Data tab
+        data_tab = page.get_by_text("Data", exact=True).first
+        data_tab.click()
+        page.wait_for_timeout(500)
 
         # Fill invalid URL
         url_input = page.locator('input[placeholder*="spreadsheets"]')
@@ -188,25 +225,24 @@ class TestUserSettingsPage:
         # Should show error
         expect(page.locator("text=Invalid Google Sheets URL")).to_be_visible(timeout=2000)
 
-    def test_refresh_data_button_exists_in_header_sidebar(self, page: Page):
-        """Test that Refresh Data button exists in the header sidebar."""
+    def test_refresh_data_button_exists_in_settings(self, page: Page):
+        """Test that Refresh Data button exists in the Settings → Data tab."""
         # Mock Google Sheets API to handle refresh request
         page.route(
             "**/sheets.googleapis.com/**", lambda route: route.fulfill(status=200, body="{}")
         )
 
-        page.goto("/home")
+        page.goto("/settings")
 
-        # Open the right drawer (user settings sidebar) by clicking profile icon
-        # The profile icon has class "avatar cursor-pointer" on desktop
-        profile_icon = page.locator(".avatar.cursor-pointer").first
-        expect(profile_icon).to_be_visible()
-        profile_icon.click()
+        # Click on the Data tab
+        data_tab = page.get_by_text("Data", exact=True).first
+        expect(data_tab).to_be_visible()
+        data_tab.click()
 
-        # Wait for sidebar to open
+        # Wait for tab content to load
         page.wait_for_timeout(500)
 
-        # Verify Refresh Data button is visible in sidebar
+        # Verify Refresh Data button is visible in Data tab
         refresh_button = page.locator('button:has-text("Refresh Data")').first
         expect(refresh_button).to_be_visible()
 

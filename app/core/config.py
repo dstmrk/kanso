@@ -67,7 +67,7 @@ class AppConfig:
         liabilities_sheet_name: Name of liabilities worksheet (default: "Liabilities")
         expenses_sheet_name: Name of expenses worksheet (default: "Expenses")
         incomes_sheet_name: Name of incomes worksheet (default: "Incomes")
-        app_port: Port to run the application on (default: 6789)
+        app_port: Port to run the application on (default: 9525)
         root_path: Root path for the application (default: "")
         title: Application title (default: "kanso - your minimal money tracker")
         default_theme: UI theme (default: "light")
@@ -98,7 +98,7 @@ class AppConfig:
     incomes_sheet_name: str = SHEET_NAME_INCOMES
 
     # App settings
-    app_port: int = 6789
+    app_port: int = 9525
     root_path: str = ""
     title: str = "kanso - your minimal money tracker"
     default_theme: str = "light"
@@ -131,7 +131,7 @@ class AppConfig:
             LIABILITIES_SHEET_NAME: Liabilities worksheet name (default: "Liabilities")
             EXPENSES_SHEET_NAME: Expenses worksheet name (default: "Expenses")
             INCOMES_SHEET_NAME: Incomes worksheet name (default: "Incomes")
-            APP_PORT: Application port (default: 6789)
+            APP_PORT: Application port (default: 9525)
             ROOT_PATH: Root path (default: "")
             APP_TITLE: Application title
             DEFAULT_THEME: UI theme (default: "light")
@@ -147,7 +147,7 @@ class AppConfig:
             >>> # With .env file containing required variables
             >>> config = AppConfig.from_env(Path(__file__).parent)
             >>> print(config.app_port)
-            6789
+            9525
         """
         config = cls(
             app_root=app_root,
@@ -159,7 +159,7 @@ class AppConfig:
             liabilities_sheet_name=os.getenv("LIABILITIES_SHEET_NAME", SHEET_NAME_LIABILITIES),
             expenses_sheet_name=os.getenv("EXPENSES_SHEET_NAME", SHEET_NAME_EXPENSES),
             incomes_sheet_name=os.getenv("INCOMES_SHEET_NAME", SHEET_NAME_INCOMES),
-            app_port=int(os.getenv("APP_PORT", "6789")),
+            app_port=int(os.getenv("APP_PORT", "9525")),
             root_path=os.getenv("ROOT_PATH", ""),
             title=os.getenv("APP_TITLE", "kanso - your minimal money tracker"),
             default_theme=os.getenv("DEFAULT_THEME", "light"),
