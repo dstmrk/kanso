@@ -66,6 +66,14 @@ http://localhost:9525
 
 You'll see the onboarding wizard on first launch.
 
+!!! tip "Before Starting the Wizard"
+    Make sure you have ready:
+
+    - **Google Sheets service account JSON** - See [Google Sheets Setup](google-sheets-setup.md)
+    - **Your Google Sheet URL** - The spreadsheet where your financial data is stored
+
+    Having these ready ensures a smooth onboarding experience!
+
 ### Optional Configuration
 
 The application uses default settings from `.env.prod` (embedded in the image).

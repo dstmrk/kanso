@@ -40,6 +40,18 @@ Documentation improvements are always welcome:
 
 Ready to code? Follow the development workflow below.
 
+## Where to Start?
+
+New to the codebase? Start with issues labeled [`good first issue`](https://github.com/dstmrk/kanso/labels/good%20first%20issue).
+
+These are carefully selected tasks that:
+
+- Don't require deep knowledge of the entire codebase
+- Have clear acceptance criteria
+- Are mentored by maintainers
+
+Check also [GitHub Discussions](https://github.com/dstmrk/kanso/discussions) for feature ideas and architecture questions.
+
 ## Development Setup
 
 ### Prerequisites

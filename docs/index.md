@@ -138,7 +138,7 @@ graph LR
 
     **That's it.** Follow onboarding wizard to connect Google Sheets.
 
-    [:octicons-arrow-right-24: Detailed Installation Guide](installation.md)
+    [:octicons-arrow-right-24: Detailed Installation Guide](installation.md) • [:material-google: Google Sheets Setup](google-sheets-setup.md)
 
 === "Local Development"
 

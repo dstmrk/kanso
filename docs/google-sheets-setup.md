@@ -95,18 +95,16 @@ Create a new Google Sheet with these tabs:
 
 Kanso uses a **service account** for secure, server-side access to your Google Sheet.
 
-!!! info "Service Account Setup"
-    Follow the official [gspread Service Account guide](https://docs.gspread.org/en/latest/oauth2.html#service-account) for detailed instructions on:
+!!! info "Service Account Setup (5 minutes)"
+    Follow the official [gspread Service Account guide](https://docs.gspread.org/en/latest/oauth2.html#service-account).
 
-    1. Creating a Google Cloud Project
-    2. Enabling the Google Sheets API
-    3. Creating a service account
-    4. Generating a JSON key file
+    **Quick overview** - You'll need to:
 
-    **Key points:**
-    - You'll download a JSON file with credentials
-    - Keep this file safe - you'll need it for Kanso onboarding
-    - The service account email (found in the JSON) will be used to share your sheet
+    1. Create a Google Cloud Project (free)
+    2. Enable **Google Sheets API** and **Google Drive API**
+    3. Create a service account and download JSON credentials
+
+    **What you'll get**: A JSON file with credentials - keep it safe for the next step!
 
 ## Step 3: Share Sheet with Service Account
 
