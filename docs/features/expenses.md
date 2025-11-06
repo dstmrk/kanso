@@ -114,19 +114,27 @@ One-Time: 5% (car repair, appliance replacement)
 
 ## Transaction History Table
 
-Below the 3 charts, see **full transaction list** with sorting and pagination.
+Below the 3 charts, explore **all transactions** with a powerful data table.
 
 **Columns**:
-- **Date**: When transaction occurred
+- **Date**: Month and year (YYYY-MM format)
 - **Merchant**: Where money was spent
-- **Amount**: How much (with currency formatting)
+- **Amount**: Exact amount with decimals and currency symbol
 - **Category**: Type of expense
 - **Type**: Recurring, essential, discretionary, etc.
 
-**Features**:
-- **Sortable**: Click column headers to sort (date, amount, etc.)
-- **Paginated**: 10 rows per page by default
-- **Searchable**: Find specific merchant or date range
+**What You Can Do**:
+- **Sort any column**: Click headers to order by date, amount, merchant, etc.
+- **Filter per column**:
+  - Date: Find all transactions in a specific month
+  - Amount: Filter by value ranges ("Show me expenses over €100")
+  - Merchant/Category: Search for specific text
+  - Type: Select one or multiple types
+- **Global search**: Type anything to search across all fields at once
+- **Pagination**: View 10 or 25 transactions per page (you choose)
+- **Export to CSV**: Download filtered transactions for offline analysis
+
+**Why It Matters**: Quickly find that one transaction you're looking for, or filter to answer questions like "How much did I spend at grocery stores in March?"
 
 ---
 
