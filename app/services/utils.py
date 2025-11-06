@@ -246,7 +246,7 @@ def format_percentage(value: float, currency: str = "USD") -> str:
         return f"{percentage:.2f}%"
 
 
-def format_currency(amount: float, currency: str | None = None) -> str:
+def format_currency(amount: float, currency: str | None = None, decimals: int = 0) -> str:
     """Format amount as currency with specified currency code.
 
     Formats numbers according to currency conventions:
@@ -255,8 +255,9 @@ def format_currency(amount: float, currency: str | None = None) -> str:
     - All currencies have space between symbol and number
 
     Args:
-        amount: The monetary amount to format (will be rounded to integer)
+        amount: The monetary amount to format
         currency: Currency code (EUR, USD, GBP, CHF, JPY). If None, uses user locale.
+        decimals: Number of decimal places to show (default: 0 for backward compatibility)
 
     Returns:
         Formatted currency string with symbol and space (e.g., "1.235 €", "$ 1,235")
@@ -264,8 +265,12 @@ def format_currency(amount: float, currency: str | None = None) -> str:
     Example:
         >>> format_currency(1234.56, "EUR")
         '1.235 €'
+        >>> format_currency(1234.56, "EUR", decimals=2)
+        '1.234,56 €'
         >>> format_currency(1234.56, "USD")
         '$ 1,235'
+        >>> format_currency(1234.56, "USD", decimals=2)
+        '$ 1,234.56'
         >>> format_currency(1234.56, "GBP")
         '£ 1,235'
         >>> format_currency(1234.56, "JPY")
@@ -281,10 +286,21 @@ def format_currency(amount: float, currency: str | None = None) -> str:
     # Get currency format from centralized config
     fmt = get_currency_format(currency)
 
-    # Format with appropriate thousands separator
-    # Python's format always uses comma, so replace if needed
-    formatted = f"{amount:,.0f}"
-    if fmt.thousands_sep == ".":
+    # Format with appropriate thousands separator and decimal places
+    # Python's format always uses comma for thousands and dot for decimals
+    formatted = f"{amount:,.{decimals}f}"
+
+    # Replace separators based on currency convention
+    if fmt.thousands_sep == "." and fmt.decimal_sep == ",":
+        # European style: swap dot and comma
+        # First replace comma (thousands) with temp marker
+        formatted = formatted.replace(",", "###TEMP###")
+        # Replace dot (decimal) with comma
+        formatted = formatted.replace(".", ",")
+        # Replace temp marker with dot (thousands)
+        formatted = formatted.replace("###TEMP###", ".")
+    elif fmt.thousands_sep == ".":
+        # Just replace thousands separator
         formatted = formatted.replace(",", ".")
 
     # Position symbol based on currency convention (with space)

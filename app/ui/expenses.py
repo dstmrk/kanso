@@ -1,8 +1,11 @@
 """Expenses page UI with transaction table and visualizations."""
 
 from collections.abc import Callable
+from datetime import datetime
+from io import StringIO
 from typing import Any
 
+import pandas as pd
 from nicegui import app, ui
 
 from app.core.constants import (
@@ -12,7 +15,6 @@ from app.core.constants import (
     COL_DATE,
     COL_MERCHANT,
     COL_TYPE,
-    TABLE_ROWS_PER_PAGE_DEFAULT,
 )
 from app.core.state_manager import state_manager
 from app.logic.finance_calculator import FinanceCalculator
@@ -61,7 +63,7 @@ class ExpensesRenderer:
 
         return await state_manager.get_or_compute(
             user_storage_key="expenses_sheet",
-            computation_key="expenses_data_v2",  # Changed to force cache refresh
+            computation_key="expenses_data_v3",  # Changed to force cache refresh with full date format
             compute_fn=compute_expenses_data,
             ttl_seconds=CACHE_TTL_SECONDS,
         )
@@ -99,45 +101,70 @@ class ExpensesRenderer:
 
         # Desktop/tablet table (hidden on mobile)
         with container:
-            with ui.column().classes("hidden md:block w-full"):
-                ui.label(f"All Transactions ({expenses_data['total_count']})").classes(
-                    "text-xl font-semibold mb-4"
-                )
+            with ui.column().classes("max-md:hidden w-full"):
+                with ui.row().classes("w-full justify-between items-center mb-4"):
+                    ui.label(f"All Transactions ({expenses_data['total_count']})").classes(
+                        "text-xl font-semibold"
+                    )
 
-                # Create table with all transactions
-                columns: list[dict[str, Any]] = [
-                    {"name": "date", "label": "Date", "field": COL_DATE, "align": "left"},
-                    {
-                        "name": "merchant",
-                        "label": "Merchant",
-                        "field": COL_MERCHANT,
-                        "align": "left",
-                    },
-                    {
-                        "name": "amount",
-                        "label": "Amount",
-                        "field": COL_AMOUNT_PARSED,
-                        "align": "right",
-                        "sortable": True,
-                    },
-                    {
-                        "name": "category",
-                        "label": "Category",
-                        "field": COL_CATEGORY,
-                        "align": "left",
-                    },
-                    {"name": "type", "label": "Type", "field": COL_TYPE, "align": "left"},
-                ]
+                    with ui.row().classes("gap-2 items-center"):
+                        # Global search input
+                        search_input = (
+                            ui.input(placeholder="Search all fields...")
+                            .classes("w-64")
+                            .props("outlined dense")
+                        )
 
+                        # CSV Export button
+                        def export_csv():
+                            """Export transactions to CSV file."""
+                            # Create DataFrame from transactions
+                            df = pd.DataFrame(expenses_data["transactions"])
+
+                            # Select and rename columns for export
+                            export_columns = {
+                                COL_DATE: "Date",
+                                COL_MERCHANT: "Merchant",
+                                COL_AMOUNT_PARSED: "Amount",
+                                COL_CATEGORY: "Category",
+                                COL_TYPE: "Type",
+                            }
+
+                            df_export = df[list(export_columns.keys())].copy()
+                            df_export.columns = list(export_columns.values())
+
+                            # Generate CSV
+                            csv_buffer = StringIO()
+                            df_export.to_csv(csv_buffer, index=False)
+                            csv_content = csv_buffer.getvalue()
+
+                            # Generate filename with timestamp
+                            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                            filename = f"kanso_expenses_{timestamp}.csv"
+
+                            # Trigger download
+                            ui.download(csv_content.encode("utf-8"), filename)
+                            ui.notify("✓ CSV exported successfully", type="positive")
+
+                        ui.button(icon="download", on_click=export_csv).props("flat dense").tooltip(
+                            "Export to CSV"
+                        )
+
+                # Prepare data for AG Grid
                 rows = []
                 for transaction in expenses_data["transactions"]:
-                    # Format amount with currency
+                    # Format amount with currency for display (with 2 decimals)
                     amount_value = transaction.get(COL_AMOUNT_PARSED, 0)
-                    formatted_amount = utils.format_currency(amount_value, user_currency)
+                    formatted_amount = utils.format_currency(
+                        amount_value, user_currency, decimals=2
+                    )
+
+                    # Keep full date for filtering, will format for display in column config
+                    date_str = transaction.get(COL_DATE, "")
 
                     rows.append(
                         {
-                            COL_DATE: transaction.get(COL_DATE, ""),
+                            COL_DATE: date_str,  # Keep full date (YYYY-MM-DD) for proper filtering
                             COL_MERCHANT: transaction.get(COL_MERCHANT, ""),
                             COL_AMOUNT_PARSED: amount_value,
                             "amount_display": formatted_amount,
@@ -146,27 +173,77 @@ class ExpensesRenderer:
                         }
                     )
 
-                table = ui.table(
-                    columns=columns,
-                    rows=rows,
-                    row_key="Date",
-                    pagination={
-                        "rowsPerPage": TABLE_ROWS_PER_PAGE_DEFAULT,
-                        "sortBy": "date",
-                        "descending": True,
+                # AG Grid configuration
+                aggrid = ui.aggrid(
+                    options={
+                        "columnDefs": [
+                            {
+                                "field": COL_DATE,
+                                "headerName": "Date",
+                                "sortable": True,
+                                "filter": "agDateColumnFilter",
+                                "sort": "desc",  # Default sort descending
+                                "flex": 1,
+                                "minWidth": 120,
+                                "valueFormatter": "value ? value.substring(0, 7) : ''",  # Display as YYYY-MM
+                            },
+                            {
+                                "field": COL_MERCHANT,
+                                "headerName": "Merchant",
+                                "sortable": True,
+                                "filter": "agTextColumnFilter",
+                                "flex": 2,
+                                "minWidth": 150,
+                            },
+                            {
+                                "field": COL_AMOUNT_PARSED,
+                                "headerName": "Amount",
+                                "sortable": True,
+                                "filter": "agNumberColumnFilter",
+                                "type": "rightAligned",
+                                "cellStyle": {"fontFamily": "monospace"},
+                                "flex": 1,
+                                "minWidth": 120,
+                                "valueFormatter": "value ? value.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' €' : ''",
+                            },
+                            {
+                                "field": COL_CATEGORY,
+                                "headerName": "Category",
+                                "sortable": True,
+                                "filter": "agTextColumnFilter",
+                                "flex": 1,
+                                "minWidth": 120,
+                            },
+                            {
+                                "field": COL_TYPE,
+                                "headerName": "Type",
+                                "sortable": True,
+                                "filter": "agSetColumnFilter",
+                                "flex": 1,
+                                "minWidth": 100,
+                            },
+                        ],
+                        "rowData": rows,
+                        "defaultColDef": {
+                            "resizable": True,
+                            "sortable": True,
+                            "filter": True,
+                        },
+                        "pagination": True,
+                        "paginationPageSize": 25,
+                        "paginationPageSizeSelector": [10, 25],
+                        "domLayout": "autoHeight",
                     },
+                    theme="quartz",
+                    auto_size_columns=False,
                 ).classes("w-full")
 
-                # Custom cell rendering for amount with currency format
-                table.add_slot(
-                    "body-cell-amount",
-                    r"""
-                    <q-td :props="props">
-                        <div class="text-right font-mono">
-                            {{ props.row.amount_display }}
-                        </div>
-                    </q-td>
-                    """,
+                # Connect search input to AG Grid quick filter
+                search_input.on(
+                    "update:model-value",
+                    lambda e: aggrid.run_grid_method(
+                        "setGridOption", "quickFilterText", e.args or ""
+                    ),
                 )
 
     async def _render_chart_generic(

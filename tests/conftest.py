@@ -7,7 +7,6 @@ import time
 from pathlib import Path
 
 import pytest
-from playwright.sync_api import Page
 
 
 @pytest.fixture(scope="session")
@@ -30,13 +29,19 @@ def app_server(storage_dir):
     port = 7590  # Use a different port to avoid conflicts
     project_root = Path(__file__).parent.parent
 
-    # Clean up NiceGUI storage before starting server to ensure clean state
+    # Clean up NiceGUI storage and storage secret before starting server to ensure clean state
     nicegui_dir = project_root / ".nicegui"
+    storage_secret_file = project_root / ".storage_secret"
+
     if nicegui_dir.exists():
         shutil.rmtree(nicegui_dir)
         print(
             f"Cleaned up {nicegui_dir} before starting test server for test: {os.getenv('PYTEST_CURRENT_TEST', 'unknown')}"
         )
+
+    if storage_secret_file.exists():
+        storage_secret_file.unlink()
+        print(f"Cleaned up {storage_secret_file} before starting test server")
 
     # Environment variables for test
     test_env = os.environ.copy()
@@ -97,25 +102,43 @@ def app_server(storage_dir):
 
 
 @pytest.fixture
-def page(app_server, page: Page):
+def page(app_server, browser):
     """Configure page for E2E tests with app server URL."""
+    # Create a fresh browser context for each test to ensure complete isolation
+    context = browser.new_context(viewport={"width": 1280, "height": 720})
+
+    # Create a new page in the fresh context
+    page = context.new_page()
+
     # Store base URL in page object for easy access
     page.base_url = app_server  # type: ignore[attr-defined]
 
-    # Clear browser storage before each test
-    page.context.clear_cookies()
-    page.context.clear_permissions()
-
-    # Override goto to handle relative URLs
+    # Override goto to handle relative URLs and clear storage on first navigation
     original_goto = page.goto
+    first_goto = [True]  # Use list to allow modification in closure
 
     def goto_with_base(url, **kwargs):
         if url.startswith("/"):
             url = app_server + url
-        return original_goto(url, **kwargs)
+
+        result = original_goto(url, **kwargs)
+
+        # Clear localStorage and sessionStorage after first navigation
+        if first_goto[0]:
+            try:
+                page.evaluate("() => { localStorage.clear(); sessionStorage.clear(); }")
+                first_goto[0] = False
+            except Exception:
+                pass  # Ignore if we can't clear storage
+
+        return result
 
     page.goto = goto_with_base  # type: ignore[method-assign]
-    return page
+
+    yield page
+
+    # Cleanup: close the context after the test
+    context.close()
 
 
 @pytest.fixture
