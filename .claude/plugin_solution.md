@@ -11,16 +11,17 @@ This stack is a curated collection of mature, best-in-class tools covering the e
 | Category                | Technology                                         | Rationale                                                                      |
 | :---------------------- | :------------------------------------------------- | :----------------------------------------------------------------------------- |
 | **Backend Framework**   | **FastAPI** (with `uv` for package management)     | High-performance, modern, async-native, with automatic API documentation.      |
-| **Database & ORM**      | **SQLite** + **SQLAlchemy** + **Alembic**          | Simple, zero-config persistence with multi-database support for plugin isolation. Lightweight and perfect for self-hosted personal finance applications. |
+| **Database & ORM**      | **SQLite** + **SQLAlchemy**                        | Simple, zero-config persistence. Each plugin gets its own isolated database file. Lightweight and perfect for self-hosted personal finance applications. |
 | **Backend Testing**     | **Pytest** + **HTTPX**                             | The de-facto standard for writing clean, scalable tests for Python applications. |
 | **Backend Code Quality**| **Ruff**                                           | An all-in-one, high-speed linter and formatter for maintaining a clean Python codebase. |
-| **Frontend Framework**  | **React** (bootstrapped with **Vite**)             | The industry standard for data-intensive applications with a vast ecosystem.       |
+| **Frontend Framework**  | **React** (bundled with **Webpack 5**)             | The industry standard for data-intensive applications with a vast ecosystem. Webpack chosen for mature Module Federation support. |
+| **Frontend Module Federation** | **Webpack 5 Module Federation**            | Production-proven micro-frontend solution for dynamic plugin loading with excellent documentation and tooling. |
 | **Frontend Routing**    | **React Router**                                   | The standard library for client-side routing in React applications.              |
 | **Server State Mgmt**   | **TanStack Query**                                 | Crucial for fetching, caching, and syncing server data. Reduces boilerplate and improves UX. |
-| **Client State Mgmt**   | **Zustand**                                        | A minimal, modern solution for global UI state that isn't tied to the server. |
+| **Client State Mgmt**   | **React Context**                                  | Built-in React solution for simple global UI state (theme, preferences). Sufficient for Kanso's needs. |
 | **UI Components**       | **shadcn/ui** + **Tailwind CSS**                   | A modern, accessible, and themeable component system for rapid UI development. |
 | **Data Visualization**  | **TanStack Table v8** + **Apache ECharts**         | Best-in-class libraries for building powerful, interactive tables and charts.  |
-| **Frontend Testing**    | **Vitest** + **React Testing Library**             | The modern, fast standard for testing React applications built with Vite.          |
+| **Frontend Testing**    | **Jest** + **React Testing Library**               | Industry standard for testing React applications with Webpack.          |
 | **Frontend Code Quality**| **ESLint** + **Prettier**                          | For maintaining consistent, error-free, and high-quality frontend code.       |
 | **Containerization**    | **Docker** & **Docker Compose**                    | For creating a reproducible, isolated, and scalable multi-service environment.   |
 
@@ -43,68 +44,137 @@ The platform's extensibility is its core feature. A plugin is a self-contained p
     ```
 *   **Dynamic Routing**: For each discovered plugin, the main FastAPI application will dynamically mount its `APIRouter` object under a dedicated path, e.g., `/api/plugins/plugin_id/`.
 
-### 3.3. Database Integration
+### 3.3. Data Access Model
 
-A multi-database model using SQLite provides strong isolation while maintaining simplicity and zero-config deployment.
+**Core Principle**: Plugins NEVER access the core database directly. All data access happens via well-defined HTTP API endpoints exposed by the core application.
 
-*   **Dedicated Database File**: Upon installation, a dedicated SQLite database file is created for each plugin in the data directory (e.g., `data/plugin_fire.db`, `data/plugin_stocks.db`).
-*   **Isolated Write Access**: Each plugin writes exclusively to its own database file using SQLAlchemy with a dedicated connection string. Plugins have full control over their schema and can use **Alembic** for migrations without affecting the core application.
-*   **Global Read-Only Access**: Plugins can read core data by attaching the core database and performing cross-database queries using SQLite's `ATTACH DATABASE` feature.
+#### 3.3.1. Plugin Database (Isolated Write)
 
-#### 3.3.1. Database Structure
+Each plugin has its own SQLite database for storing plugin-specific data:
 
 ```
 /data/
-  ├── core.db              # Core Kanso database (assets, liabilities, income, expenses)
-  ├── plugin_fire.db       # FIRE Calculator plugin data (fi_targets, withdrawal_scenarios)
-  ├── plugin_stocks.db     # Stocks plugin data (stock_prices, portfolio_allocations)
-  └── plugin_budget.db     # Budget Tracker plugin data (budgets, alerts)
+  ├── core.db              # Core application only (never accessed by plugins)
+  ├── plugin_fire.db       # FI/RE Calculator plugin (full read/write access)
+  ├── plugin_stocks.db     # Stocks plugin (full read/write access)
+  └── plugin_budget.db     # Budget Tracker plugin (full read/write access)
 ```
 
-#### 3.3.2. Cross-Database Queries
+Plugins have **full control** over their own database:
+- Define schema as needed
+- Use Alembic for migrations (optional) or simple SQL schema files
+- Store plugin-specific state, calculations, configurations
 
-Plugins can query core data alongside their own tables using SQLite's `ATTACH DATABASE` feature:
+#### 3.3.2. Core Data Access (Read via API)
+
+Plugins read core financial data by calling HTTP API endpoints exposed by the core application:
 
 ```python
-# Example: Plugin querying core assets + plugin-specific data
-from sqlalchemy import create_engine, text
+# Example: Plugin accessing core data via API
+from kanso_sdk import CoreAPI
 
-# Plugin's own database connection
-plugin_engine = create_engine('sqlite:///data/plugin_fire.db')
+async def calculate_fire_scenario():
+    # Fetch investment assets from core API
+    assets_response = await CoreAPI.get("/api/v1/assets", params={
+        "type": "investment"
+    })
+    assets = assets_response["data"]
 
-with plugin_engine.connect() as conn:
-    # Attach core database for read access
-    conn.execute(text("ATTACH DATABASE 'data/core.db' AS core"))
+    # Fetch expenses for the last 12 months
+    expenses_response = await CoreAPI.get("/api/v1/expenses", params={
+        "start_date": "2024-01-01",
+        "end_date": "2024-12-31"
+    })
+    expenses = expenses_response["data"]
 
-    # Cross-database query joining core and plugin tables
-    result = conn.execute(text("""
-        SELECT
-            a.id,
-            a.name,
-            a.value,
-            a.type,
-            f.fire_target,
-            f.withdrawal_rate
-        FROM core.assets a
-        LEFT JOIN fi_targets f ON a.id = f.asset_id
-        WHERE a.type IN ('investment', 'retirement')
-        ORDER BY a.value DESC
-    """))
+    # Calculate with data from plugin's own DB
+    total_assets = sum(a["value"] for a in assets)
+    monthly_expenses = sum(e["amount"] for e in expenses) / 12
 
-    for row in result:
-        print(f"{row.name}: ${row.value} (FI Target: ${row.fire_target})")
+    return {
+        "fire_number": monthly_expenses * 12 * 25,  # 4% rule
+        "current_progress": total_assets / (monthly_expenses * 12 * 25)
+    }
 ```
 
-**Key Benefits**:
-- ✅ Plugins can read all core financial data (assets, liabilities, income, expenses)
-- ✅ Plugins maintain their own schema independently
-- ✅ Zero risk of plugins corrupting core data (write isolation)
-- ✅ Simple backup: copy individual `.db` files
+#### 3.3.3. Core API Categories
 
-**Limitations**:
-- ⚠️ SQLite does not support transactions across attached databases
-- ⚠️ Plugins should read from core and write to their own DB in separate transactions
-- ⚠️ Concurrent writes are serialized (database-level lock), but this is not an issue for personal finance workloads
+The core application exposes two categories of API endpoints:
+
+**1. Raw Data Endpoints** - Direct access to financial data tables:
+```python
+GET /api/v1/assets              # All assets (bank accounts, investments, real estate)
+GET /api/v1/liabilities         # All liabilities (loans, mortgages, credit cards)
+GET /api/v1/income              # Income records
+GET /api/v1/expenses            # Expense transactions
+
+# All endpoints support filtering, pagination, date ranges
+GET /api/v1/expenses?category=food&start_date=2024-01-01&limit=100
+```
+
+**2. Aggregated Analytics Endpoints** - Pre-calculated for performance:
+```python
+GET /api/v1/analytics/net-worth-timeline    # Historical net worth over time
+GET /api/v1/analytics/expense-breakdown     # Expenses grouped by category
+GET /api/v1/analytics/income-vs-expenses    # Monthly income vs expenses comparison
+```
+
+Plugins use whichever endpoint best fits their needs. Aggregated endpoints are more efficient when plugins need summarized data.
+
+#### 3.3.4. Benefits of API-Only Access
+
+| Aspect | Direct DB Access | API-Only Access ✅ |
+|--------|------------------|-------------------|
+| **Security** | Plugin sees entire schema | Core controls data exposure |
+| **Versioning** | Schema coupling, breaks on changes | API versioned (v1, v2), backward compatible |
+| **Performance** | Plugin writes naive queries | Core optimizes queries |
+| **Permissions** | Hard to implement | Natural (HTTP middleware) |
+| **Testing** | Must mock entire database | Mock HTTP calls (simpler) |
+| **Caching** | Not possible | HTTP cache headers |
+| **Rate Limiting** | Not possible | Trivial (middleware) |
+| **Monitoring** | Difficult | API logs, metrics out of the box |
+
+#### 3.3.5. Example: Complete Plugin Data Flow
+
+```python
+# FI/RE Calculator plugin example
+from kanso_sdk import CoreAPI, PluginBase
+
+class FireCalculatorPlugin(PluginBase):
+
+    async def get_fire_dashboard(self):
+        # 1. Fetch core data via API
+        assets = await CoreAPI.get("/api/v1/assets", params={"type": "investment"})
+        expenses = await CoreAPI.get("/api/v1/expenses", params={
+            "start_date": "2024-01-01",
+            "end_date": "2024-12-31"
+        })
+
+        # 2. Read plugin-specific data from plugin DB
+        with self.get_db_connection() as db:
+            user_target = db.execute(
+                "SELECT target_amount, target_date FROM fi_targets WHERE active = 1"
+            ).fetchone()
+
+        # 3. Calculate and return
+        total_assets = sum(a["value"] for a in assets["data"])
+        annual_expenses = sum(e["amount"] for e in expenses["data"])
+        fire_number = annual_expenses * 25
+
+        return {
+            "current_assets": total_assets,
+            "fire_number": fire_number,
+            "progress": total_assets / fire_number * 100,
+            "user_target": user_target["target_amount"] if user_target else None
+        }
+```
+
+**Key Advantages**:
+- ✅ Plugin never needs direct database credentials
+- ✅ Core can change database schema without breaking plugins (API abstraction)
+- ✅ Core can add caching, rate limiting, permissions at API layer
+- ✅ Plugin testing is simpler (mock HTTP, not database)
+- ✅ Security: Plugin cannot execute arbitrary SQL on core database
 
 ### 3.4. Frontend Integration
 
@@ -148,10 +218,12 @@ Every plugin must include a `manifest.json` file at its root declaring its metad
   },
 
   "backend": {
-    "entry_point": "fire_plugin.main:plugin_router",
+    "package": "kanso-plugin-fire",
+    "module": "fire_plugin.router",
+    "router": "plugin_router",
     "database": {
       "file": "plugin_fire.db",
-      "migrations": "alembic/"
+      "schema": "backend/schema.sql"
     },
     "dependencies": {
       "kanso": ">=2.0.0,<3.0.0",
@@ -164,8 +236,7 @@ Every plugin must include a `manifest.json` file at its root declaring its metad
   },
 
   "frontend": {
-    "entry": "dist/remoteEntry.js",
-    "build_command": "npm run build",
+    "entry": "remoteEntry.js",
     "peerDependencies": {
       "react": "^18.2.0",
       "react-dom": "^18.2.0",
@@ -193,8 +264,20 @@ Every plugin must include a `manifest.json` file at its root declaring its metad
 | `type` | ✅ Yes | `"full-stack"` or `"frontend-only"` |
 | `navigation` | ✅ Yes | Navigation menu entries (label, icon, routes) |
 | `backend` | Conditional | Required if `type` is `"full-stack"` |
-| `frontend` | ✅ Yes | Frontend build configuration |
+| `backend.package` | ✅ Yes | Python package name (for `uv pip install`) |
+| `backend.module` | ✅ Yes | Python module path containing the router |
+| `backend.router` | ✅ Yes | Variable name of the FastAPI router object |
+| `backend.database.file` | ✅ Yes | SQLite database filename for plugin |
+| `backend.database.schema` | Conditional | SQL file to initialize database (simple plugins) |
+| `backend.database.migrations` | Conditional | Alembic migrations directory (complex plugins) |
+| `frontend` | ✅ Yes | Frontend configuration |
+| `frontend.entry` | ✅ Yes | Module Federation entry point (relative to `frontend-dist/`) |
 | `permissions` | ❌ No | Declarative permissions (currently informational) |
+
+**Note on database initialization**:
+- **Simple plugins** (recommended): Use `backend.database.schema` pointing to a SQL file. The core will execute this file once during installation.
+- **Complex plugins**: Use `backend.database.migrations` pointing to an Alembic directory. The core will run `alembic upgrade head` during installation and updates.
+- Only one of `schema` or `migrations` should be specified, not both.
 
 #### 3.5.3. Manifest Validation
 
@@ -220,25 +303,238 @@ Issues found:
 Installation aborted. No changes were made to your system.
 ```
 
+### 3.6. Plugin SDK
+
+The core provides official SDKs for both backend and frontend plugin development, abstracting common operations and providing utilities to accelerate plugin development.
+
+#### 3.6.1. Backend SDK (`kanso-plugin-sdk`)
+
+**Installation**:
+```bash
+uv pip install kanso-plugin-sdk
+```
+
+**Key Components**:
+
+```python
+from kanso_sdk import CoreAPI, PluginBase
+
+class MyPlugin(PluginBase):
+    """
+    Base class providing utilities for plugin development.
+
+    Automatically provides:
+    - Core API client (self.core_api)
+    - Database connection helpers (self.get_db_connection())
+    - Plugin metadata (self.plugin_id, self.version)
+    - Logging (self.logger)
+    """
+
+    async def get_data_from_core(self):
+        # Access Core API with built-in authentication
+        assets = await self.core_api.get("/api/v1/assets", params={
+            "type": "investment",
+            "min_value": 1000
+        })
+        return assets["data"]
+
+    def store_calculation(self, result: dict):
+        # Access plugin's own database
+        with self.get_db_connection() as db:
+            db.execute(
+                "INSERT INTO calculations (result, created_at) VALUES (?, ?)",
+                (json.dumps(result), datetime.now())
+            )
+            db.commit()
+```
+
+**CoreAPI Client**:
+
+```python
+from kanso_sdk import CoreAPI
+
+# Automatic authentication using current user session
+assets = await CoreAPI.get("/api/v1/assets")
+expenses = await CoreAPI.get("/api/v1/expenses", params={
+    "start_date": "2024-01-01",
+    "end_date": "2024-12-31",
+    "category": "food"
+})
+
+# Handles pagination automatically
+all_transactions = await CoreAPI.get_all("/api/v1/expenses")  # Fetches all pages
+
+# Error handling built-in
+try:
+    data = await CoreAPI.get("/api/v1/invalid")
+except CoreAPIError as e:
+    logger.error(f"Core API error: {e.status_code} - {e.message}")
+```
+
+**Testing Utilities**:
+
+```python
+from kanso_sdk.testing import MockCoreAPI
+import pytest
+
+@pytest.fixture
+def mock_core():
+    return MockCoreAPI(
+        assets=[
+            {"id": 1, "name": "Savings", "value": 10000, "type": "bank_account"},
+            {"id": 2, "name": "Stocks", "value": 50000, "type": "investment"}
+        ],
+        expenses=[
+            {"id": 1, "amount": 500, "category": "food", "date": "2024-11-01"}
+        ]
+    )
+
+def test_plugin_calculation(mock_core):
+    plugin = MyPlugin(core_api=mock_core)
+    result = await plugin.calculate()
+    assert result["total_assets"] == 60000
+```
+
+#### 3.6.2. Frontend SDK (`@kanso/plugin-sdk`)
+
+**Installation**:
+```bash
+npm install @kanso/plugin-sdk
+```
+
+**Key Components**:
+
+```typescript
+import { useCoreAPI, KPICard, Chart, Table } from '@kanso/plugin-sdk'
+
+export function PluginDashboard() {
+  // React hook wrapping TanStack Query
+  const { data: assets, isLoading, error } = useCoreAPI<Asset[]>({
+    endpoint: '/api/v1/assets',
+    params: { type: 'investment' }
+  })
+
+  if (isLoading) return <Loading />
+  if (error) return <ErrorDisplay error={error} />
+
+  const totalValue = assets.reduce((sum, a) => sum + a.value, 0)
+
+  return (
+    <>
+      {/* Reusable components from core */}
+      <KPICard
+        title="Total Investments"
+        value={totalValue}
+        currency="EUR"
+        trend={{ value: 5.2, direction: 'up' }}
+      />
+
+      <Chart
+        type="pie"
+        data={assets.map(a => ({ name: a.name, value: a.value }))}
+        title="Asset Allocation"
+      />
+
+      <Table
+        columns={[
+          { key: 'name', label: 'Asset' },
+          { key: 'value', label: 'Value', format: 'currency' }
+        ]}
+        data={assets}
+        sortable
+        paginated
+      />
+    </>
+  )
+}
+```
+
+**TypeScript Types**:
+
+The SDK includes TypeScript definitions for all Core API responses:
+
+```typescript
+import type { Asset, Liability, Income, Expense } from '@kanso/plugin-sdk/types'
+
+// Fully typed
+const asset: Asset = {
+  id: 1,
+  name: "Savings Account",
+  type: "bank_account",
+  value: 10000,
+  currency: "EUR",
+  updated_at: "2024-11-06T10:00:00Z"
+}
+```
+
+**Shared Components**:
+
+The SDK exposes core UI components for consistent design:
+
+- `<KPICard>`: Metric display with optional trend indicator
+- `<Chart>`: ECharts wrapper with pre-configured themes
+- `<Table>`: TanStack Table wrapper with sorting, filtering, pagination
+- `<DateRangePicker>`: Consistent date selection
+- `<CurrencyInput>`: Formatted currency input
+- `<Button>`, `<Card>`, `<Dialog>`: shadcn/ui components
+
+**Benefits of Using the SDK**:
+
+| Without SDK | With SDK |
+|-------------|----------|
+| Manual HTTP fetch + auth | `useCoreAPI()` hook handles everything |
+| Build UI components from scratch | Reuse core components (consistent UX) |
+| Manual TypeScript types | Auto-generated types from OpenAPI |
+| Custom error handling | Built-in error boundaries |
+| Write mock server for tests | `MockCoreAPI` provided |
+
 ## 4. Plugin Lifecycle Management
 
 A built-in **"Plugin Manager"** will handle the entire lifecycle of a plugin via the main application's UI.
 
 ### 4.1. Installation Process
 
-The administrator installs a plugin by providing a URL to a GitHub release archive (e.g., `https://github.com/author/kanso-plugin-fire/releases/download/v1.0.0/plugin.tar.gz`). The Plugin Manager orchestrates the following automated steps:
+The administrator installs a plugin by providing a URL to a GitHub release archive (e.g., `https://github.com/author/kanso-plugin-fire/releases/download/v1.0.0/kanso-plugin-fire-1.0.0.tar.gz`).
 
-1.  **Download & Validate**: Securely downloads the archive and validates its structure against the "Plugin Contract":
-    - Checks for required files: `manifest.json`, `pyproject.toml`, `vite.config.js`
+**Plugin Release Structure**:
+
+Plugins are distributed as pre-built archives containing both backend source and **pre-compiled frontend assets**:
+
+```
+kanso-plugin-fire-1.0.0.tar.gz
+├── manifest.json
+├── backend/
+│   ├── fire_plugin/
+│   │   ├── __init__.py
+│   │   ├── router.py
+│   │   └── models.py
+│   ├── pyproject.toml
+│   └── schema.sql
+└── frontend-dist/              # ⭐ Pre-built, ready to serve
+    ├── assets/
+    │   ├── index-abc123.js
+    │   └── index-def456.css
+    ├── remoteEntry.js
+    └── index.html
+```
+
+The Plugin Manager orchestrates the following automated steps:
+
+1.  **Download & Validate**: Securely downloads the archive and validates its structure:
+    - Checks for required files: `manifest.json`, `backend/pyproject.toml`, `frontend-dist/remoteEntry.js`
     - Validates manifest schema and compatibility (see section 3.5.3)
     - Ensures repository is public GitHub URL and license is open source
-2.  **Install Backend**: Runs `uv pip install` to install the plugin's Python package into the main application's environment
-3.  **Build Frontend**: Runs `npm install` and `npm run build` within the plugin's frontend directory to generate static assets
-4.  **Deploy Frontend**: Moves the built static assets to a persistent, publicly served location (e.g., `/var/www/plugins/fire/`)
-5.  **Configure Database**: Creates the plugin's dedicated SQLite database file (e.g., `data/plugin_fire.db`)
-6.  **Run Migrations**: If the plugin includes Alembic migrations, runs `alembic upgrade head` to create the plugin's schema
-7.  **Register Plugin**: Records the plugin in the core database's `plugin_installations` table with status `"active"`
-8.  **Rollback on Failure**: If any step fails, all changes are automatically rolled back (see section 4.1.1)
+2.  **Install Backend**: Runs `uv pip install backend/` to install the plugin's Python package
+3.  **Deploy Frontend**: Copies pre-built `frontend-dist/` to persistent location (e.g., `/var/www/plugins/fire/`) - **no build step required**
+4.  **Configure Database**: Creates the plugin's dedicated SQLite database file (e.g., `data/plugin_fire.db`)
+5.  **Initialize Schema**: Executes `backend/schema.sql` to create database tables (or runs Alembic migrations if specified)
+6.  **Register Plugin**: Records the plugin in the core database's `plugin_installations` table with status `"active"`
+7.  **Rollback on Failure**: If any step fails, all changes are automatically rolled back (see section 4.1.1)
+
+**Key Advantage**: Frontend is pre-built by the plugin developer before release. This makes installation:
+- ✅ **10x faster** (no `npm install` + `npm build` step)
+- ✅ **More reliable** (zero npm/build failures during install)
+- ✅ **Deterministic** (same artifact for all users)
 
 #### 4.1.1. Error Handling & Automatic Rollback
 
@@ -259,12 +555,19 @@ The installation process is **atomic**: either all steps succeed, or everything 
 ```
 Installing plugin: FI/RE Calculator (v1.0.0)
 
-✓ Downloaded and validated manifest (2s)
+✓ Downloaded archive (2s)
+✓ Validated manifest and structure (1s)
 ✓ Validated dependencies (1s)
-✓ Installed backend package (8s)
-⏳ Building frontend... (45s elapsed)
-   Running: npm install && npm run build
-   [████████████████░░░░] 80% - Optimizing bundle...
+✓ Installed backend package (6s)
+✓ Deployed frontend assets (2s)
+✓ Created database and initialized schema (1s)
+✓ Registered plugin (1s)
+
+Installation complete! (14s total)
+
+⚠️  Server restart required to activate plugin backend.
+
+[Restart Now] [Restart Later]
 ```
 
 **Example rollback on failure**:
@@ -272,23 +575,20 @@ Installing plugin: FI/RE Calculator (v1.0.0)
 ```
 Installing plugin: FI/RE Calculator (v1.0.0)
 
-✓ Downloaded and validated manifest
+✓ Downloaded archive
+✓ Validated manifest
 ✓ Validated dependencies
-✓ Installed backend package
-✗ Build failed: npm build exited with code 1
-
-Error details:
-  Module not found: Can't resolve 'invalid-package'
-  at frontend/src/Dashboard.tsx:3
+✗ Backend installation failed: Package 'numpy>=2.0' conflicts with core 'numpy==1.24.0'
 
 Rolling back changes:
-✓ Removed frontend build artifacts
-✓ Uninstalled backend package (kanso-plugin-fire)
-✓ Cleaned up temporary files
+✓ Removed temporary files
+✓ Cleaned up partially installed packages
 
 Installation failed. Your system is unchanged.
 
-[View Full Logs] [Report Issue] [Try Again]
+Suggestion: Update your core application or contact the plugin author.
+
+[View Full Logs] [Report Issue] [Cancel]
 ```
 
 #### 4.1.2. Installation State Tracking
@@ -473,19 +773,40 @@ Then try installing the plugin again.
 
 **Module Federation Shared Configuration**: Core and plugins must share the same major versions of React, React Router, and other critical libraries to prevent runtime errors.
 
-**Core application** (`kanso-core/vite.config.js`):
+**Core application** (`kanso-core/webpack.config.js`):
 
 ```javascript
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import federation from '@originjs/vite-plugin-federation'
+const ModuleFederationPlugin = require('webpack/lib/container/ModuleFederationPlugin')
+const path = require('path')
 
-export default defineConfig({
+module.exports = {
+  entry: './src/index',
+  mode: 'production',
+  output: {
+    path: path.resolve(__dirname, 'dist'),
+    publicPath: 'auto'
+  },
+  resolve: {
+    extensions: ['.ts', '.tsx', '.js', '.jsx']
+  },
+  module: {
+    rules: [
+      {
+        test: /\.tsx?$/,
+        use: 'ts-loader',
+        exclude: /node_modules/
+      }
+    ]
+  },
   plugins: [
-    react(),
-    federation({
+    new ModuleFederationPlugin({
       name: 'kansoCore',
-      remotes: {},  // Populated dynamically with plugin URLs
+      remotes: {},  // Populated dynamically at runtime
+      exposes: {
+        './KPICard': './src/components/KPICard',
+        './Chart': './src/components/Chart',
+        './Table': './src/components/Table'
+      },
       shared: {
         react: {
           singleton: true,
@@ -499,35 +820,69 @@ export default defineConfig({
         },
         'react-router-dom': {
           singleton: true,
+          requiredVersion: '^6.20.0',
+          strictVersion: true
+        }
+      }
+    })
+  ]
+}
+```
+
+**Plugin** (`kanso-plugin-fire/frontend/webpack.config.js`):
+
+```javascript
+const ModuleFederationPlugin = require('webpack/lib/container/ModuleFederationPlugin')
+const path = require('path')
+
+module.exports = {
+  entry: './src/index',
+  mode: 'production',
+  output: {
+    path: path.resolve(__dirname, 'dist'),
+    publicPath: 'auto'
+  },
+  resolve: {
+    extensions: ['.ts', '.tsx', '.js', '.jsx']
+  },
+  module: {
+    rules: [
+      {
+        test: /\.tsx?$/,
+        use: 'ts-loader',
+        exclude: /node_modules/
+      },
+      {
+        test: /\.css$/,
+        use: ['style-loader', 'css-loader', 'postcss-loader']
+      }
+    ]
+  },
+  plugins: [
+    new ModuleFederationPlugin({
+      name: 'firePlugin',
+      filename: 'remoteEntry.js',
+      exposes: {
+        './Dashboard': './src/pages/Dashboard',
+        './Scenarios': './src/pages/Scenarios'
+      },
+      shared: {
+        react: {
+          singleton: true,
+          requiredVersion: '^18.2.0'
+        },
+        'react-dom': {
+          singleton: true,
+          requiredVersion: '^18.2.0'
+        },
+        'react-router-dom': {
+          singleton: true,
           requiredVersion: '^6.20.0'
         }
       }
     })
   ]
-})
-```
-
-**Plugin** (`kanso-plugin-fire/vite.config.js`):
-
-```javascript
-export default defineConfig({
-  plugins: [
-    react(),
-    federation({
-      name: 'firePlugin',
-      filename: 'remoteEntry.js',
-      exposes: {
-        './Dashboard': './src/Dashboard.tsx',
-        './Scenarios': './src/Scenarios.tsx'
-      },
-      shared: {
-        react: { singleton: true, requiredVersion: '^18.2.0' },
-        'react-dom': { singleton: true, requiredVersion: '^18.2.0' },
-        'react-router-dom': { singleton: true, requiredVersion: '^6.20.0' }
-      }
-    })
-  ]
-})
+}
 ```
 
 **Validation**: The Plugin Manager validates `manifest.json` frontend peer dependencies before building:
@@ -576,6 +931,151 @@ requires_kanso = ">=2.0.0,<3.0.0"  # Works with all 2.x versions
 ```
 
 This ensures plugins continue working across minor/patch updates but must be explicitly updated for major version changes.
+
+### 4.4. Plugin Release Process
+
+Plugin developers create releases by building their plugin and packaging it for distribution via GitHub Releases.
+
+#### 4.4.1. Build and Package Workflow
+
+**Step 1: Build Frontend**
+
+```bash
+cd kanso-plugin-fire/frontend
+npm install
+npm run build  # Output: dist/
+```
+
+This generates production-optimized assets with Webpack Module Federation configuration.
+
+**Step 2: Prepare Release Directory**
+
+```bash
+cd kanso-plugin-fire
+mkdir -p release/backend
+mkdir -p release/frontend-dist
+
+# Copy backend source
+cp -r backend/* release/backend/
+
+# Copy pre-built frontend
+cp -r frontend/dist/* release/frontend-dist/
+
+# Copy manifest
+cp manifest.json release/
+```
+
+**Step 3: Create Release Archive**
+
+```bash
+cd release
+tar -czf ../kanso-plugin-fire-1.0.0.tar.gz .
+cd ..
+```
+
+**Step 4: Publish to GitHub**
+
+```bash
+# Using GitHub CLI
+gh release create v1.0.0 \
+  --title "v1.0.0: Initial Release" \
+  --notes "## Features
+- 4% rule calculator
+- FIRE target tracking
+- Projection scenarios
+
+## Installation
+Install from Kanso Plugin Manager using:
+https://github.com/yourname/kanso-plugin-fire/releases/download/v1.0.0/kanso-plugin-fire-1.0.0.tar.gz" \
+  kanso-plugin-fire-1.0.0.tar.gz
+```
+
+**Step 5: Users Install**
+
+Users install the plugin in Kanso's Plugin Manager UI by pasting the release URL:
+```
+https://github.com/yourname/kanso-plugin-fire/releases/download/v1.0.0/kanso-plugin-fire-1.0.0.tar.gz
+```
+
+#### 4.4.2. Release Checklist
+
+Before publishing a release, plugin developers should:
+
+- [ ] Update `manifest.json` version (semantic versioning)
+- [ ] Update `backend/pyproject.toml` version to match manifest
+- [ ] Update `CHANGELOG.md` with release notes
+- [ ] Run backend tests: `pytest backend/tests/`
+- [ ] Run frontend tests: `npm test`
+- [ ] Build frontend: `npm run build`
+- [ ] Manually test plugin locally with development core
+- [ ] Verify manifest peer dependencies are correct
+- [ ] Create and test the release archive locally before publishing
+- [ ] Write clear release notes explaining changes
+- [ ] Tag release with semantic version (v1.0.0, v1.1.0, etc.)
+
+#### 4.4.3. Semantic Versioning Strategy
+
+Plugins should follow semantic versioning (MAJOR.MINOR.PATCH):
+
+| Version Change | When to Use | Example |
+|----------------|-------------|---------|
+| **MAJOR** (1.0.0 → 2.0.0) | Breaking changes, incompatible with previous version | Changed Core API usage, removed routes, changed manifest structure |
+| **MINOR** (1.0.0 → 1.1.0) | New features, backward compatible | Added new dashboard page, new calculation method, new settings |
+| **PATCH** (1.0.0 → 1.0.1) | Bug fixes, no new features | Fixed calculation error, fixed UI bug, updated dependencies |
+
+#### 4.4.4. Automated Release with GitHub Actions (Optional)
+
+Plugin developers can automate the release process:
+
+```yaml
+# .github/workflows/release.yml
+name: Release Plugin
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm install
+          npm run build
+
+      - name: Package plugin
+        run: |
+          mkdir -p release/backend release/frontend-dist
+          cp -r backend/* release/backend/
+          cp -r frontend/dist/* release/frontend-dist/
+          cp manifest.json release/
+          cd release
+          tar -czf ../kanso-plugin-fire-${GITHUB_REF_NAME}.tar.gz .
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: kanso-plugin-fire-*.tar.gz
+          generate_release_notes: true
+```
+
+With this setup, creating a release is as simple as:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+# GitHub Actions builds and publishes automatically
+```
 
 ---
 
@@ -741,12 +1241,27 @@ Kanso 2.0 represents a strategic architectural evolution focused on **extensibil
 
 ### Key Architectural Decisions
 
-1. **SQLite over PostgreSQL**: Simplicity and zero-config deployment outweigh the marginal benefits of PostgreSQL for personal finance workloads
-2. **Full-stack plugins by default**: Python + pandas on the backend enables powerful data analysis that would be impractical in browser-only JavaScript
-3. **Module Federation**: Industry-standard micro-frontend approach provides true plugin isolation and independent deployment
-4. **User responsibility security model**: Platform enforces transparency (open source, manifest validation, database isolation) but trusts users to review code
-5. **Peer dependency validation**: Prevents version conflicts while allowing plugins to use additional libraries
-6. **Atomic installation with rollback**: Ensures system never ends up in inconsistent state after failed plugin install
+1. **SQLite over PostgreSQL**: Simplicity and zero-config deployment outweigh the marginal benefits of PostgreSQL for personal finance workloads. Each plugin gets its own isolated database file.
+
+2. **API-only data access**: Plugins access core data exclusively via HTTP API endpoints, never directly touching the core database. This provides security, versioning, and flexibility.
+
+3. **Webpack 5 Module Federation**: Chosen over Vite for production-proven stability, excellent documentation, and mature dynamic remote loading support.
+
+4. **Pre-built frontend in releases**: Plugin releases include pre-compiled frontend assets, making installation 10x faster and eliminating npm/build failures.
+
+5. **Full-stack plugins by default**: Python + pandas on the backend enables powerful data analysis that would be impractical in browser-only JavaScript.
+
+6. **manifest.json as single source of truth**: All plugin metadata, entry points, and dependencies declared in one validated file.
+
+7. **Optional Alembic**: Simple plugins use `schema.sql` for database initialization. Alembic migrations only for complex plugins that evolve over time.
+
+8. **React Context over Zustand**: Built-in React Context is sufficient for Kanso's simple global UI state (theme, preferences). TanStack Query handles all server state.
+
+9. **User responsibility security model**: Platform enforces transparency (open source, manifest validation, database isolation) but trusts users to review code before installation.
+
+10. **Peer dependency validation**: Strict version compatibility checks prevent "dependency hell" while allowing plugins to add their own libraries.
+
+11. **Atomic installation with rollback**: Ensures system never ends up in inconsistent state after failed plugin install.
 
 ### Success Criteria
 
@@ -762,11 +1277,13 @@ Kanso 2.0 will be considered successful if:
 
 | Risk | Probability | Impact | Mitigation |
 |------|-------------|--------|------------|
-| Low plugin adoption | High | High | Create 2-3 official plugins, excellent developer docs, template repo |
-| Security breach via malicious plugin | Medium | Critical | Clear warnings, code review culture, database isolation |
-| Module Federation complexity | Medium | Medium | Invest in plugin template, thorough documentation |
-| Version conflicts (deps hell) | Medium | High | Strict peer dependency validation, semantic versioning |
-| Poor performance (SQLite limits) | Low | Medium | Monitor, migrate to PostgreSQL only if needed |
+| Low plugin adoption | High | High | Create 2-3 official plugins, excellent developer docs, template repo, plugin SDK |
+| Security breach via malicious plugin | Medium | Critical | Clear warnings, code review culture, API-only data access, database isolation |
+| Webpack build complexity | Low | Medium | Provide working webpack config in template, comprehensive docs |
+| Version conflicts (deps hell) | Low | High | Strict peer dependency validation at install time, semantic versioning enforcement |
+| API versioning breaking plugins | Low | High | Maintain v1 API compatibility, clear deprecation policy, semver core versions |
+| Poor performance (SQLite limits) | Low | Medium | API caching, optimized aggregation endpoints, monitor query performance |
+| Core API evolution | Medium | Medium | OpenAPI spec, versioned endpoints (/api/v1, /api/v2), backward compatibility commitment |
 
 ### Next Steps
 
