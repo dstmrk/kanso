@@ -49,13 +49,28 @@ def render_last_refresh_timestamp() -> None:
         formatted, relative = format_timestamp_relative(last_refresh)
 
         # Show relative time, with full datetime in tooltip
-        if relative:
-            container.timestamp_label.set_text(relative)
-            container.timestamp_label.tooltip(formatted)
-        else:
-            # Fallback if no relative time
-            container.timestamp_label.set_text(formatted)
-            container.timestamp_label.tooltip("")
+        try:
+            if relative:
+                container.timestamp_label.set_text(relative)
+                # Only update tooltip if it doesn't exist yet or text changed
+                if (
+                    not hasattr(container.timestamp_label, "_tooltip_text")
+                    or container.timestamp_label._tooltip_text != formatted
+                ):
+                    container.timestamp_label.tooltip(formatted)
+                    container.timestamp_label._tooltip_text = formatted
+            else:
+                # Fallback if no relative time
+                container.timestamp_label.set_text(formatted)
+                if (
+                    not hasattr(container.timestamp_label, "_tooltip_text")
+                    or container.timestamp_label._tooltip_text != ""
+                ):
+                    container.timestamp_label.tooltip("")
+                    container.timestamp_label._tooltip_text = ""
+        except Exception:
+            # Client has been disconnected, timer will be cleaned up automatically
+            pass
 
     # Initial check
     check_and_render()
