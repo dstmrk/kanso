@@ -267,7 +267,11 @@ def render() -> None:
             .style("height: 60vh; min-height: 400px;")
         )
 
-        render_large_chart_skeleton(chart_container)
+        # Wrapper with padding to match tab panels
+        with chart_container:
+            skeleton_wrapper = ui.column().classes("w-full h-full p-4")
+
+        render_large_chart_skeleton(skeleton_wrapper)
 
         # Mobile-only message for data tables (hidden on desktop/tablet)
         with (

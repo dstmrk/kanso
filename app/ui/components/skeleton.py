@@ -93,9 +93,9 @@ def render_large_chart_skeleton(container: ui.element, title_width: str = "w-64"
     with container:
         # Title skeleton
         ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(
-            f"{title_width} h-8 rounded mb-4 ml-4 mt-4"
+            f"{title_width} h-8 rounded mb-4"
         )
         # Chart skeleton - flex-grow to fill remaining space
         ui.skeleton(animation_speed=styles.SKELETON_ANIMATION_SPEED).classes(
-            "w-full flex-grow rounded-lg mx-4 mb-4"
+            "w-full flex-grow rounded-lg"
         )
