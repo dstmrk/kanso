@@ -31,18 +31,126 @@ The platform's extensibility is its core feature. A plugin is a self-contained p
 
 ### 3.1. General Principles
 
-*   **Plugin as a Package**: A plugin is a standard, installable Python package.
-*   **The Plugin Contract**: Each plugin must adhere to a strict structure, including a `pyproject.toml` with specific entry points, a frontend directory with a valid Vite configuration (including Module Federation), and an Alembic directory for database migrations.
+*   **Plugin as a Package**: A plugin is a standard, installable Python package distributed as a GitHub release archive containing both backend source and pre-built frontend assets.
+*   **The Plugin Contract**: Each plugin must adhere to a strict structure to be recognized and loaded by the core application:
+
+**Required Structure**:
+```
+kanso-plugin-[name]/
+├── manifest.json                    # Single source of truth (metadata, dependencies, routes)
+├── backend/
+│   ├── [plugin_package]/
+│   │   ├── __init__.py
+│   │   ├── router.py               # FastAPI router
+│   │   └── models.py               # SQLAlchemy models (optional)
+│   ├── pyproject.toml              # Python package metadata
+│   └── schema.sql                  # Database schema (or alembic/ directory for complex plugins)
+└── frontend-dist/                   # Pre-built Webpack bundle (Module Federation)
+    ├── remoteEntry.js              # Module Federation entry point
+    ├── assets/
+    └── index.html
+```
+
+**Key Requirements**:
+- ✅ `manifest.json` with all required fields (see section 3.5)
+- ✅ Backend: FastAPI router exposing plugin endpoints
+- ✅ Frontend: Pre-built Webpack 5 bundle with Module Federation
+- ✅ Database: SQLite schema file (simple) OR Alembic migrations (complex)
+- ✅ Open source repository on GitHub
+- ✅ Semantic versioning
 
 ### 3.2. Backend Integration
 
-*   **Discovery via Entry Points**: The main application uses Python's `importlib.metadata` to discover installed plugins that declare a specific entry point in their `pyproject.toml`.
-    ```toml
-    # In the plugin's pyproject.toml
-    [project.entry-points."my_app.plugins"]
-    plugin_id = "my_plugin_package.main:plugin_router"
-    ```
-*   **Dynamic Routing**: For each discovered plugin, the main FastAPI application will dynamically mount its `APIRouter` object under a dedicated path, e.g., `/api/plugins/plugin_id/`.
+*   **Discovery via Manifest**: The main application discovers plugins by scanning the plugins directory and reading each plugin's `manifest.json` file (single source of truth).
+*   **Dynamic Loading**: For each plugin, the core uses the manifest's backend configuration to dynamically import and mount the plugin's FastAPI router.
+
+**Plugin Loading Implementation**:
+
+```python
+# kanso-core/app/plugin_loader.py
+import json
+import importlib
+from pathlib import Path
+from fastapi import FastAPI
+
+def load_plugins(app: FastAPI, plugins_dir: Path = Path("/app/plugins")):
+    """
+    Scan plugins directory and load all valid plugins.
+
+    Each plugin must have:
+    - manifest.json with backend configuration
+    - Installed Python package (via uv pip install)
+    """
+    loaded_plugins = []
+
+    for plugin_dir in plugins_dir.iterdir():
+        if not plugin_dir.is_dir():
+            continue
+
+        manifest_path = plugin_dir / "manifest.json"
+        if not manifest_path.exists():
+            continue
+
+        try:
+            # Load manifest
+            manifest = json.load(open(manifest_path))
+
+            # Skip frontend-only plugins
+            if manifest.get("type") == "frontend-only":
+                continue
+
+            # Get backend configuration from manifest
+            backend_config = manifest["backend"]
+            module_path = backend_config["module"]
+            router_name = backend_config["router"]
+
+            # Dynamic import
+            module = importlib.import_module(module_path)
+            router = getattr(module, router_name)
+
+            # Mount router on FastAPI app
+            app.include_router(
+                router,
+                prefix=f"/api/plugins/{manifest['id']}",
+                tags=[manifest['name']]
+            )
+
+            loaded_plugins.append(manifest['id'])
+            logger.info(f"Loaded plugin: {manifest['name']} (v{manifest['version']})")
+
+        except Exception as e:
+            logger.error(f"Failed to load plugin from {plugin_dir}: {e}")
+            continue
+
+    return loaded_plugins
+```
+
+**Usage in core application**:
+
+```python
+# kanso-core/app/main.py
+from fastapi import FastAPI
+from app.plugin_loader import load_plugins
+
+app = FastAPI(title="Kanso Core")
+
+# Load core routes
+from app.api.v1 import assets, liabilities, income, expenses
+app.include_router(assets.router, prefix="/api/v1", tags=["assets"])
+# ... other core routes
+
+# Load plugins at startup
+@app.on_event("startup")
+async def startup_event():
+    loaded = load_plugins(app)
+    logger.info(f"Loaded {len(loaded)} plugins: {', '.join(loaded)}")
+```
+
+**Key Points**:
+- ✅ Manifest is the single source of truth
+- ✅ No duplication in `pyproject.toml`
+- ✅ Clear error handling per plugin
+- ✅ Plugins fail independently (one broken plugin doesn't stop core)
 
 ### 3.3. Data Access Model
 
@@ -176,6 +284,52 @@ class FireCalculatorPlugin(PluginBase):
 - ✅ Plugin testing is simpler (mock HTTP, not database)
 - ✅ Security: Plugin cannot execute arbitrary SQL on core database
 
+#### 3.3.6. Authentication & Multi-User Support
+
+**Current Scope (v2.0)**: Kanso 2.0 is designed as a **single-user application** (like v1.x). No authentication is required for Core API endpoints.
+
+- ✅ Core API endpoints are open (no auth headers required)
+- ✅ Plugins call `CoreAPI.get("/api/v1/assets")` directly
+- ✅ Simplified architecture for self-hosted personal use
+
+**Future Evolution**:
+
+The architecture is designed to support authentication when multi-user functionality is needed:
+
+**v2.5 - Multi-User Self-Hosted** (family/small team):
+- **Auth Method**: Session-based cookies (FastAPI session middleware)
+- **Plugin Scope**: Global (installed once, visible to all users)
+- **Data Isolation**: Each user has their own data via `user_id` filtering
+- **Use Case**: Household finance tracking (2-5 users on same instance)
+
+```python
+# Example: Plugin backend receives current user automatically
+from fastapi import Depends
+from kanso_sdk import get_current_user, CoreAPI
+
+@router.get("/calculate")
+async def calculate_fire(user = Depends(get_current_user)):
+    # CoreAPI inherits user context automatically
+    assets = await CoreAPI.get("/api/v1/assets", user=user)
+
+    # Plugin DB filters by user_id
+    with db:
+        targets = db.execute(
+            "SELECT * FROM fi_targets WHERE user_id = ?", (user.id,)
+        ).fetchall()
+```
+
+**v3.0 - SaaS Multi-Tenant** (public hosted service):
+- **Auth Method**: JWT tokens (stateless, scalable)
+- **Plugin Scope**: Per-user (each user installs their own plugins)
+- **Data Isolation**: Separate database per tenant or strict `tenant_id` filtering
+- **Use Case**: Public SaaS offering with thousands of users
+
+**Migration Path**: The current API design (section 3.3.3) is compatible with future auth. When auth is added:
+1. Core adds `Authorization` header requirement
+2. SDK's `CoreAPI` client automatically includes auth token
+3. Plugins continue using same API calls (no code changes needed)
+
 ### 3.4. Frontend Integration
 
 A **Micro-Frontend** architecture will be implemented using **Module Federation**.
@@ -183,6 +337,180 @@ A **Micro-Frontend** architecture will be implemented using **Module Federation*
 *   **Plugin Discovery**: The main React app fetches a manifest from the backend listing all active plugins and their navigation entries (pages, titles, icons) to dynamically build the UI (e.g., a navigation drawer).
 *   **Dynamic Loading**: The main app uses a "catch-all" route (`/plugins/:pluginId/*`) handled by a `PluginLoader` component. This component dynamically loads and renders the appropriate remote component from the plugin's own frontend build using Module Federation.
 *   **Developer Freedom**: This approach gives plugin developers full freedom to build their UI with React, ensuring maximum flexibility while maintaining seamless integration.
+
+#### 3.4.1. Dynamic Plugin Loading Implementation
+
+The core React application dynamically loads plugin components at runtime using Webpack Module Federation's dynamic remote containers.
+
+**Core Router Setup**:
+
+```typescript
+// kanso-core/src/App.tsx
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { PluginLoader } from './components/PluginLoader'
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* Core routes */}
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/assets" element={<Assets />} />
+
+        {/* Plugin catch-all route */}
+        <Route path="/plugins/:pluginId/*" element={<PluginLoader />} />
+      </Routes>
+    </BrowserRouter>
+  )
+}
+```
+
+**PluginLoader Component**:
+
+```typescript
+// kanso-core/src/components/PluginLoader.tsx
+import React, { lazy, Suspense, useEffect, useState } from 'react'
+import { useParams, useLocation } from 'react-router-dom'
+import { loadRemote } from '@module-federation/runtime'
+
+interface PluginManifest {
+  id: string
+  name: string
+  navigation: {
+    routes: Array<{
+      path: string
+      label: string
+      component: string  // e.g., "./Dashboard"
+    }>
+  }
+  frontend: {
+    entry: string  // e.g., "remoteEntry.js"
+  }
+}
+
+export function PluginLoader() {
+  const { pluginId } = useParams()
+  const location = useLocation()
+  const [PluginComponent, setPluginComponent] = useState<React.ComponentType | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function loadPlugin() {
+      try {
+        // 1. Fetch plugin manifest from backend
+        const response = await fetch('/api/plugins/manifest')
+        const { plugins }: { plugins: PluginManifest[] } = await response.json()
+
+        const plugin = plugins.find(p => p.id === pluginId)
+        if (!plugin) {
+          setError(`Plugin "${pluginId}" not found`)
+          return
+        }
+
+        // 2. Find matching route based on current path
+        const currentPath = location.pathname
+        const route = plugin.navigation.routes.find(r => currentPath.startsWith(r.path))
+
+        if (!route) {
+          setError(`No route found for path: ${currentPath}`)
+          return
+        }
+
+        // 3. Construct remote URL
+        const remoteUrl = `/plugins/${pluginId}/${plugin.frontend.entry}`
+
+        // 4. Load remote module using Module Federation
+        const container = await loadRemote(remoteUrl)
+
+        // 5. Get the specific component (e.g., "./Dashboard")
+        const component = await container.get(route.component)
+        const factory = component()
+
+        setPluginComponent(() => factory.default)
+
+      } catch (err) {
+        console.error('Plugin loading error:', err)
+        setError(`Failed to load plugin: ${err.message}`)
+      }
+    }
+
+    loadPlugin()
+  }, [pluginId, location.pathname])
+
+  if (error) {
+    return (
+      <div className="plugin-error">
+        <h2>Plugin Error</h2>
+        <p>{error}</p>
+        <button onClick={() => window.location.href = '/'}>Return to Dashboard</button>
+      </div>
+    )
+  }
+
+  if (!PluginComponent) {
+    return <div className="plugin-loading">Loading plugin...</div>
+  }
+
+  return (
+    <Suspense fallback={<div>Loading component...</div>}>
+      <PluginComponent />
+    </Suspense>
+  )
+}
+```
+
+**Error Boundary Wrapper**:
+
+```typescript
+// kanso-core/src/components/PluginErrorBoundary.tsx
+import React from 'react'
+
+class PluginErrorBoundary extends React.Component<
+  { pluginId: string; children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false, error: null }
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error }
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error(`Plugin ${this.props.pluginId} crashed:`, error, errorInfo)
+    // TODO: Send to monitoring service
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="plugin-crash">
+          <h2>Plugin Crashed</h2>
+          <p>Plugin "{this.props.pluginId}" encountered an error.</p>
+          <details>
+            <summary>Error details</summary>
+            <pre>{this.state.error?.message}</pre>
+          </details>
+          <button onClick={() => this.setState({ hasError: false, error: null })}>
+            Retry
+          </button>
+        </div>
+      )
+    }
+
+    return this.props.children
+  }
+}
+```
+
+**Key Implementation Details**:
+- ✅ Plugins loaded only when user navigates to their routes (lazy loading)
+- ✅ Each plugin isolated in ErrorBoundary (crashes don't affect core)
+- ✅ Manifest fetched once, cached by browser
+- ✅ Clear error messages for debugging
+- ✅ `component` field explicitly maps path to Webpack exposed module
 
 ### 3.5. Plugin Manifest Structure
 
@@ -208,11 +536,13 @@ Every plugin must include a `manifest.json` file at its root declaring its metad
     "routes": [
       {
         "path": "/plugins/fire-calculator/dashboard",
-        "label": "Dashboard"
+        "label": "Dashboard",
+        "component": "./Dashboard"
       },
       {
         "path": "/plugins/fire-calculator/scenarios",
-        "label": "Scenarios"
+        "label": "Scenarios",
+        "component": "./Scenarios"
       }
     ]
   },
@@ -263,6 +593,9 @@ Every plugin must include a `manifest.json` file at its root declaring its metad
 | `license` | ✅ Yes | Open source license (MIT, Apache 2.0, GPL, etc.) |
 | `type` | ✅ Yes | `"full-stack"` or `"frontend-only"` |
 | `navigation` | ✅ Yes | Navigation menu entries (label, icon, routes) |
+| `navigation.routes[].path` | ✅ Yes | Route path (must start with `/plugins/{plugin-id}/`) |
+| `navigation.routes[].label` | ✅ Yes | Display label for navigation menu |
+| `navigation.routes[].component` | ✅ Yes | Module Federation component path (e.g., `"./Dashboard"`) |
 | `backend` | Conditional | Required if `type` is `"full-stack"` |
 | `backend.package` | ✅ Yes | Python package name (for `uv pip install`) |
 | `backend.module` | ✅ Yes | Python module path containing the router |
@@ -1077,6 +1410,389 @@ git push origin v1.0.0
 # GitHub Actions builds and publishes automatically
 ```
 
+### 4.5. Plugin Update Process
+
+Users can update plugins to newer versions from the Plugin Manager UI. The update process preserves plugin data while upgrading code and handling schema migrations.
+
+#### 4.5.1. Update Detection
+
+The Plugin Manager can check for updates by comparing the currently installed version with the latest release on GitHub:
+
+```python
+async def check_for_updates(plugin_id: str) -> Optional[dict]:
+    """Check if a newer version is available on GitHub."""
+    installation = db.query(PluginInstallation).filter_by(plugin_id=plugin_id).first()
+    current_version = installation.version
+
+    # Parse manifest to get repository URL
+    manifest = load_manifest(plugin_id)
+    repo_url = manifest["repository"]  # e.g., https://github.com/author/kanso-plugin-fire
+
+    # Fetch latest release from GitHub API
+    api_url = repo_url.replace("github.com", "api.github.com/repos") + "/releases/latest"
+    response = await httpx.get(api_url)
+    latest_release = response.json()
+
+    latest_version = latest_release["tag_name"].lstrip("v")  # v1.2.0 -> 1.2.0
+
+    if is_newer_version(latest_version, current_version):
+        return {
+            "current": current_version,
+            "latest": latest_version,
+            "release_url": latest_release["assets"][0]["browser_download_url"],
+            "release_notes": latest_release["body"]
+        }
+
+    return None
+```
+
+**UI Example**:
+
+```
+Plugin Manager
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Installed Plugins:
+
+📊 FI/RE Calculator (v1.0.0)  🆕 Update available!
+    Latest: v1.2.0
+    [View Changes] [Update Now]
+
+🏦 Bank Statement Importer (v2.1.5)  ✓ Up to date
+    [Manage] [Uninstall]
+```
+
+#### 4.5.2. Update Workflow
+
+The update process is similar to installation but includes data migration handling:
+
+1.  **Pre-Update Validation**:
+    - Download new version archive
+    - Validate manifest and compatibility
+    - Check if database migrations are required
+    - Create backup of current plugin database
+
+2.  **Update Execution**:
+    - Uninstall old backend package: `uv pip uninstall kanso-plugin-fire`
+    - Install new backend package: `uv pip install new-backend/`
+    - Replace frontend assets: delete old `frontend-dist/`, copy new one
+    - Run database migrations (if applicable):
+      - **Schema-based plugins**: Compare `schema.sql`, apply incremental changes
+      - **Alembic-based plugins**: Run `alembic upgrade head`
+    - Update manifest.json with new version
+    - Update `plugin_installations` table
+
+3.  **Post-Update Verification**:
+    - Verify all tables exist and are accessible
+    - Run plugin's self-test endpoint if available: `GET /api/plugins/{id}/health`
+    - Update status to `"active"` if successful
+
+4.  **Rollback on Failure**:
+    - Restore database backup
+    - Reinstall previous backend version
+    - Restore previous frontend assets
+    - Restore previous manifest
+
+**Progress UI Example**:
+
+```
+Updating plugin: FI/RE Calculator (v1.0.0 → v1.2.0)
+
+✓ Downloaded new version (3s)
+✓ Validated compatibility (1s)
+✓ Created database backup (2s)
+✓ Updated backend package (5s)
+✓ Deployed new frontend assets (2s)
+⏳ Running database migrations...
+  - Added column: fi_targets.target_date (0.1s)
+  - Added table: fi_scenarios (0.2s)
+✓ Migrations complete (0.3s)
+✓ Verified plugin health (1s)
+
+Update complete! (14s total)
+
+⚠️  Server restart required to activate updated backend.
+
+[Restart Now] [Restart Later]
+```
+
+#### 4.5.3. Database Migration Strategies
+
+**For schema-based plugins** (simple updates):
+
+The core can detect schema changes and apply them automatically:
+
+```python
+def migrate_schema_based_plugin(plugin_id: str, old_schema: str, new_schema: str):
+    """Apply incremental changes from old schema to new schema."""
+    # Parse both SQL files and compare
+    old_tables = parse_sql_schema(old_schema)
+    new_tables = parse_sql_schema(new_schema)
+
+    # Generate ALTER TABLE statements for differences
+    migrations = []
+    for table_name, new_def in new_tables.items():
+        if table_name not in old_tables:
+            # New table - create it
+            migrations.append(f"CREATE TABLE {table_name} {new_def}")
+        else:
+            # Existing table - check for new columns
+            new_cols = get_columns(new_def)
+            old_cols = get_columns(old_tables[table_name])
+            for col in new_cols:
+                if col not in old_cols:
+                    migrations.append(f"ALTER TABLE {table_name} ADD COLUMN {col}")
+
+    # Execute migrations
+    with get_plugin_db(plugin_id) as db:
+        for migration in migrations:
+            db.execute(migration)
+```
+
+**For Alembic-based plugins** (complex updates):
+
+Plugin developers create versioned migration scripts:
+
+```python
+# kanso-plugin-fire/backend/alembic/versions/002_add_scenarios.py
+from alembic import op
+import sqlalchemy as sa
+
+def upgrade():
+    op.create_table(
+        'fi_scenarios',
+        sa.Column('id', sa.Integer, primary_key=True),
+        sa.Column('user_id', sa.Integer, nullable=False),
+        sa.Column('name', sa.Text, nullable=False),
+        sa.Column('created_at', sa.DateTime, server_default=sa.func.now())
+    )
+
+    op.add_column('fi_targets',
+        sa.Column('target_date', sa.Date, nullable=True)
+    )
+
+def downgrade():
+    op.drop_table('fi_scenarios')
+    op.drop_column('fi_targets', 'target_date')
+```
+
+The core runs: `alembic -c backend/alembic.ini upgrade head`
+
+#### 4.5.4. Update Safety Guarantees
+
+To ensure safe updates:
+
+1. **Semantic Version Enforcement**: Core warns if update is a major version (breaking changes)
+2. **Backup Required**: Database backup is mandatory before any migration
+3. **Dry-Run Mode**: Plugin Manager can simulate update without applying changes
+4. **Rollback Tested**: Every update tests rollback procedure before committing
+
+**Major Version Warning**:
+
+```
+⚠️  MAJOR VERSION UPDATE
+
+You are updating FI/RE Calculator from v1.5.0 to v2.0.0
+
+Major version updates may include BREAKING CHANGES:
+- API changes that affect integrations
+- Data structure changes requiring migration
+- Removed features or changed behavior
+
+Release notes:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+## v2.0.0 - Breaking Changes
+
+- Removed legacy 'simple' calculation mode
+- Changed database schema: renamed fi_targets → retirement_targets
+- Updated Core API usage (requires Kanso >=2.1.0)
+
+Migration will automatically:
+✓ Rename fi_targets table to retirement_targets
+✓ Preserve all existing data
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ ] I have read the release notes and understand the changes
+[Cancel] [Proceed with Update]
+```
+
+### 4.6. Plugin Uninstall Process
+
+Users can remove plugins they no longer need. The uninstall process provides options for data handling and ensures clean removal.
+
+#### 4.6.1. Uninstall Workflow
+
+1.  **Pre-Uninstall Confirmation**:
+    ```
+    Uninstall Plugin: FI/RE Calculator (v1.2.0)
+
+    This will remove:
+    ✓ Backend Python package (kanso-plugin-fire)
+    ✓ Frontend assets (/var/www/plugins/fire/)
+    ✓ Plugin entry from installed plugins list
+
+    What should we do with your plugin data?
+
+    ○ Keep plugin database (recommended)
+       Database file: data/plugin_fire.db (2.4 MB)
+       You can restore the plugin later without losing data
+
+    ○ Delete plugin database permanently
+       ⚠️  WARNING: This cannot be undone
+       All plugin data will be permanently lost
+
+    [Cancel] [Uninstall and Keep Data] [Uninstall and Delete Data]
+    ```
+
+2.  **Uninstall Execution**:
+    - Update plugin status to `"uninstalling"` in `plugin_installations` table
+    - Uninstall backend package: `uv pip uninstall kanso-plugin-fire`
+    - Remove frontend assets: `rm -rf /var/www/plugins/fire/`
+    - Remove plugin directory: `rm -rf /app/plugins/fire-calculator/`
+    - Handle database based on user choice:
+      - **Keep**: Update status to `"uninstalled_data_retained"`
+      - **Delete**: Delete database file, remove from `plugin_installations`
+    - Clear backend route cache (or prompt for restart)
+
+3.  **Post-Uninstall**:
+    - Prompt for server restart to unload backend routes
+    - Show uninstall summary with data retention info
+
+**Uninstall Progress UI**:
+
+```
+Uninstalling plugin: FI/RE Calculator
+
+✓ Removed backend package (3s)
+✓ Removed frontend assets (1s)
+✓ Removed plugin files (1s)
+✓ Retained plugin database (data/plugin_fire.db)
+✓ Updated plugin registry (1s)
+
+Uninstall complete! (6s total)
+
+⚠️  Server restart required to fully unload plugin.
+
+Plugin data has been retained. You can reinstall this plugin
+later without losing your data.
+
+[Restart Now] [Restart Later]
+```
+
+#### 4.6.2. Data Retention Model
+
+The core tracks uninstalled plugins with retained data:
+
+```sql
+-- plugin_installations table
+CREATE TABLE plugin_installations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    plugin_id TEXT NOT NULL,
+    version TEXT NOT NULL,
+    status TEXT NOT NULL CHECK(status IN (
+        'installing',
+        'active',
+        'failed',
+        'disabled',
+        'uninstalled_data_retained',  -- ⭐ New status
+        'uninstalled_data_deleted'
+    )),
+    database_file TEXT,  -- Path to retained database
+    installed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+**UI for Retained Data**:
+
+```
+Plugin Manager > Data Recovery
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Uninstalled Plugins with Retained Data:
+
+📊 FI/RE Calculator (v1.2.0)
+    Uninstalled: 2024-03-15
+    Database: data/plugin_fire.db (2.4 MB)
+    [Reinstall] [Delete Data Permanently]
+
+🏦 Bank Statement Importer (v2.0.1)
+    Uninstalled: 2024-02-10
+    Database: data/plugin_bank_import.db (15.8 MB)
+    [Reinstall] [Delete Data Permanently]
+```
+
+#### 4.6.3. Dependency Cleanup
+
+When uninstalling a plugin, the Plugin Manager checks if any dependencies can be safely removed:
+
+```python
+def check_orphaned_dependencies(plugin_id: str) -> list[str]:
+    """Check if plugin dependencies are used by other plugins."""
+    plugin_deps = get_plugin_dependencies(plugin_id)  # e.g., ["numpy", "scipy"]
+    active_plugins = get_active_plugins()
+
+    orphaned = []
+    for dep in plugin_deps:
+        used_by_others = any(
+            dep in get_plugin_dependencies(p.plugin_id)
+            for p in active_plugins
+            if p.plugin_id != plugin_id
+        )
+        if not used_by_others:
+            orphaned.append(dep)
+
+    return orphaned
+```
+
+**Dependency Cleanup UI**:
+
+```
+Uninstall Complete!
+
+The following dependencies are no longer needed:
+- numpy (installed by FI/RE Calculator)
+- scipy (installed by FI/RE Calculator)
+
+These packages are not used by any other plugins.
+
+[ ] Remove unused dependencies (saves 50 MB disk space)
+
+[Done] [Remove and Restart]
+```
+
+**Safety Note**: Core dependencies (pandas, FastAPI, SQLAlchemy) are never removed automatically, even if no plugins use them.
+
+#### 4.6.4. Reinstall After Uninstall
+
+If a plugin was uninstalled with data retained, reinstalling the same plugin will:
+
+1. Detect existing database file
+2. Verify schema compatibility
+3. Reconnect plugin to existing data
+
+**Reinstall UI**:
+
+```
+Installing plugin: FI/RE Calculator (v1.2.0)
+
+ℹ️  Found existing plugin data!
+
+We found a database from a previous installation:
+- Database: data/plugin_fire.db (2.4 MB)
+- Last used: 2024-03-15 (2 months ago)
+- Compatible: ✓ Yes (same version)
+
+○ Use existing data (recommended)
+   Your previous plugin data will be preserved
+
+○ Start fresh
+   Existing data will be backed up to:
+   data/plugin_fire.db.backup-2024-05-20
+
+[Cancel] [Install with Existing Data] [Install Fresh]
+```
+
 ---
 
 ## 5. Core Features vs. Plugins
@@ -1186,7 +1902,7 @@ This section outlines a suggested phased approach to building Kanso 2.0.
 - [ ] FastAPI backend with SQLAlchemy + SQLite
 - [ ] Core data models: Assets, Liabilities, Income, Expenses
 - [ ] CRUD API endpoints for financial data
-- [ ] React frontend with Vite
+- [ ] React frontend with Webpack
 - [ ] Basic dashboard with KPI cards
 - [ ] Google Sheets integration (read/write sync)
 - [ ] Authentication & user management
@@ -1213,7 +1929,7 @@ This section outlines a suggested phased approach to building Kanso 2.0.
 - [ ] FI/RE plugin backend (calculations, API endpoints)
 - [ ] FI/RE plugin frontend (Dashboard, Scenarios pages)
 - [ ] Plugin database with Alembic migrations
-- [ ] Cross-database queries (read core assets)
+- [ ] API integration (read core assets via HTTP endpoints)
 - [ ] Plugin documentation (README, API docs)
 - [ ] Plugin template repository (for community developers)
 
