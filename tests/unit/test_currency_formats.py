@@ -196,3 +196,55 @@ class TestGetSupportedCurrencies:
         """Should return exactly 10 supported currencies."""
         currencies = get_supported_currencies()
         assert len(currencies) == 10
+
+
+class TestGetLocaleForCurrency:
+    """Test JavaScript locale code retrieval for currency formatting."""
+
+    def test_eur_locale(self):
+        """EUR should map to German locale."""
+        from app.core.currency_formats import get_locale_for_currency
+
+        assert get_locale_for_currency("EUR") == "de-DE"
+
+    def test_usd_locale(self):
+        """USD should map to US locale."""
+        from app.core.currency_formats import get_locale_for_currency
+
+        assert get_locale_for_currency("USD") == "en-US"
+
+    def test_gbp_locale(self):
+        """GBP should map to UK locale."""
+        from app.core.currency_formats import get_locale_for_currency
+
+        assert get_locale_for_currency("GBP") == "en-GB"
+
+    def test_chf_locale(self):
+        """CHF should map to Swiss locale."""
+        from app.core.currency_formats import get_locale_for_currency
+
+        assert get_locale_for_currency("CHF") == "de-CH"
+
+    def test_jpy_locale(self):
+        """JPY should map to Japanese locale."""
+        from app.core.currency_formats import get_locale_for_currency
+
+        assert get_locale_for_currency("JPY") == "ja-JP"
+
+    def test_all_supported_currencies_have_locale(self):
+        """All supported currencies should have locale mapping."""
+        from app.core.currency_formats import get_locale_for_currency, get_supported_currencies
+
+        for currency in get_supported_currencies():
+            locale = get_locale_for_currency(currency)
+            assert locale is not None
+            assert len(locale) > 0
+            # Locale should be in format like "en-US", "de-DE"
+            assert "-" in locale or "_" in locale
+
+    def test_unknown_currency_fallback(self):
+        """Unknown currency should fallback to en-US."""
+        from app.core.currency_formats import get_locale_for_currency
+
+        assert get_locale_for_currency("XYZ") == "en-US"
+        assert get_locale_for_currency("") == "en-US"

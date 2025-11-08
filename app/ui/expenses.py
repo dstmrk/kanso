@@ -1,5 +1,6 @@
 """Expenses page UI with transaction table and visualizations."""
 
+import logging
 from collections.abc import Callable
 from datetime import datetime
 from io import StringIO
@@ -9,6 +10,8 @@ import pandas as pd
 from nicegui import app, ui
 
 from app.core.constants import (
+    AGGRID_PAGE_SIZE_DEFAULT,
+    AGGRID_PAGE_SIZE_OPTIONS,
     CACHE_TTL_SECONDS,
     COL_AMOUNT_PARSED,
     COL_CATEGORY,
@@ -20,10 +23,11 @@ from app.core.state_manager import state_manager
 from app.logic.finance_calculator import FinanceCalculator
 from app.services import utils
 from app.ui import charts, header, styles
-from app.ui.common import get_user_preferences
+from app.ui.common import get_aggrid_currency_formatter, get_user_preferences
 from app.ui.components.skeleton import render_chart_skeleton, render_table_skeleton
 from app.ui.data_loading import render_with_data_loading
 from app.ui.rendering_utils import render_no_data_message
+from app.ui.table_utils import render_mobile_table_message
 
 
 class ExpensesRenderer:
@@ -31,42 +35,47 @@ class ExpensesRenderer:
 
     async def load_expenses_data(self) -> dict[str, Any] | None:
         """Load and cache expenses data from financial records."""
-        expenses_sheet_str = app.storage.general.get("expenses_sheet")
-        if not expenses_sheet_str:
-            return None
-
-        def compute_expenses_data():
-            expenses_sheet = utils.read_json(expenses_sheet_str)
-            calculator = FinanceCalculator(expenses_df=expenses_sheet)
-
-            # Get processed expenses DataFrame
-            processed_df = calculator.processed_expenses_df
-            if processed_df is None:
+        try:
+            expenses_sheet_str = app.storage.general.get("expenses_sheet")
+            if not expenses_sheet_str:
                 return None
 
-            # Convert to list of dicts for easier rendering
-            # Convert all datetime/Timestamp columns to strings for JSON serialization
-            df_copy = processed_df.copy()
-            for col in df_copy.columns:
-                if df_copy[col].dtype == "datetime64[ns]":
-                    df_copy[col] = df_copy[col].astype(str)
-            transactions = df_copy.to_dict("records")
+            def compute_expenses_data():
+                expenses_sheet = utils.read_json(expenses_sheet_str)
+                calculator = FinanceCalculator(expenses_df=expenses_sheet)
 
-            # Get category totals
-            category_totals = calculator.get_average_expenses_by_category_last_12_months()
+                # Get processed expenses DataFrame
+                processed_df = calculator.processed_expenses_df
+                if processed_df is None:
+                    return None
 
-            return {
-                "transactions": transactions,
-                "category_totals": category_totals,
-                "total_count": len(transactions),
-            }
+                # Convert to list of dicts for easier rendering
+                # Convert all datetime/Timestamp columns to strings for JSON serialization
+                df_copy = processed_df.copy()
+                for col in df_copy.columns:
+                    if df_copy[col].dtype == "datetime64[ns]":
+                        df_copy[col] = df_copy[col].astype(str)
+                transactions = df_copy.to_dict("records")
 
-        return await state_manager.get_or_compute(
-            user_storage_key="expenses_sheet",
-            computation_key="expenses_data_v3",  # Changed to force cache refresh with full date format
-            compute_fn=compute_expenses_data,
-            ttl_seconds=CACHE_TTL_SECONDS,
-        )
+                # Get category totals
+                category_totals = calculator.get_average_expenses_by_category_last_12_months()
+
+                return {
+                    "transactions": transactions,
+                    "category_totals": category_totals,
+                    "total_count": len(transactions),
+                }
+
+            return await state_manager.get_or_compute(
+                user_storage_key="expenses_sheet",
+                computation_key="expenses_data_v3",
+                compute_fn=compute_expenses_data,
+                ttl_seconds=CACHE_TTL_SECONDS,
+            )
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error loading expenses data: {e}", exc_info=True)
+            return None
 
     async def render_expenses_table(self, container: ui.column) -> None:
         """Render expenses transaction table with all data."""
@@ -83,21 +92,7 @@ class ExpensesRenderer:
 
         # Mobile-only message (hidden on desktop/tablet)
         with container:
-            with (
-                ui.card()
-                .classes(
-                    "w-full max-w-screen-xl mx-auto p-6 flex items-center justify-center bg-base-100 shadow-md md:hidden"
-                )
-                .style("min-height: 200px;")
-            ):
-                with ui.column().classes("items-center gap-3 text-center"):
-                    ui.icon("table_chart", size="56px").classes("text-base-content/40")
-                    ui.label("Where's my data table?").classes(
-                        "text-xl font-semibold text-base-content"
-                    )
-                    ui.label("Data tables are visible on desktop and tablet only").classes(
-                        "text-sm text-base-content/60"
-                    )
+            render_mobile_table_message()
 
         # Desktop/tablet table (hidden on mobile)
         with container:
@@ -173,6 +168,9 @@ class ExpensesRenderer:
                         }
                     )
 
+                # Get currency formatter for amount column
+                amount_formatter = get_aggrid_currency_formatter(user_currency)
+
                 # AG Grid configuration
                 aggrid = ui.aggrid(
                     options={
@@ -204,7 +202,7 @@ class ExpensesRenderer:
                                 "cellStyle": {"fontFamily": "monospace"},
                                 "flex": 1,
                                 "minWidth": 120,
-                                "valueFormatter": "value ? value.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' €' : ''",
+                                "valueFormatter": amount_formatter,
                             },
                             {
                                 "field": COL_CATEGORY,
@@ -230,8 +228,8 @@ class ExpensesRenderer:
                             "filter": True,
                         },
                         "pagination": True,
-                        "paginationPageSize": 25,
-                        "paginationPageSizeSelector": [10, 25],
+                        "paginationPageSize": AGGRID_PAGE_SIZE_DEFAULT,
+                        "paginationPageSizeSelector": AGGRID_PAGE_SIZE_OPTIONS,
                         "domLayout": "autoHeight",
                     },
                     theme="quartz",
@@ -376,6 +374,7 @@ class ExpensesRenderer:
 
 def render() -> None:
     """Render the expenses page with transaction table and charts."""
+    ui.add_head_html(styles.AGGRID_DAISY_THEME_CSS)
     header.render()
 
     # Always render skeleton UI immediately for better UX

@@ -4,6 +4,7 @@ from typing import Literal, NamedTuple
 
 from nicegui import app
 
+from app.core.currency_formats import get_currency_format, get_locale_for_currency
 from app.services import utils
 
 
@@ -28,7 +29,7 @@ def get_user_preferences() -> UserPreferences:
     code duplication across UI components.
 
     Returns:
-        UserPreferences with user_agent, currency, and echart_theme
+        UserPreferences with user_agent, currency, and echart_theme.
 
     Example:
         >>> prefs = get_user_preferences()
@@ -50,3 +51,54 @@ def get_user_preferences() -> UserPreferences:
         currency=user_currency,
         echart_theme=echart_theme,
     )
+
+
+def get_aggrid_currency_formatter(currency: str) -> str:
+    """Generate AG Grid valueFormatter JavaScript for user's currency.
+
+    Creates a JavaScript string for AG Grid's valueFormatter that formats
+    monetary values according to the user's currency preferences, including
+    proper locale, decimals, and symbol placement.
+
+    Args:
+        currency: Currency code (EUR, USD, GBP, etc.).
+
+    Returns:
+        JavaScript valueFormatter string for AG Grid columnDefs.
+
+    Example:
+        >>> formatter = get_aggrid_currency_formatter("EUR")
+        >>> "de-DE" in formatter
+        True
+        >>> "€" in formatter
+        True
+        >>> formatter = get_aggrid_currency_formatter("USD")
+        >>> "en-US" in formatter
+        True
+        >>> "$" in formatter
+        True
+    """
+    # Get currency configuration
+    fmt = get_currency_format(currency)
+    locale = get_locale_for_currency(currency)
+
+    # Build formatter based on decimal support
+    if fmt.has_decimals:
+        # Standard format with 2 decimals
+        number_format = (
+            f"value.toLocaleString('{locale}', "
+            "{minimumFractionDigits: 2, maximumFractionDigits: 2})"
+        )
+        null_value = f"'0{fmt.decimal_sep}00'"
+    else:
+        # No decimals (e.g., JPY)
+        number_format = f"value.toLocaleString('{locale}', {{maximumFractionDigits: 0}})"
+        null_value = "'0'"
+
+    # Build final formatter with symbol placement
+    if fmt.position == "before":
+        # Symbol before number: $ 1,234.56
+        return f"value != null ? '{fmt.symbol} ' + {number_format} : '{fmt.symbol} ' + {null_value}"
+    else:
+        # Symbol after number: 1.234,56 €
+        return f"value != null ? {number_format} + ' {fmt.symbol}' : {null_value} + ' {fmt.symbol}'"

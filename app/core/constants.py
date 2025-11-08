@@ -109,3 +109,17 @@ SAVING_RATIO_THRESHOLD_MEDIUM = 0.4  # Below this is "warning" (yellow), above i
 
 # Default rows per page for data tables
 TABLE_ROWS_PER_PAGE_DEFAULT = 10
+
+# === AG Grid Table Configuration ===
+
+# Pagination settings
+AGGRID_PAGE_SIZE_DEFAULT = 25
+AGGRID_PAGE_SIZE_OPTIONS = [10, 25]
+
+# Column width settings (pixels)
+AGGRID_COL_MIN_WIDTH = 120
+AGGRID_COL_DATE_WIDTH = 110
+AGGRID_COL_DATE_MIN_WIDTH = 100
+
+# Container dimensions
+TABLE_MOBILE_MESSAGE_MIN_HEIGHT = "200px"

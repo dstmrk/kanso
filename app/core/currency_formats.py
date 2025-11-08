@@ -162,3 +162,36 @@ def get_supported_currencies() -> list[str]:
         ['EUR', 'USD', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'CNY', 'INR', 'BRL']
     """
     return list(CURRENCY_FORMATS.keys())
+
+
+# Mapping of currency codes to locale codes for JavaScript toLocaleString()
+CURRENCY_LOCALE_MAP: dict[str, str] = {
+    "EUR": "de-DE",  # European format: 1.234,56
+    "USD": "en-US",  # American format: 1,234.56
+    "GBP": "en-GB",  # British format: 1,234.56
+    "CHF": "de-CH",  # Swiss format: 1'234.56 (but we use German for consistency)
+    "JPY": "ja-JP",  # Japanese format: 1,234 (no decimals)
+    "CAD": "en-CA",  # Canadian format: 1,234.56
+    "AUD": "en-AU",  # Australian format: 1,234.56
+    "CNY": "zh-CN",  # Chinese format: 1,234.56
+    "INR": "en-IN",  # Indian format: 1,23,456.78 (unique grouping)
+    "BRL": "pt-BR",  # Brazilian format: 1.234,56
+}
+
+
+def get_locale_for_currency(currency: str) -> str:
+    """Get JavaScript locale code for currency formatting.
+
+    Args:
+        currency: Currency code (EUR, USD, etc.)
+
+    Returns:
+        Locale code for toLocaleString() (e.g., "de-DE", "en-US")
+
+    Example:
+        >>> get_locale_for_currency("EUR")
+        'de-DE'
+        >>> get_locale_for_currency("USD")
+        'en-US'
+    """
+    return CURRENCY_LOCALE_MAP.get(currency, "en-US")
