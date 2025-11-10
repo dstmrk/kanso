@@ -4,10 +4,18 @@ Tests for validators module.
 Tests Pydantic validation models for expenses sheet.
 """
 
+import json
+
 import pytest
 from pydantic import ValidationError
 
-from app.core.validators import ExpenseRow, validate_dataframe_structure
+from app.core.validators import (
+    ExpenseRow,
+    clean_google_sheets_url,
+    validate_dataframe_structure,
+    validate_google_credentials_json,
+    validate_google_sheets_url,
+)
 
 
 class TestExpenseRow:
@@ -325,3 +333,181 @@ class TestValidateDataframeStructure:
 
         assert is_valid is False
         assert len(errors) == 20  # All rows have errors
+
+
+class TestCleanGoogleSheetsUrl:
+    """Tests for clean_google_sheets_url function."""
+
+    def test_clean_url_with_query_params(self):
+        """Should remove query parameters from URL."""
+        url = "https://docs.google.com/spreadsheets/d/ABC123/edit?usp=sharing"
+        cleaned = clean_google_sheets_url(url)
+        assert cleaned == "https://docs.google.com/spreadsheets/d/ABC123/edit"
+
+    def test_clean_url_with_gid_param(self):
+        """Should remove gid parameter from URL."""
+        url = "https://docs.google.com/spreadsheets/d/ABC123/edit#gid=0"
+        cleaned = clean_google_sheets_url(url)
+        assert cleaned == "https://docs.google.com/spreadsheets/d/ABC123/edit"
+
+    def test_clean_url_already_clean(self):
+        """Should return same URL if already clean."""
+        url = "https://docs.google.com/spreadsheets/d/ABC123/edit"
+        cleaned = clean_google_sheets_url(url)
+        assert cleaned == url
+
+    def test_clean_url_with_copy_suffix(self):
+        """Should handle URLs with /copy suffix."""
+        url = "https://docs.google.com/spreadsheets/d/ABC123/copy"
+        cleaned = clean_google_sheets_url(url)
+        assert cleaned == "https://docs.google.com/spreadsheets/d/ABC123/edit"
+
+    def test_clean_url_with_view_suffix(self):
+        """Should handle URLs with /view suffix."""
+        url = "https://docs.google.com/spreadsheets/d/ABC123/view"
+        cleaned = clean_google_sheets_url(url)
+        assert cleaned == "https://docs.google.com/spreadsheets/d/ABC123/edit"
+
+    def test_clean_url_invalid_format(self):
+        """Should raise ValueError for invalid URL format."""
+        with pytest.raises(ValueError, match="Could not extract workbook ID"):
+            clean_google_sheets_url("https://example.com/not-a-spreadsheet")
+
+    def test_clean_url_with_underscores_and_hyphens(self):
+        """Should handle workbook IDs with underscores and hyphens."""
+        url = "https://docs.google.com/spreadsheets/d/ABC-123_DEF/edit"
+        cleaned = clean_google_sheets_url(url)
+        assert cleaned == "https://docs.google.com/spreadsheets/d/ABC-123_DEF/edit"
+
+
+class TestValidateGoogleSheetsUrl:
+    """Tests for validate_google_sheets_url function."""
+
+    def test_valid_url(self):
+        """Should validate correct Google Sheets URL."""
+        url = "https://docs.google.com/spreadsheets/d/ABC123/edit"
+        is_valid, error = validate_google_sheets_url(url)
+        assert is_valid is True
+        assert error == ""
+
+    def test_valid_url_with_params(self):
+        """Should validate URL with query parameters."""
+        url = "https://docs.google.com/spreadsheets/d/ABC123/edit?usp=sharing"
+        is_valid, error = validate_google_sheets_url(url)
+        assert is_valid is True
+        assert error == ""
+
+    def test_empty_url(self):
+        """Should reject empty URL."""
+        is_valid, error = validate_google_sheets_url("")
+        assert is_valid is False
+        assert error == "URL is required"
+
+    def test_none_url(self):
+        """Should reject None URL."""
+        is_valid, error = validate_google_sheets_url(None)
+        assert is_valid is False
+        assert error == "URL is required"
+
+    def test_non_google_url(self):
+        """Should reject non-Google URLs."""
+        url = "https://example.com/spreadsheet"
+        is_valid, error = validate_google_sheets_url(url)
+        assert is_valid is False
+        assert error == "Invalid Google Sheets URL format"
+
+    def test_google_docs_url(self):
+        """Should reject Google Docs URLs (not Sheets)."""
+        url = "https://docs.google.com/document/d/ABC123/edit"
+        is_valid, error = validate_google_sheets_url(url)
+        assert is_valid is False
+        assert error == "Invalid Google Sheets URL format"
+
+    def test_url_without_workbook_id(self):
+        """Should reject URL without workbook ID."""
+        url = "https://docs.google.com/spreadsheets/"
+        is_valid, error = validate_google_sheets_url(url)
+        assert is_valid is False
+        assert "Could not find workbook ID" in error
+
+
+class TestValidateGoogleCredentialsJson:
+    """Tests for validate_google_credentials_json function."""
+
+    def test_valid_credentials(self):
+        """Should validate correct service account credentials."""
+        credentials = {
+            "type": "service_account",
+            "project_id": "test-project",
+            "private_key_id": "key123",
+            "private_key": "-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----\n",
+            "client_email": "test@test-project.iam.gserviceaccount.com",
+        }
+        is_valid, result = validate_google_credentials_json(json.dumps(credentials))
+        assert is_valid is True
+        assert result == credentials
+
+    def test_empty_json(self):
+        """Should reject empty JSON string."""
+        is_valid, error = validate_google_credentials_json("")
+        assert is_valid is False
+        assert error == "Credentials JSON is required"
+
+    def test_none_json(self):
+        """Should reject None."""
+        is_valid, error = validate_google_credentials_json(None)
+        assert is_valid is False
+        assert error == "Credentials JSON is required"
+
+    def test_invalid_json_format(self):
+        """Should reject malformed JSON."""
+        is_valid, error = validate_google_credentials_json("not valid json")
+        assert is_valid is False
+        assert "Invalid JSON format" in error
+
+    def test_json_array_not_object(self):
+        """Should reject JSON array instead of object."""
+        is_valid, error = validate_google_credentials_json("[1, 2, 3]")
+        assert is_valid is False
+        assert "must be an object" in error
+
+    def test_missing_type_field(self):
+        """Should reject credentials without 'type' field."""
+        credentials = {"project_id": "test-project"}
+        is_valid, error = validate_google_credentials_json(json.dumps(credentials))
+        assert is_valid is False
+        assert "Missing 'type' field" in error
+
+    def test_invalid_type_value(self):
+        """Should reject non-service_account type."""
+        credentials = {"type": "user_account", "project_id": "test"}
+        is_valid, error = validate_google_credentials_json(json.dumps(credentials))
+        assert is_valid is False
+        assert "Invalid credential type" in error
+        assert "service_account" in error
+
+    def test_missing_required_fields(self):
+        """Should reject credentials missing required fields."""
+        credentials = {
+            "type": "service_account",
+            "project_id": "test-project",
+            # Missing: private_key_id, private_key, client_email
+        }
+        is_valid, error = validate_google_credentials_json(json.dumps(credentials))
+        assert is_valid is False
+        assert "Missing required fields" in error
+        assert "private_key_id" in error
+
+    def test_missing_multiple_fields(self):
+        """Should list all missing required fields."""
+        credentials = {
+            "type": "service_account",
+            "project_id": "test-project",
+            "private_key_id": "key123",
+            # Missing: private_key, client_email
+        }
+        is_valid, error = validate_google_credentials_json(json.dumps(credentials))
+        assert is_valid is False
+        assert "private_key" in error
+        assert "client_email" in error
+
