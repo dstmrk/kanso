@@ -52,8 +52,6 @@ class TestFinanceServiceLoadDataframes:
 
     def test_load_with_missing_sheets(self):
         """Should return None for missing sheets."""
-        import pandas as pd
-
         assets_df_test = pd.DataFrame([{"Date": "2024-01", "Total": 10000}])
         expenses_df_test = pd.DataFrame([{"Date": "2024-01", "Total": 2000}])
 
@@ -83,8 +81,6 @@ class TestFinanceServiceLoadDataframes:
 
     def test_load_with_invalid_json(self, caplog):
         """Should handle invalid JSON gracefully and log error."""
-        import pandas as pd
-
         liabilities_df_test = pd.DataFrame([{"Date": "2024-01", "Total": 5000}])
         expenses_df_test = pd.DataFrame([{"Date": "2024-01", "Total": 2000}])
 
@@ -115,8 +111,6 @@ class TestFinanceServiceGetCalculator:
 
     def test_get_calculator_with_missing_assets(self):
         """Should return None when assets sheet is missing."""
-        import pandas as pd
-
         liabilities_df = pd.DataFrame([{"Date": "2024-01", "Total": 5000}])
         expenses_df = pd.DataFrame([{"Date": "2024-01", "Total": 2000}])
 
@@ -131,8 +125,6 @@ class TestFinanceServiceGetCalculator:
 
     def test_get_calculator_with_missing_liabilities(self):
         """Should return None when liabilities sheet is missing."""
-        import pandas as pd
-
         assets_df = pd.DataFrame([{"Date": "2024-01", "Total": 10000}])
         expenses_df = pd.DataFrame([{"Date": "2024-01", "Total": 2000}])
 
@@ -147,8 +139,6 @@ class TestFinanceServiceGetCalculator:
 
     def test_get_calculator_with_missing_expenses(self):
         """Should return None when expenses sheet is missing."""
-        import pandas as pd
-
         assets_df = pd.DataFrame([{"Date": "2024-01", "Total": 10000}])
         liabilities_df = pd.DataFrame([{"Date": "2024-01", "Total": 5000}])
 
@@ -351,8 +341,6 @@ class TestFinanceServiceGetDashboardData:
 @pytest.fixture
 def sample_storage_with_all_sheets():
     """Provide sample storage with all required sheets in pandas split-oriented format."""
-    import pandas as pd
-
     # Create DataFrames
     assets_df = pd.DataFrame([
         {"Date": "2024-01-01", "Total": 10000},
