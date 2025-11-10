@@ -9,7 +9,7 @@ dependencies = [
     "nicegui==3.2.0",
     "pandas==2.3.3",
     "pydantic==2.12.3",
-    "pytest==8.4.2",
+    "pytest==9.0.0",
     "pytest-asyncio==1.2.0",
     "pytest-cov==7.0.0",
     "python-dotenv==1.2.1",
