@@ -19,6 +19,43 @@ from app.core.constants import (
 from app.logic.monetary_parsing import parse_monetary_value
 
 
+def parse_dataframe_monetary_values(df: pd.DataFrame) -> pd.DataFrame:
+    """Parse monetary values in DataFrame to numeric, preserving multi-level column structure.
+
+    Takes a DataFrame with formatted monetary strings (e.g., "1.234,56 €") and converts
+    them to clean numeric values (e.g., 1234.56), while preserving the original column
+    structure including multi-level headers.
+
+    Args:
+        df: DataFrame with formatted monetary values and potentially multi-level columns.
+
+    Returns:
+        New DataFrame with same column structure but numeric values.
+
+    Example:
+        >>> df = pd.DataFrame({("Cash", "Checking"): ["100,00 €"], ("Cash", "Savings"): ["200 €"]})
+        >>> result = parse_dataframe_monetary_values(df)
+        >>> result[("Cash", "Checking")][0]
+        100.0
+    """
+    df_clean = df.copy()
+
+    # Iterate through all columns and parse monetary values
+    for col in df_clean.columns:
+        # Skip Date columns (both Date and Date_DT)
+        if col == COL_DATE_DT or col == COL_DATE:
+            continue
+        if isinstance(col, tuple) and (COL_DATE_DT in col or COL_DATE in col):
+            continue
+
+        # Parse each value in the column
+        df_clean[col] = df_clean[col].apply(
+            lambda x: parse_monetary_value(x) if not pd.isna(x) else 0.0
+        )
+
+    return df_clean
+
+
 def build_aggrid_columns_from_dataframe(df: pd.DataFrame, currency_formatter: str) -> list[dict]:
     """Build AG Grid columnDefs dynamically from DataFrame with multi-level header support.
 

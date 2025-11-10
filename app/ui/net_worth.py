@@ -12,6 +12,7 @@ from app.core.constants import (
 from app.core.state_manager import state_manager
 from app.logic.table_formatters import (
     build_aggrid_columns_from_dataframe,
+    parse_dataframe_monetary_values,
     prepare_dataframe_for_aggrid,
 )
 from app.services.finance_service import FinanceService
@@ -221,13 +222,16 @@ def render() -> None:
             prefs = get_user_preferences()
             currency_formatter = get_aggrid_currency_formatter(prefs.currency)
 
+            # Prepare clean DataFrame for CSV export (numeric values, preserves multi-level columns)
+            df_export = parse_dataframe_monetary_values(df)
+
             # Export button only
             with ui.row().classes("w-full justify-end items-center mb-4 px-4 pt-4"):
                 create_csv_export_button(
-                    df=df, filename_prefix=f"kanso_{table_id}", columns_to_drop=[COL_DATE_DT]
+                    df=df_export, filename_prefix=f"kanso_{table_id}", columns_to_drop=[COL_DATE_DT]
                 )
 
-            # Build AG Grid columns and rows
+            # Build AG Grid columns and rows (flattens multi-level for AG Grid)
             column_defs = build_aggrid_columns_from_dataframe(df, currency_formatter)
             rows = prepare_dataframe_for_aggrid(df)
 

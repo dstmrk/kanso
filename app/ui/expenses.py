@@ -2,8 +2,6 @@
 
 import logging
 from collections.abc import Callable
-from datetime import datetime
-from io import StringIO
 from typing import Any
 
 import pandas as pd
@@ -27,7 +25,7 @@ from app.ui.common import get_aggrid_currency_formatter, get_user_preferences
 from app.ui.components.skeleton import render_chart_skeleton, render_table_skeleton
 from app.ui.data_loading import render_with_data_loading
 from app.ui.rendering_utils import render_no_data_message
-from app.ui.table_utils import render_mobile_table_message
+from app.ui.table_utils import create_csv_export_button, render_mobile_table_message
 
 
 class ExpensesRenderer:
@@ -110,40 +108,19 @@ class ExpensesRenderer:
                             .props("outlined dense")
                         )
 
-                        # CSV Export button
-                        def export_csv():
-                            """Export transactions to CSV file."""
-                            # Create DataFrame from transactions
-                            df = pd.DataFrame(expenses_data["transactions"])
+                        # CSV Export button - prepare DataFrame with renamed columns
+                        df_export = pd.DataFrame(expenses_data["transactions"])
+                        export_columns = {
+                            COL_DATE: "Date",
+                            COL_MERCHANT: "Merchant",
+                            COL_AMOUNT_PARSED: "Amount",
+                            COL_CATEGORY: "Category",
+                            COL_TYPE: "Type",
+                        }
+                        df_export = df_export[list(export_columns.keys())].copy()
+                        df_export.columns = list(export_columns.values())
 
-                            # Select and rename columns for export
-                            export_columns = {
-                                COL_DATE: "Date",
-                                COL_MERCHANT: "Merchant",
-                                COL_AMOUNT_PARSED: "Amount",
-                                COL_CATEGORY: "Category",
-                                COL_TYPE: "Type",
-                            }
-
-                            df_export = df[list(export_columns.keys())].copy()
-                            df_export.columns = list(export_columns.values())
-
-                            # Generate CSV
-                            csv_buffer = StringIO()
-                            df_export.to_csv(csv_buffer, index=False)
-                            csv_content = csv_buffer.getvalue()
-
-                            # Generate filename with timestamp
-                            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                            filename = f"kanso_expenses_{timestamp}.csv"
-
-                            # Trigger download
-                            ui.download(csv_content.encode("utf-8"), filename)
-                            ui.notify("✓ CSV exported successfully", type="positive")
-
-                        ui.button(icon="download", on_click=export_csv).props("flat dense").tooltip(
-                            "Export to CSV"
-                        )
+                        create_csv_export_button(df_export, "kanso_expenses")
 
                 # Prepare data for AG Grid
                 rows = []

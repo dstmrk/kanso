@@ -4,6 +4,7 @@ import pandas as pd
 
 from app.logic.table_formatters import (
     build_aggrid_columns_from_dataframe,
+    parse_dataframe_monetary_values,
     prepare_dataframe_for_aggrid,
 )
 
@@ -247,6 +248,101 @@ class TestPrepareDataframeForAggrid:
         rows = prepare_dataframe_for_aggrid(df)
 
         assert len(rows) == 0
+
+
+class TestParseDataframeMonetaryValues:
+    """Test DataFrame monetary value parsing while preserving column structure."""
+
+    def test_single_level_columns(self):
+        """Test parsing with single-level columns."""
+        df = pd.DataFrame(
+            {
+                "date_dt": pd.to_datetime(["2024-01-01"]),
+                "Cash": ["1.234,56 €"],  # European format
+                "Stocks": ["5000,00 €"],  # No thousands separator for clearer parsing
+            }
+        )
+
+        result = parse_dataframe_monetary_values(df)
+
+        # Check values are parsed
+        assert result["Cash"].iloc[0] == 1234.56
+        assert result["Stocks"].iloc[0] == 5000.00
+        # Check Date_DT is preserved
+        assert result["date_dt"].iloc[0] == pd.Timestamp("2024-01-01")
+
+    def test_multi_level_columns_preserved(self):
+        """Test that multi-level columns are preserved."""
+        df = pd.DataFrame(
+            {
+                "date_dt": pd.to_datetime(["2024-01-01"]),
+                ("Cash", "Checking"): ["1000,00 €"],
+                ("Cash", "Savings"): ["5000,00 €"],
+                ("Investments", "Stocks"): ["10000,00 €"],
+            }
+        )
+
+        result = parse_dataframe_monetary_values(df)
+
+        # Check column structure is preserved
+        assert ("Cash", "Checking") in result.columns
+        assert ("Cash", "Savings") in result.columns
+        assert ("Investments", "Stocks") in result.columns
+
+        # Check values are parsed
+        assert result[("Cash", "Checking")].iloc[0] == 1000.00
+        assert result[("Cash", "Savings")].iloc[0] == 5000.00
+        assert result[("Investments", "Stocks")].iloc[0] == 10000.00
+
+    def test_nan_handling(self):
+        """Test that NaN values are converted to 0.0."""
+        df = pd.DataFrame(
+            {
+                "date_dt": pd.to_datetime(["2024-01-01"]),
+                "WithNaN": [None],
+                "WithValue": ["€ 100,00"],
+            }
+        )
+
+        result = parse_dataframe_monetary_values(df)
+
+        assert result["WithNaN"].iloc[0] == 0.0
+        assert result["WithValue"].iloc[0] == 100.00
+
+    def test_skips_date_dt_column(self):
+        """Test that date_dt column is not parsed as monetary."""
+        df = pd.DataFrame(
+            {
+                "date_dt": pd.to_datetime(["2024-01-01", "2024-02-01"]),
+                "Value": ["€ 100,00", "€ 200,00"],
+            }
+        )
+
+        result = parse_dataframe_monetary_values(df)
+
+        # date_dt should remain datetime, not parsed
+        assert pd.api.types.is_datetime64_any_dtype(result["date_dt"])
+        assert result["date_dt"].iloc[0] == pd.Timestamp("2024-01-01")
+        assert result["Value"].iloc[0] == 100.00
+
+    def test_skips_date_column(self):
+        """Test that Date column (string dates) is not parsed as monetary."""
+        df = pd.DataFrame(
+            {
+                "date_dt": pd.to_datetime(["2024-01-01", "2024-02-01"]),
+                "Date": ["2024-01", "2024-02"],  # String dates like in actual data
+                "Value": ["100,00 €", "200,00 €"],
+            }
+        )
+
+        result = parse_dataframe_monetary_values(df)
+
+        # Date column should remain as-is (strings), not converted to 0.0
+        assert result["Date"].iloc[0] == "2024-01"
+        assert result["Date"].iloc[1] == "2024-02"
+        # Value column should be parsed
+        assert result["Value"].iloc[0] == 100.00
+        assert result["Value"].iloc[1] == 200.00
 
     def test_field_name_flattening(self):
         """Test that multi-level columns are flattened to Category_Item format."""
