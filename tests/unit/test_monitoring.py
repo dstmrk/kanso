@@ -164,6 +164,7 @@ class TestTrackPerformanceDecorator:
 
         # Replace global collector temporarily
         import app.core.monitoring
+
         original_collector = app.core.monitoring.metrics_collector
         app.core.monitoring.metrics_collector = collector
 
@@ -187,6 +188,7 @@ class TestTrackPerformanceDecorator:
 
         # Replace global collector temporarily
         import app.core.monitoring
+
         original_collector = app.core.monitoring.metrics_collector
         app.core.monitoring.metrics_collector = collector
 
@@ -211,6 +213,7 @@ class TestTrackPerformanceDecorator:
 
         # Replace global collector temporarily
         import app.core.monitoring
+
         original_collector = app.core.monitoring.metrics_collector
         app.core.monitoring.metrics_collector = collector
 
@@ -237,6 +240,7 @@ class TestTrackPerformanceDecorator:
 
         # Replace global collector temporarily
         import app.core.monitoring
+
         original_collector = app.core.monitoring.metrics_collector
         app.core.monitoring.metrics_collector = collector
 

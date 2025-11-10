@@ -24,9 +24,11 @@ class TestFinanceServiceInit:
         class MockApp:
             class Storage:
                 general = mock_storage
+
             storage = Storage()
 
         import app.services.finance_service
+
         monkeypatch.setattr(app.services.finance_service, "app", MockApp())
 
         service = FinanceService()
@@ -342,29 +344,37 @@ class TestFinanceServiceGetDashboardData:
 def sample_storage_with_all_sheets():
     """Provide sample storage with all required sheets in pandas split-oriented format."""
     # Create DataFrames
-    assets_df = pd.DataFrame([
-        {"Date": "2024-01-01", "Total": 10000},
-        {"Date": "2024-02-01", "Total": 11000},
-        {"Date": "2024-03-01", "Total": 12000}
-    ])
+    assets_df = pd.DataFrame(
+        [
+            {"Date": "2024-01-01", "Total": 10000},
+            {"Date": "2024-02-01", "Total": 11000},
+            {"Date": "2024-03-01", "Total": 12000},
+        ]
+    )
 
-    liabilities_df = pd.DataFrame([
-        {"Date": "2024-01-01", "Total": 5000},
-        {"Date": "2024-02-01", "Total": 4800},
-        {"Date": "2024-03-01", "Total": 4600}
-    ])
+    liabilities_df = pd.DataFrame(
+        [
+            {"Date": "2024-01-01", "Total": 5000},
+            {"Date": "2024-02-01", "Total": 4800},
+            {"Date": "2024-03-01", "Total": 4600},
+        ]
+    )
 
-    expenses_df = pd.DataFrame([
-        {"Date": "2024-01-15", "Amount": 2000, "Category": "Food"},
-        {"Date": "2024-02-15", "Amount": 1800, "Category": "Food"},
-        {"Date": "2024-03-15", "Amount": 2100, "Category": "Food"}
-    ])
+    expenses_df = pd.DataFrame(
+        [
+            {"Date": "2024-01-15", "Amount": 2000, "Category": "Food"},
+            {"Date": "2024-02-15", "Amount": 1800, "Category": "Food"},
+            {"Date": "2024-03-15", "Amount": 2100, "Category": "Food"},
+        ]
+    )
 
-    incomes_df = pd.DataFrame([
-        {"Date": "2024-01-01", "Total": 5000},
-        {"Date": "2024-02-01", "Total": 5000},
-        {"Date": "2024-03-01", "Total": 5000}
-    ])
+    incomes_df = pd.DataFrame(
+        [
+            {"Date": "2024-01-01", "Total": 5000},
+            {"Date": "2024-02-01", "Total": 5000},
+            {"Date": "2024-03-01", "Total": 5000},
+        ]
+    )
 
     return {
         "assets_sheet": assets_df.to_json(orient="split"),

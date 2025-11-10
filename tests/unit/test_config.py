@@ -113,9 +113,23 @@ class TestAppConfigFromEnv:
         """Should load with default values when env vars not set."""
         # Clear all relevant env vars
         for key in os.environ.copy():
-            if key.startswith(("APP_", "DEBUG", "LOG_", "STATIC_", "ASSETS_", "LIABILITIES_",
-                              "EXPENSES_", "INCOMES_", "ROOT_", "DEFAULT_", "RELOAD",
-                              "UVICORN_", "CACHE_")):
+            if key.startswith(
+                (
+                    "APP_",
+                    "DEBUG",
+                    "LOG_",
+                    "STATIC_",
+                    "ASSETS_",
+                    "LIABILITIES_",
+                    "EXPENSES_",
+                    "INCOMES_",
+                    "ROOT_",
+                    "DEFAULT_",
+                    "RELOAD",
+                    "UVICORN_",
+                    "CACHE_",
+                )
+            ):
                 monkeypatch.delenv(key, raising=False)
 
         config = AppConfig.from_env(tmp_path)

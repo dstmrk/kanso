@@ -510,4 +510,3 @@ class TestValidateGoogleCredentialsJson:
         assert is_valid is False
         assert "private_key" in error
         assert "client_email" in error
-
