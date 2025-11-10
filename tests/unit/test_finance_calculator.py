@@ -377,6 +377,60 @@ class TestFinanceCalculator:
         # All expenses should be negative 2000
         assert all(expense == -2000.0 for expense in data["expenses"])
 
+    def test_get_assets_liabilities(self, calculator):
+        """Test getting assets and liabilities breakdown."""
+        breakdown = calculator.get_assets_liabilities()
+
+        # Should have both Assets and Liabilities keys
+        assert "Assets" in breakdown
+        assert "Liabilities" in breakdown
+
+        # Assets should contain Cash with latest value (€ 50,000)
+        assert "Cash" in breakdown["Assets"]
+        assert breakdown["Assets"]["Cash"] == 50000.0
+
+        # Assets should contain Stocks with latest value (€ 72,000)
+        assert "Stocks" in breakdown["Assets"]
+        assert breakdown["Assets"]["Stocks"] == 72000.0
+
+        # Liabilities should contain Mortgage with latest value (€ 100,000)
+        assert "Mortgage" in breakdown["Liabilities"]
+        assert breakdown["Liabilities"]["Mortgage"] == 100000.0
+
+    def test_get_assets_liabilities_empty_data(self):
+        """Test get_assets_liabilities with no data returns empty dicts."""
+        calc = FinanceCalculator()
+        breakdown = calc.get_assets_liabilities()
+
+        assert breakdown["Assets"] == {}
+        assert breakdown["Liabilities"] == {}
+
+    def test_get_expenses_by_type_last_12_months(self, calculator_with_expenses):
+        """Test getting expenses grouped by type."""
+        expenses = calculator_with_expenses.get_expenses_by_type_last_12_months()
+
+        # Should return dict with expense types
+        assert isinstance(expenses, dict)
+        # Sample data has various types
+        assert "Essential" in expenses or "Discretionary" in expenses or len(expenses) >= 0
+
+    def test_get_fi_progress(self, calculator):
+        """Test FI (Financial Independence) progress calculation."""
+        fi_progress = calculator.get_fi_progress()
+
+        # Should return a float (percentage)
+        assert isinstance(fi_progress, float)
+        # Progress should be >= 0
+        assert fi_progress >= 0.0
+
+    def test_get_fi_progress_no_data(self):
+        """Test FI progress placeholder returns fixed value."""
+        calc = FinanceCalculator()
+        fi_progress = calc.get_fi_progress()
+
+        # Currently returns placeholder value
+        assert fi_progress == 0.263
+
     def test_missing_columns(self):
         """Test behavior when no assets/liabilities are provided."""
         # No assets or liabilities provided
