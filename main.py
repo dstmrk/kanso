@@ -13,7 +13,7 @@ from app.core.monitoring import metrics_collector
 from app.core.state_manager import state_manager
 from app.services import pages, utils
 from app.services.google_sheets import GoogleSheetService
-from app.ui import expenses, home, logout, net_worth, onboarding, settings, styles
+from app.ui import expenses, home, logout, net_worth, onboarding, quick_add, settings, styles
 
 # === Load environment first ===
 APP_ROOT = Path(__file__).parent
@@ -310,6 +310,13 @@ def expenses_page():
     """Expenses page showing transaction details and category breakdown."""
     ensure_theme_setup()
     expenses.render()
+
+
+@ui.page("/quick-add", title=f"{app_config.title} - Add Expense")
+def quick_add_page():
+    """Quick add expense page for streamlined expense entry."""
+    ensure_theme_setup()
+    quick_add.render()
 
 
 @ui.page(pages.NET_WORTH_PAGE, title=app_config.title)

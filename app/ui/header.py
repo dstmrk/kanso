@@ -142,6 +142,16 @@ def render() -> None:
             with ui.link(target=pages.HOME_PAGE).classes("no-underline"):
                 ui.html(styles.LOGO_SVG, sanitize=False)
 
+            # Spacer to push Add button to the right
+            ui.space()
+
+            # Quick add expense button (desktop: icon + text)
+            with ui.link(target="/quick-add").classes("no-underline"):
+                with ui.button().props("flat color=white"):
+                    ui.html(styles.ADD_SVG, sanitize=False)
+                    ui.label("Add").classes("ml-1")
+                ui.tooltip("Add Expense")
+
     # Header mobile
     with ui.header().classes("bg-secondary p-2 md:hidden"):
         with ui.row().classes("w-full items-center relative"):
@@ -153,3 +163,12 @@ def render() -> None:
             with ui.element("div").classes("absolute left-1/2 -translate-x-1/2"):
                 with ui.link(target=pages.HOME_PAGE).classes("no-underline"):
                     ui.html(styles.LOGO_SVG, sanitize=False)
+
+            # Spacer to push Add button to the right
+            ui.space()
+
+            # Quick add expense button (mobile: icon only)
+            with ui.link(target="/quick-add").classes("no-underline"):
+                with ui.button().props("flat color=white"):
+                    ui.html(styles.ADD_SVG, sanitize=False)
+                ui.tooltip("Add Expense")

@@ -184,3 +184,47 @@ class GoogleSheetService:
                     logger.warning(f"  ... and {len(errors) - 3} more error(s)")
             else:
                 logger.debug(f"Worksheet '{worksheet_name}' validation passed")
+
+    @track_performance("google_sheets_append")
+    def append_expense(
+        self,
+        date: str,
+        merchant: str,
+        amount: str,
+        category: str,
+        expense_type: str,
+    ) -> bool:
+        """Append a new expense row to the Expenses worksheet.
+
+        Args:
+            date: Date in YYYY-MM-DD format (will be stored as provided)
+            merchant: Merchant/vendor name
+            amount: Amount as string (e.g., "123,45 €" or "123.45")
+            category: Expense category
+            expense_type: Expense type
+
+        Returns:
+            True if successful, False otherwise
+
+        Example:
+            >>> service.append_expense(
+            ...     date="2024-11-01",
+            ...     merchant="Supermarket",
+            ...     amount="50,00 €",
+            ...     category="Food",
+            ...     expense_type="Essential"
+            ... )
+            True
+        """
+        try:
+            sheet = self.client.open_by_url(self.workbook_url).worksheet("Expenses")
+
+            # Append row with expense data (matching Expenses sheet column order)
+            row = [date, merchant, amount, category, expense_type]
+            sheet.append_row(row, value_input_option="USER_ENTERED")  # type: ignore[arg-type]
+
+            logger.info(f"Expense added: {amount} at {merchant} on {date}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to append expense: {e}", exc_info=True)
+            return False
