@@ -35,6 +35,10 @@ class TestSettingsPage:
         page.locator('button:has-text("Save & Test Configuration")').click()
         page.wait_for_url(re.compile(r".*/home$|.*/$"), timeout=10000)
 
+        # Wait for storage to sync after onboarding completion
+        # This is needed after library updates to ensure onboarding_completed is persisted
+        page.wait_for_timeout(1000)
+
     def test_access_settings_page(self, page: Page):
         """Test that user can access the settings page."""
         # Navigate to settings page
