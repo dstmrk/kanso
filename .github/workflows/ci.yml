@@ -119,7 +119,11 @@ jobs:
       run: |
         uv sync --frozen --all-extras
 
-    - name: Run ruff (linter)
+    - name: Run ruff format (formatter check)
+      run: |
+        uv run ruff format --check .
+
+    - name: Run ruff check (linter)
       run: |
         uv run ruff check .
 
@@ -127,10 +131,6 @@ jobs:
       run: |
         uv run mypy app --ignore-missing-imports
       continue-on-error: true
-
-    - name: Run black (formatter check)
-      run: |
-        uv run black --check .
 
   test-e2e:
     runs-on: ubuntu-latest

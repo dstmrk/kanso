@@ -486,7 +486,7 @@ def validate_google_credentials_json(
     if json_data.get("type") != "service_account":
         return (
             False,
-            f"Invalid credential type: '{json_data.get('type')}'. " "Expected 'service_account'",
+            f"Invalid credential type: '{json_data.get('type')}'. Expected 'service_account'",
         )
 
     # Check for other required fields (basic check)

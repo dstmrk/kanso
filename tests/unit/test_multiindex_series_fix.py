@@ -37,9 +37,9 @@ def test_multiindex_assets_dont_cause_series_error():
 
     # Net worth should be: 11,000 + 5,400 - 98,000 = -81,600
     expected_net_worth = 11_000 + 5_400 - 98_000
-    assert (
-        abs(net_worth - expected_net_worth) < 1.0
-    ), f"Expected {expected_net_worth}, got {net_worth}"
+    assert abs(net_worth - expected_net_worth) < 1.0, (
+        f"Expected {expected_net_worth}, got {net_worth}"
+    )
 
 
 def test_multiindex_with_incomes_and_expenses():

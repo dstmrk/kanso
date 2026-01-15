@@ -111,9 +111,9 @@ def test_expenses_datetime_dates_are_normalized_to_month():
     # All Jan expenses (5th, 15th, 25th) should be grouped: 100+200+300 = 600
     # Feb expense (3rd) should be: 400
     # Note: expenses are negative in the chart
-    assert (
-        len([e for e in income_vs_expenses["expenses"] if e == -600.0]) >= 1
-    ), "Jan expenses should total 600"
-    assert (
-        len([e for e in income_vs_expenses["expenses"] if e == -400.0]) >= 1
-    ), "Feb expenses should total 400"
+    assert len([e for e in income_vs_expenses["expenses"] if e == -600.0]) >= 1, (
+        "Jan expenses should total 600"
+    )
+    assert len([e for e in income_vs_expenses["expenses"] if e == -400.0]) >= 1, (
+        "Feb expenses should total 400"
+    )
