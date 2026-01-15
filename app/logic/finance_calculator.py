@@ -730,11 +730,7 @@ class FinanceCalculator:
             ]
 
             # Identify columns (skip date columns)
-            asset_columns = [
-                col
-                for col in assets_df.columns
-                if not is_date_column(col)
-            ]
+            asset_columns = [col for col in assets_df.columns if not is_date_column(col)]
 
             # Group columns by category (for multi-index) or use column name (for single-index)
             for col in asset_columns:
@@ -784,8 +780,7 @@ class FinanceCalculator:
             liability_columns = [
                 col
                 for col in liabilities_df.columns
-                if not is_date_column(col)
-                and col != COL_CATEGORY
+                if not is_date_column(col) and col != COL_CATEGORY
             ]
 
             for col in liability_columns:
