@@ -43,32 +43,36 @@ class GoogleSheetService:
     with automatic conversion to pandas DataFrames.
 
     Attributes:
-        creds_path: Path to service account credentials JSON file
         workbook_url: URL of the Google Sheets workbook
         client: Authenticated gspread client
 
     Example:
+        >>> # From credentials file
         >>> service = GoogleSheetService(
-        ...     credentials_path='config/credentials/service_account.json',
+        ...     credentials='config/credentials/service_account.json',
+        ...     workbook_url='https://docs.google.com/spreadsheets/d/...'
+        ... )
+        >>> # From credentials dict (no temp file needed)
+        >>> service = GoogleSheetService(
+        ...     credentials={'type': 'service_account', ...},
         ...     workbook_url='https://docs.google.com/spreadsheets/d/...'
         ... )
         >>> df = service.get_worksheet_as_dataframe('Data')
     """
 
-    def __init__(self, credentials_path: str | Path, workbook_url: str) -> None:
+    def __init__(self, credentials: str | Path | dict[str, Any], workbook_url: str) -> None:
         """Initialize the Google Sheets service.
 
         Args:
-            credentials_path: Path to Google service account credentials JSON file
+            credentials: Either a path to credentials JSON file, or a dict
+                containing the credentials directly (avoids temp file creation)
             workbook_url: Full URL of the Google Sheets workbook
 
         Raises:
-            FileNotFoundError: If credentials file doesn't exist at the specified path
+            FileNotFoundError: If credentials is a path and file doesn't exist
         """
-        self.creds_path = Path(credentials_path)
         self.workbook_url = workbook_url
-        if not self.creds_path.exists():
-            raise FileNotFoundError(f"Credentials file not found at: {self.creds_path}")
+        self._credentials = credentials
         self.client = self._authenticate()
         logger.info(f"Google Sheets service initialized for workbook: {workbook_url}")
 
@@ -78,7 +82,15 @@ class GoogleSheetService:
         Returns:
             Authenticated gspread Client instance
         """
-        return gspread.service_account(filename=str(self.creds_path))
+        if isinstance(self._credentials, dict):
+            # Authenticate directly from dict (no temp file needed)
+            return gspread.service_account_from_dict(self._credentials)
+        else:
+            # Authenticate from file path
+            creds_path = Path(self._credentials)
+            if not creds_path.exists():
+                raise FileNotFoundError(f"Credentials file not found at: {creds_path}")
+            return gspread.service_account(filename=str(creds_path))
 
     @retry(
         stop=stop_after_attempt(3),
