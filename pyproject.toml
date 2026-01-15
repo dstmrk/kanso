@@ -118,6 +118,7 @@ match_dir = "^(?!(tests|venv|\\.venv|build|dist)).*"
 [dependency-groups]
 dev = [
     "playwright>=1.55.0",
+    "pre-commit>=4.3.0",
     "pytest-playwright>=0.7.1",
 ]
 docs = [
