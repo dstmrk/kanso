@@ -294,7 +294,9 @@ def render() -> None:
                                                 status_icon = (
                                                     "✓"
                                                     if changed
-                                                    else "•" if "No changes" in message else "✗"
+                                                    else "•"
+                                                    if "No changes" in message
+                                                    else "✗"
                                                 )
                                                 ui.label(f"{status_icon} {message}").classes(
                                                     "text-sm"
