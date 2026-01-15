@@ -345,7 +345,11 @@ def logout_page():
 
 @app.post("/api/sync-theme")
 async def sync_theme(request):
-    """API endpoint to synchronize theme changes from client-side."""
+    """API endpoint to synchronize theme changes from client-side.
+
+    This endpoint is always available as it's required for core functionality
+    (theme synchronization between client localStorage and server storage).
+    """
     try:
         data = await request.json()
         theme = data.get("theme", app_config.default_theme)
@@ -362,38 +366,59 @@ async def sync_theme(request):
         return {"status": "error"}
 
 
-@app.get("/api/cache-stats")
-async def cache_stats():
-    """Get cache statistics for debugging and monitoring."""
-    return state_manager.get_cache_stats()
+# === Debug API Endpoints ===
+# These endpoints are only registered when DEBUG=true to prevent information
+# leakage and potential abuse in production environments.
 
 
-@app.post("/api/cache-clear")
-async def clear_cache():
-    """Clear cache manually (useful for development)."""
-    state_manager.invalidate_cache()
-    return {"status": "success", "message": "Cache cleared"}
+def _register_debug_api_routes() -> None:
+    """Register debug/development API routes.
+
+    These routes provide cache and metrics management for development and debugging.
+    They are only available when DEBUG=true in the environment configuration.
+
+    Security note:
+        These endpoints are intentionally not registered in production to:
+        - Prevent information leakage (cache stats, performance metrics)
+        - Prevent potential DoS via cache invalidation
+        - Follow the principle of minimal attack surface
+    """
+
+    @app.get("/api/cache-stats")
+    async def cache_stats():
+        """Get cache statistics for debugging and monitoring."""
+        return state_manager.get_cache_stats()
+
+    @app.post("/api/cache-clear")
+    async def clear_cache():
+        """Clear cache manually (useful for development)."""
+        state_manager.invalidate_cache()
+        return {"status": "success", "message": "Cache cleared"}
+
+    @app.get("/api/metrics")
+    async def get_metrics():
+        """Get performance metrics and statistics."""
+        return metrics_collector.get_statistics()
+
+    @app.post("/api/metrics/save")
+    async def save_metrics():
+        """Save current metrics to file."""
+        metrics_file = APP_ROOT / "metrics" / "app_metrics.json"
+        metrics_collector.save_to_file(metrics_file)
+        return {"status": "success", "message": f"Metrics saved to {metrics_file}"}
+
+    @app.post("/api/metrics/reset")
+    async def reset_metrics():
+        """Reset all collected metrics."""
+        metrics_collector.reset()
+        return {"status": "success", "message": "Metrics reset"}
+
+    logger.info("Debug API routes registered: /api/cache-*, /api/metrics/*")
 
 
-@app.get("/api/metrics")
-async def get_metrics():
-    """Get performance metrics and statistics."""
-    return metrics_collector.get_statistics()
-
-
-@app.post("/api/metrics/save")
-async def save_metrics():
-    """Save current metrics to file."""
-    metrics_file = APP_ROOT / "metrics" / "app_metrics.json"
-    metrics_collector.save_to_file(metrics_file)
-    return {"status": "success", "message": f"Metrics saved to {metrics_file}"}
-
-
-@app.post("/api/metrics/reset")
-async def reset_metrics():
-    """Reset all collected metrics."""
-    metrics_collector.reset()
-    return {"status": "success", "message": "Metrics reset"}
+# Register debug routes only when DEBUG=true
+if app_config.debug:
+    _register_debug_api_routes()
 
 
 # Save metrics on shutdown
