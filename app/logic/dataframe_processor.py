@@ -227,6 +227,39 @@ class DataFrameProcessor:
         return df.sort_values(by=COL_DATE_DT)
 
     @staticmethod
+    def _preprocess_multiindex_sheet(
+        df: pd.DataFrame | None, sheet_name: str
+    ) -> pd.DataFrame | None:
+        """Preprocess a multi-index sheet (assets, liabilities, incomes) with date parsing.
+
+        This internal method handles the common preprocessing logic for sheets that use
+        MultiIndex columns. It finds the Date column dynamically, converts it to datetime,
+        and sorts by date.
+
+        Args:
+            df: Raw DataFrame to preprocess
+            sheet_name: Name of the sheet (for logging purposes)
+
+        Returns:
+            Preprocessed DataFrame with date_dt column, or None if input is None/empty
+        """
+        if df is None or df.empty:
+            return None
+
+        df = df.copy()
+
+        # Find Date column using helper method
+        date_col = DataFrameProcessor.find_date_column(df)
+
+        if date_col is not None:
+            df[COL_DATE_DT] = pd.to_datetime(
+                df[date_col], format=DATE_FORMAT_STORAGE, errors="coerce"
+            )
+            df = df.sort_values(by=COL_DATE_DT)
+
+        return df
+
+    @staticmethod
     def preprocess_assets(assets_df: pd.DataFrame | None) -> pd.DataFrame | None:
         """Preprocess assets DataFrame with date parsing and sorting.
 
@@ -240,21 +273,7 @@ class DataFrameProcessor:
             Preprocessed assets DataFrame with date_dt column, or None if no assets
             DataFrame was provided
         """
-        if assets_df is None or assets_df.empty:
-            return None
-
-        df = assets_df.copy()
-
-        # Find Date column using helper method
-        date_col = DataFrameProcessor.find_date_column(df)
-
-        if date_col is not None:
-            df[COL_DATE_DT] = pd.to_datetime(
-                df[date_col], format=DATE_FORMAT_STORAGE, errors="coerce"
-            )
-            df = df.sort_values(by=COL_DATE_DT)
-
-        return df
+        return DataFrameProcessor._preprocess_multiindex_sheet(assets_df, "Assets")
 
     @staticmethod
     def preprocess_liabilities(liabilities_df: pd.DataFrame | None) -> pd.DataFrame | None:
@@ -270,21 +289,7 @@ class DataFrameProcessor:
             Preprocessed liabilities DataFrame with date_dt column, or None if no
             liabilities DataFrame was provided
         """
-        if liabilities_df is None or liabilities_df.empty:
-            return None
-
-        df = liabilities_df.copy()
-
-        # Find Date column using helper method
-        date_col = DataFrameProcessor.find_date_column(df)
-
-        if date_col is not None:
-            df[COL_DATE_DT] = pd.to_datetime(
-                df[date_col], format=DATE_FORMAT_STORAGE, errors="coerce"
-            )
-            df = df.sort_values(by=COL_DATE_DT)
-
-        return df
+        return DataFrameProcessor._preprocess_multiindex_sheet(liabilities_df, "Liabilities")
 
     @staticmethod
     def preprocess_incomes(incomes_df: pd.DataFrame | None) -> pd.DataFrame | None:
@@ -300,18 +305,4 @@ class DataFrameProcessor:
             Preprocessed incomes DataFrame with date_dt column, or None if no
             incomes DataFrame was provided
         """
-        if incomes_df is None or incomes_df.empty:
-            return None
-
-        df = incomes_df.copy()
-
-        # Find Date column using helper method
-        date_col = DataFrameProcessor.find_date_column(df)
-
-        if date_col is not None:
-            df[COL_DATE_DT] = pd.to_datetime(
-                df[date_col], format=DATE_FORMAT_STORAGE, errors="coerce"
-            )
-            df = df.sort_values(by=COL_DATE_DT)
-
-        return df
+        return DataFrameProcessor._preprocess_multiindex_sheet(incomes_df, "Incomes")

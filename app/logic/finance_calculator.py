@@ -730,9 +730,7 @@ class FinanceCalculator:
             ]
 
             # Identify columns (skip date columns)
-            asset_columns = [
-                col for col in assets_df.columns if not is_date_column(col)
-            ]
+            asset_columns = [col for col in assets_df.columns if not is_date_column(col)]
 
             # Group columns by category (for multi-index) or use column name (for single-index)
             for col in asset_columns:
