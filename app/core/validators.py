@@ -37,13 +37,59 @@ import json
 import logging
 import re
 from datetime import datetime
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, field_validator, model_validator
 
 from app.core.constants import DATE_FORMAT_STORAGE
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Reusable Field Validators
+# =============================================================================
+
+
+def _validate_date_format(v: str) -> str:
+    """Validate that a date string is in YYYY-MM format.
+
+    This is a reusable validator function used by the DateField type annotation.
+    It ensures consistent date validation across all sheet types (Expenses, Assets,
+    Liabilities, Incomes).
+
+    Args:
+        v: Date string to validate
+
+    Returns:
+        Stripped date string if valid
+
+    Raises:
+        ValueError: If date is empty or not in YYYY-MM format
+
+    Example:
+        >>> _validate_date_format("2024-01")
+        '2024-01'
+        >>> _validate_date_format("  2024-01  ")
+        '2024-01'
+        >>> _validate_date_format("invalid")
+        Traceback (most recent call last):
+            ...
+        ValueError: Date must be in YYYY-MM format, got: invalid
+    """
+    if not v:
+        raise ValueError("Date cannot be empty")
+
+    try:
+        datetime.strptime(v.strip(), DATE_FORMAT_STORAGE)
+        return v.strip()
+    except ValueError as e:
+        raise ValueError(f"Date must be in YYYY-MM format, got: {v}") from e
+
+
+# Reusable date field type with built-in validation
+# Usage: Date: DateField (instead of Date: str with @field_validator)
+DateField = Annotated[str, BeforeValidator(_validate_date_format)]
 
 
 class ExpenseRow(BaseModel):
@@ -71,34 +117,11 @@ class ExpenseRow(BaseModel):
 
     model_config = ConfigDict(str_strip_whitespace=True)
 
-    Date: str
+    Date: DateField
     Merchant: str
     Amount: str
     Category: str
     Type: str
-
-    @field_validator("Date")
-    @classmethod
-    def validate_date_format(cls, v: str) -> str:
-        """Validate that Date is in YYYY-MM format.
-
-        Args:
-            v: Date string to validate
-
-        Returns:
-            Stripped date string if valid
-
-        Raises:
-            ValueError: If date is empty or not in YYYY-MM format
-        """
-        if not v:
-            raise ValueError("Date cannot be empty")
-
-        try:
-            datetime.strptime(v.strip(), DATE_FORMAT_STORAGE)
-            return v.strip()
-        except ValueError as e:
-            raise ValueError(f"Date must be in YYYY-MM format, got: {v}") from e
 
     @field_validator("Category")
     @classmethod
@@ -247,30 +270,7 @@ class AssetRow(MonetaryValueValidatorMixin, BaseModel):
 
     model_config = ConfigDict(str_strip_whitespace=True, extra="allow")
 
-    Date: str
-
-    @field_validator("Date")
-    @classmethod
-    def validate_date_format(cls, v: str) -> str:
-        """Validate that Date is in YYYY-MM format.
-
-        Args:
-            v: Date string to validate
-
-        Returns:
-            Stripped date string if valid
-
-        Raises:
-            ValueError: If date is empty or not in YYYY-MM format
-        """
-        if not v:
-            raise ValueError("Date cannot be empty")
-
-        try:
-            datetime.strptime(v.strip(), DATE_FORMAT_STORAGE)
-            return v.strip()
-        except ValueError as e:
-            raise ValueError(f"Date must be in YYYY-MM format, got: {v}") from e
+    Date: DateField
 
 
 class LiabilityRow(MonetaryValueValidatorMixin, BaseModel):
@@ -293,30 +293,7 @@ class LiabilityRow(MonetaryValueValidatorMixin, BaseModel):
 
     model_config = ConfigDict(str_strip_whitespace=True, extra="allow")
 
-    Date: str
-
-    @field_validator("Date")
-    @classmethod
-    def validate_date_format(cls, v: str) -> str:
-        """Validate that Date is in YYYY-MM format.
-
-        Args:
-            v: Date string to validate
-
-        Returns:
-            Stripped date string if valid
-
-        Raises:
-            ValueError: If date is empty or not in YYYY-MM format
-        """
-        if not v:
-            raise ValueError("Date cannot be empty")
-
-        try:
-            datetime.strptime(v.strip(), DATE_FORMAT_STORAGE)
-            return v.strip()
-        except ValueError as e:
-            raise ValueError(f"Date must be in YYYY-MM format, got: {v}") from e
+    Date: DateField
 
 
 class IncomeRow(MonetaryValueValidatorMixin, BaseModel):
@@ -339,30 +316,7 @@ class IncomeRow(MonetaryValueValidatorMixin, BaseModel):
 
     model_config = ConfigDict(str_strip_whitespace=True, extra="allow")
 
-    Date: str
-
-    @field_validator("Date")
-    @classmethod
-    def validate_date_format(cls, v: str) -> str:
-        """Validate that Date is in YYYY-MM format.
-
-        Args:
-            v: Date string to validate
-
-        Returns:
-            Stripped date string if valid
-
-        Raises:
-            ValueError: If date is empty or not in YYYY-MM format
-        """
-        if not v:
-            raise ValueError("Date cannot be empty")
-
-        try:
-            datetime.strptime(v.strip(), DATE_FORMAT_STORAGE)
-            return v.strip()
-        except ValueError as e:
-            raise ValueError(f"Date must be in YYYY-MM format, got: {v}") from e
+    Date: DateField
 
 
 def validate_dataframe_structure(
