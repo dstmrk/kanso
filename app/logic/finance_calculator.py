@@ -43,7 +43,7 @@ from app.core.constants import (
     MONTHS_LOOKBACK_YEAR,
 )
 from app.core.monitoring import track_performance
-from app.logic.dataframe_processor import DataFrameProcessor
+from app.logic.dataframe_processor import DataFrameProcessor, is_date_column
 from app.logic.monetary_parsing import parse_monetary_value
 
 logger = logging.getLogger(__name__)
@@ -328,24 +328,9 @@ class FinanceCalculator:
         # Calculate total income by summing all monetary columns
         total = 0.0
         for col in df.columns:
-            # Skip date_dt column (exact match for both single and tuple)
-            if col == COL_DATE_DT or col == "date_dt":
+            # Skip date columns (Date, date_dt, and variants)
+            if is_date_column(col):
                 continue
-
-            # Skip tuple columns that contain date_dt (like ('date_dt', ''))
-            if isinstance(col, tuple) and any("date_dt" in str(c).lower() for c in col):
-                continue
-
-            # Skip Date columns (handle both tuple and string)
-            # IMPORTANT: Only check for "Date" (capital D), not "data" (which might be a valid category)
-            if isinstance(col, tuple):
-                # MultiIndex: check if any level contains "Date" exactly
-                if any("Date" in str(c) for c in col):
-                    continue
-            else:
-                # Single-level: check if column name contains "Date"
-                if "Date" in str(col):
-                    continue
 
             # Sum all monetary columns
             try:
@@ -395,21 +380,9 @@ class FinanceCalculator:
         income_sources: dict[str, float] = {}
 
         for col in df.columns:
-            # Skip date_dt column
-            if col == COL_DATE_DT or col == "date_dt":
+            # Skip date columns (Date, date_dt, and variants)
+            if is_date_column(col):
                 continue
-
-            # Skip tuple columns that contain date_dt
-            if isinstance(col, tuple) and any("date_dt" in str(c).lower() for c in col):
-                continue
-
-            # Skip Date columns
-            if isinstance(col, tuple):
-                if any("Date" in str(c) for c in col):
-                    continue
-            else:
-                if "Date" in str(col):
-                    continue
 
             # Get income source name and amount
             try:
@@ -756,14 +729,9 @@ class FinanceCalculator:
                 assets_df[COL_DATE_DT].dt.strftime(DATE_FORMAT_STORAGE).isin(dates)
             ]
 
-            # Identify columns (skip date_dt and Date)
+            # Identify columns (skip date columns)
             asset_columns = [
-                col
-                for col in assets_df.columns
-                if col != COL_DATE_DT
-                and not (isinstance(col, tuple) and COL_DATE_DT in col)
-                and not (isinstance(col, str) and col == COL_DATE)
-                and not (isinstance(col, tuple) and COL_DATE in col)
+                col for col in assets_df.columns if not is_date_column(col)
             ]
 
             # Group columns by category (for multi-index) or use column name (for single-index)
@@ -810,14 +778,11 @@ class FinanceCalculator:
                 liabilities_df[COL_DATE_DT].dt.strftime(DATE_FORMAT_STORAGE).isin(dates)
             ]
 
-            # Identify columns
+            # Identify columns (skip date columns and Category)
             liability_columns = [
                 col
                 for col in liabilities_df.columns
-                if col != COL_DATE_DT
-                and not (isinstance(col, tuple) and COL_DATE_DT in col)
-                and not (isinstance(col, str) and col in (COL_DATE, COL_CATEGORY))
-                and not (isinstance(col, tuple) and COL_DATE in col)
+                if not is_date_column(col) and col != COL_CATEGORY
             ]
 
             for col in liability_columns:
@@ -904,19 +869,9 @@ class FinanceCalculator:
 
             # Extract values dynamically from columns
             for col in assets_df.columns:
-                # Skip date_dt column
-                if col == "date_dt":
+                # Skip date columns (Date, date_dt, and variants)
+                if is_date_column(col):
                     continue
-                # Skip if column name contains 'date_dt' (handles both tuple and string columns)
-                if isinstance(col, tuple) and "date_dt" in col:
-                    continue
-                # Skip Date column
-                if isinstance(col, tuple):
-                    if "Date" in col[0] or "Date" in col[1]:
-                        continue
-                else:
-                    if "Date" in col:
-                        continue
 
                 if isinstance(col, tuple) and len(col) == 2:
                     # MultiIndex: (category, item)
@@ -949,19 +904,12 @@ class FinanceCalculator:
 
             # Extract values dynamically from columns
             for col in liabilities_df.columns:
-                # Skip date_dt column
-                if col == "date_dt":
+                # Skip date columns (Date, date_dt, and variants)
+                if is_date_column(col):
                     continue
-                # Skip if column name contains 'date_dt' (handles both tuple and string columns)
-                if isinstance(col, tuple) and "date_dt" in col:
+                # Skip Category column
+                if col == COL_CATEGORY or (isinstance(col, tuple) and COL_CATEGORY in col):
                     continue
-                # Skip Date column (exact match only)
-                if isinstance(col, tuple):
-                    if COL_DATE in (col[0], col[1]) or COL_CATEGORY in (col[0], col[1]):
-                        continue
-                else:
-                    if col in (COL_DATE, COL_CATEGORY):
-                        continue
 
                 if isinstance(col, tuple) and len(col) == 2:
                     # MultiIndex: (category, item)
