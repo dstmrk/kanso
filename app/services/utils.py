@@ -17,12 +17,10 @@ Example:
 
 import json
 import locale
-import tempfile
 from collections.abc import Callable
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from io import StringIO
-from pathlib import Path
 from typing import Any, Literal
 
 import pandas as pd
@@ -386,12 +384,11 @@ def format_timestamp_relative(timestamp_str: str | None) -> tuple[str, str]:
 
 
 @contextmanager
-def temporary_sheet_service(credentials_json: str, workbook_url: str):
-    """Create GoogleSheetService with temporary credentials file.
+def sheet_service_from_json(credentials_json: str, workbook_url: str):
+    """Create GoogleSheetService from JSON credentials string.
 
-    Context manager that handles the creation of a temporary credentials file,
-    initializes GoogleSheetService with it, and ensures cleanup after use.
-    This pattern is used when credentials are stored as JSON string in app.storage.
+    Context manager that parses JSON credentials and initializes GoogleSheetService.
+    Credentials are passed directly to gspread without creating temporary files.
 
     Args:
         credentials_json: JSON string containing Google service account credentials
@@ -405,27 +402,20 @@ def temporary_sheet_service(credentials_json: str, workbook_url: str):
         RuntimeError: If GoogleSheetService initialization fails
 
     Example:
-        >>> from app.services.utils import temporary_sheet_service
+        >>> from app.services.utils import sheet_service_from_json
         >>> creds_json = app.storage.general.get("google_credentials_json")
         >>> url = app.storage.general.get("custom_workbook_url")
-        >>> with temporary_sheet_service(creds_json, url) as service:
+        >>> with sheet_service_from_json(creds_json, url) as service:
         ...     success = service.append_expense(...)
-
-    Note:
-        The temporary file is automatically deleted when exiting the context,
-        even if an exception occurs.
     """
     # Lazy import to avoid circular dependency
     from app.services.google_sheets import GoogleSheetService
 
-    # Create temporary file with credentials
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=True) as tmp:
-        # Parse and write credentials
-        json.dump(json.loads(credentials_json), tmp, indent=2)
-        tmp.flush()
-        tmp_path = Path(tmp.name)
+    # Parse JSON and pass dict directly - no temp file needed
+    credentials_dict = json.loads(credentials_json)
+    sheet_service = GoogleSheetService(credentials_dict, workbook_url)
+    yield sheet_service
 
-        # Initialize and yield service
-        sheet_service = GoogleSheetService(tmp_path, workbook_url)
-        yield sheet_service
-    # File is automatically deleted when exiting the 'with' block
+
+# Backward compatibility alias
+temporary_sheet_service = sheet_service_from_json

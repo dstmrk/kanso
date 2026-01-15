@@ -3,8 +3,6 @@
 import hashlib
 import json
 import logging
-import tempfile
-from pathlib import Path
 from typing import Any, Protocol
 
 import pandas as pd
@@ -130,7 +128,7 @@ class DataLoaderCore:
             return False
 
     def create_google_sheet_service(self, credentials_dict: dict, url: str):
-        """Create GoogleSheetService with temporary credentials file.
+        """Create GoogleSheetService with credentials dict.
 
         Args:
             credentials_dict: Credentials as dictionary
@@ -141,10 +139,8 @@ class DataLoaderCore:
         """
         from app.services.google_sheets import GoogleSheetService
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=True) as tmp:
-            json.dump(credentials_dict, tmp, indent=2)
-            tmp.flush()
-            return GoogleSheetService(Path(tmp.name), url)
+        # Pass credentials dict directly - no temp file needed
+        return GoogleSheetService(credentials_dict, url)
 
     @staticmethod
     def calculate_dataframe_hash(df: pd.DataFrame) -> str:
