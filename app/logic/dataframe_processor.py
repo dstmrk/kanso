@@ -10,9 +10,11 @@ Key features:
     - Robust error handling with logging
 
 Example:
-    >>> from app.logic.dataframe_processor import DataFrameProcessor
+    >>> from app.logic.dataframe_processor import DataFrameProcessor, is_date_column
     >>> processor = DataFrameProcessor()
     >>> processed_df = processor.preprocess_expenses(expenses_df)
+    >>> is_date_column('Date')
+    True
 """
 
 import logging
@@ -30,6 +32,63 @@ from app.core.constants import (
 from app.logic.monetary_parsing import parse_monetary_value
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Column Detection Utilities
+# =============================================================================
+
+
+def is_date_column(col: Any) -> bool:
+    """Check if a column name represents a date column.
+
+    This helper function is used when iterating over DataFrame columns to skip
+    date-related columns during monetary calculations. It handles both single-level
+    columns (str) and MultiIndex columns (tuple).
+
+    The function checks for:
+    - Exact matches: 'Date', 'date_dt', COL_DATE, COL_DATE_DT
+    - Partial matches in tuples: any level containing 'Date' or 'date_dt'
+
+    Args:
+        col: Column name (str for single-level, tuple for MultiIndex)
+
+    Returns:
+        True if column is a date column, False otherwise
+
+    Example:
+        >>> is_date_column('Date')
+        True
+        >>> is_date_column('date_dt')
+        True
+        >>> is_date_column(('Date', ''))
+        True
+        >>> is_date_column(('Cash', 'Checking'))
+        False
+        >>> is_date_column(('Income', 'date_dt'))
+        True
+    """
+    # Exact match for date_dt (internal column)
+    if col == COL_DATE_DT or col == "date_dt":
+        return True
+
+    # Exact match for Date (from sheet)
+    if col == COL_DATE or col == "Date":
+        return True
+
+    if isinstance(col, tuple):
+        # MultiIndex: check if any level contains date_dt (case-insensitive)
+        if any("date_dt" in str(c).lower() for c in col):
+            return True
+        # MultiIndex: check if any level contains "Date" (case-sensitive)
+        if any("Date" in str(c) for c in col):
+            return True
+    else:
+        # Single-level: check if column name contains "Date"
+        if "Date" in str(col):
+            return True
+
+    return False
 
 
 class DataFrameProcessor:
