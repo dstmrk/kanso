@@ -7,6 +7,7 @@ This module provides utility functions for common operations including:
 - Currency and locale handling
 - Number formatting for different currencies
 - Timestamp formatting with relative time
+- Google Sheets service helpers
 
 Example:
     >>> from app.services.utils import format_currency, get_user_currency
@@ -14,10 +15,14 @@ Example:
     >>> formatted = format_currency(1234.56, currency)  # "€1.234" or "$1,235"
 """
 
+import json
 import locale
+import tempfile
 from collections.abc import Callable
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from io import StringIO
+from pathlib import Path
 from typing import Any, Literal
 
 import pandas as pd
@@ -378,3 +383,49 @@ def format_timestamp_relative(timestamp_str: str | None) -> tuple[str, str]:
 
     except (ValueError, AttributeError):
         return ("Invalid timestamp", "")
+
+
+@contextmanager
+def temporary_sheet_service(credentials_json: str, workbook_url: str):
+    """Create GoogleSheetService with temporary credentials file.
+
+    Context manager that handles the creation of a temporary credentials file,
+    initializes GoogleSheetService with it, and ensures cleanup after use.
+    This pattern is used when credentials are stored as JSON string in app.storage.
+
+    Args:
+        credentials_json: JSON string containing Google service account credentials
+        workbook_url: Google Sheets workbook URL
+
+    Yields:
+        GoogleSheetService: Initialized service ready to use
+
+    Raises:
+        ValueError: If credentials_json is invalid JSON
+        RuntimeError: If GoogleSheetService initialization fails
+
+    Example:
+        >>> from app.services.utils import temporary_sheet_service
+        >>> creds_json = app.storage.general.get("google_credentials_json")
+        >>> url = app.storage.general.get("custom_workbook_url")
+        >>> with temporary_sheet_service(creds_json, url) as service:
+        ...     success = service.append_expense(...)
+
+    Note:
+        The temporary file is automatically deleted when exiting the context,
+        even if an exception occurs.
+    """
+    # Lazy import to avoid circular dependency
+    from app.services.google_sheets import GoogleSheetService
+
+    # Create temporary file with credentials
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=True) as tmp:
+        # Parse and write credentials
+        json.dump(json.loads(credentials_json), tmp, indent=2)
+        tmp.flush()
+        tmp_path = Path(tmp.name)
+
+        # Initialize and yield service
+        sheet_service = GoogleSheetService(tmp_path, workbook_url)
+        yield sheet_service
+    # File is automatically deleted when exiting the 'with' block

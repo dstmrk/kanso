@@ -7,7 +7,7 @@ from app.core.validators import (
     validate_google_credentials_json,
     validate_google_sheets_url,
 )
-from app.services import pages
+from app.services import pages, utils
 from app.services.data_loader import refresh_all_data
 from app.services.utils import get_user_currency
 from app.ui import header, styles
@@ -176,10 +176,6 @@ def render() -> None:
 
                     async def save_and_test_configuration():
                         """Validate, save and test both credentials and URL."""
-                        import json
-                        import tempfile
-                        from pathlib import Path
-
                         # Get values
                         credentials_content = credentials_textarea.value.strip()
                         url_value = url_input.value.strip()
@@ -200,8 +196,6 @@ def render() -> None:
                         if not is_valid_creds:
                             ui.notify(f"✗ {creds_result}", type="negative")
                             return
-
-                        json_data = creds_result  # creds_result is the parsed JSON dict
 
                         # Validate and clean URL using centralized validators
                         is_valid_url, url_error = validate_google_sheets_url(url_value)
@@ -233,26 +227,13 @@ def render() -> None:
 
                         # Test the connection with cleaned URL
                         try:
-                            from app.services.google_sheets import GoogleSheetService
-
-                            # Create a temporary file with the credentials
-                            with tempfile.NamedTemporaryFile(
-                                mode="w", suffix=".json", delete=False
-                            ) as tmp:
-                                json.dump(json_data, tmp, indent=2)
-                                tmp_path = Path(tmp.name)
-
-                            try:
-                                # Try to connect with cleaned URL
-                                GoogleSheetService(tmp_path, clean_url)
+                            # Test connection using temporary sheet service
+                            with utils.temporary_sheet_service(credentials_content, clean_url):
+                                # Connection successful if no exception raised
                                 ui.notify(
                                     "✓ Configuration saved and connection verified!",
                                     type="positive",
                                 )
-                            finally:
-                                # Clean up temp file
-                                tmp_path.unlink(missing_ok=True)
-
                         except Exception as e:
                             ui.notify(
                                 f"⚠ Configuration saved, but connection failed: {str(e)}",

@@ -612,6 +612,7 @@ dev = [
 [package.dev-dependencies]
 dev = [
     { name = "playwright" },
+    { name = "pre-commit" },
     { name = "pytest-playwright" },
 ]
 docs = [
@@ -644,6 +645,7 @@ provides-extras = ["dev"]
 [package.metadata.requires-dev]
 dev = [
     { name = "playwright", specifier = ">=1.55.0" },
+    { name = "pre-commit", specifier = ">=4.3.0" },
     { name = "pytest-playwright", specifier = ">=0.7.1" },
 ]
 docs = [

@@ -16,10 +16,19 @@ Example:
 """
 
 import logging
+from collections.abc import MutableMapping
 from pathlib import Path
+from typing import Any
 
 import gspread
 import pandas as pd
+from gspread.utils import ValueInputOption
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from app.core.monitoring import track_performance
 from app.core.validators import ExpenseRow, validate_dataframe_structure
@@ -71,6 +80,53 @@ class GoogleSheetService:
         """
         return gspread.service_account(filename=str(self.creds_path))
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((gspread.exceptions.APIError, ConnectionError)),
+        reraise=True,
+    )
+    def _fetch_worksheet_data(self, worksheet_name: str) -> list[list[str]]:
+        """Fetch worksheet data with automatic retry on transient failures.
+
+        Args:
+            worksheet_name: Name of the worksheet to fetch
+
+        Returns:
+            List of rows, where each row is a list of cell values
+
+        Raises:
+            gspread.exceptions.WorksheetNotFound: If worksheet doesn't exist
+            gspread.exceptions.APIError: If API call fails after all retries
+        """
+        sheet = self.client.open_by_url(self.workbook_url).worksheet(worksheet_name)
+        return sheet.get_all_values()
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((gspread.exceptions.APIError, ConnectionError)),
+        reraise=True,
+    )
+    def _append_row_with_retry(
+        self, worksheet_name: str, row: list[str]
+    ) -> MutableMapping[str, Any]:
+        """Append a row to worksheet with automatic retry on transient failures.
+
+        Args:
+            worksheet_name: Name of the worksheet to append to
+            row: List of cell values to append
+
+        Returns:
+            API response dict from gspread
+
+        Raises:
+            gspread.exceptions.WorksheetNotFound: If worksheet doesn't exist
+            gspread.exceptions.APIError: If API call fails after all retries
+        """
+        sheet = self.client.open_by_url(self.workbook_url).worksheet(worksheet_name)
+        return sheet.append_row(row, value_input_option=ValueInputOption.user_entered)
+
     @track_performance("google_sheets_fetch")
     def get_worksheet_as_dataframe(
         self,
@@ -107,8 +163,7 @@ class GoogleSheetService:
             MultiIndex columns are automatically sorted to avoid pandas performance warnings.
         """
         try:
-            sheet = self.client.open_by_url(self.workbook_url).worksheet(worksheet_name)
-            data = sheet.get_all_values()
+            data = self._fetch_worksheet_data(worksheet_name)
             if not data:
                 return pd.DataFrame()
             df = pd.DataFrame(data)
@@ -193,8 +248,9 @@ class GoogleSheetService:
         amount: str,
         category: str,
         expense_type: str,
+        worksheet_name: str = "Expenses",
     ) -> bool:
-        """Append a new expense row to the Expenses worksheet.
+        """Append a new expense row to the specified worksheet.
 
         Args:
             date: Date in YYYY-MM-DD format (will be stored as provided)
@@ -202,6 +258,7 @@ class GoogleSheetService:
             amount: Amount as string (e.g., "123,45 €" or "123.45")
             category: Expense category
             expense_type: Expense type
+            worksheet_name: Name of the worksheet to append to (default: "Expenses")
 
         Returns:
             True if successful, False otherwise
@@ -217,11 +274,9 @@ class GoogleSheetService:
             True
         """
         try:
-            sheet = self.client.open_by_url(self.workbook_url).worksheet("Expenses")
-
-            # Append row with expense data (matching Expenses sheet column order)
+            # Append row with expense data (matching sheet column order)
             row = [date, merchant, amount, category, expense_type]
-            sheet.append_row(row, value_input_option="USER_ENTERED")  # type: ignore[arg-type]
+            self._append_row_with_retry(worksheet_name, row)
 
             logger.info(f"Expense added: {amount} at {merchant} on {date}")
             return True

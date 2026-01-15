@@ -1,11 +1,8 @@
 """Quick add expense page - streamlined expense entry."""
 
 import asyncio
-import json
 import logging
-import tempfile
 from datetime import datetime
-from pathlib import Path
 
 import pandas as pd
 from nicegui import app, ui
@@ -13,10 +10,13 @@ from nicegui import app, ui
 from app.core.constants import CACHE_TTL_SECONDS, COL_CATEGORY, COL_MERCHANT, COL_TYPE
 from app.core.state_manager import state_manager
 from app.services import utils
-from app.services.google_sheets import GoogleSheetService
 from app.ui import header
 
 logger = logging.getLogger(__name__)
+
+# UI timing constants (in seconds)
+UI_FLUSH_DELAY_SECONDS = 0.05  # Brief delay to allow UI to update before blocking operations
+NOTIFICATION_DISPLAY_SECONDS = 1.5  # How long success notification is shown before redirect
 
 
 async def get_expense_options() -> tuple[list[str], list[str], list[str]]:
@@ -158,7 +158,7 @@ def render() -> None:
 
                 # Force UI update to show overlay before proceeding
                 # Small delay ensures browser receives and renders the overlay
-                await asyncio.sleep(0.05)
+                await asyncio.sleep(UI_FLUSH_DELAY_SECONDS)
 
                 # Validate inputs
                 if not merchant_input.value:
@@ -207,13 +207,9 @@ def render() -> None:
                 # Define the blocking operation to run in thread pool
                 def save_to_sheets():
                     """Blocking I/O operation - run in thread pool."""
-                    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=True) as tmp:
-                        json.dump(json.loads(custom_creds_json), tmp, indent=2)
-                        tmp.flush()
-                        tmp_path = Path(tmp.name)
-
-                        # Initialize service and append (both blocking operations)
-                        sheet_service = GoogleSheetService(tmp_path, custom_url)
+                    with utils.temporary_sheet_service(
+                        custom_creds_json, custom_url
+                    ) as sheet_service:
                         return sheet_service.append_expense(
                             date=date_str,
                             merchant=merchant,
@@ -237,8 +233,8 @@ def render() -> None:
                             type="positive",
                         )
 
-                        # Wait 1.5 seconds to allow user to read the notification
-                        await asyncio.sleep(1.5)
+                        # Wait to allow user to read the notification
+                        await asyncio.sleep(NOTIFICATION_DISPLAY_SECONDS)
 
                         # Navigate back (overlay stays visible during redirect)
                         ui.navigate.back()
