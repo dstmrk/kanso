@@ -81,29 +81,35 @@ git remote add upstream https://github.com/dstmrk/kanso.git
 
 ```bash
 # Install all dependencies including dev tools
-uv sync --all-extras
+uv sync --group dev
 
 # Install pre-commit hooks
 uv run pre-commit install
 ```
 
-### Environment Setup (Optional)
-
-```bash
-# For development, use the dev environment
-ln -s .env.dev .env
-```
-
-This enables debug mode, hot-reload, and verbose logging.
-
 ### Run Locally
 
 ```bash
-# Start the application
-uv run python main.py
+# Start the application (auto-loads .env.dev with debug mode and hot-reload)
+uv run main.py
 
 # Open http://localhost:9525
 ```
+
+### Work on Documentation
+
+```bash
+# Install docs dependencies
+uv sync --group docs
+
+# Start local preview server at http://localhost:8000
+uv run mkdocs serve
+
+# Build static site (outputs to ./site/)
+uv run mkdocs build
+```
+
+Documentation auto-deploys to GitHub Pages on push to `main`.
 
 ## Development Workflow
 
@@ -164,8 +170,8 @@ uv run ruff check .
 # Auto-fix linting issues
 uv run ruff check . --fix
 
-# Format with black
-uv run black .
+# Format code
+uv run ruff format .
 
 # Type check with mypy
 uv run mypy app --ignore-missing-imports

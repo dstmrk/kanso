@@ -114,16 +114,10 @@ uv sync
 ### Step 2: Run the Application
 
 ```bash
-uv run python main.py
+uv run main.py
 ```
 
-The application will start on `http://localhost:9525`.
-
-!!! tip "Development Environment"
-    For development, use `.env.dev` which enables debug mode and hot-reload:
-    ```bash
-    ln -s .env.dev .env
-    ```
+The application will start on `http://localhost:9525` with development settings (debug mode, hot-reload enabled).
 
 ### Step 3: Run Tests (Optional)
 
@@ -197,27 +191,13 @@ Clear browser storage and cookies for `localhost:9525` if you see authentication
 
 ## Updating Kanso
 
-### Docker (Pre-built Image)
+### Docker
 
 ```bash
 # Pull latest image
 docker compose pull
 
 # Restart with new image
-docker compose up -d
-```
-
-### Docker (Local Build)
-
-If you're building locally from source:
-
-```bash
-# Pull latest code
-git pull origin main
-
-# Rebuild and restart
-docker compose down
-docker compose build --no-cache
 docker compose up -d
 ```
 
