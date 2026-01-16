@@ -223,7 +223,3 @@ config/credentials
 
 # Performance metrics
 metrics/
-
-# Internal documentation (not for public repo)
-ROADMAP.md
-RELEASE_NOTES*.md
