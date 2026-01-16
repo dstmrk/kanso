@@ -180,21 +180,21 @@ docs: rewrite README with benefit-driven approach
 
 ## 🚀 Current State
 
-**Version**: v0.5.0
+**Version**: v0.7.0
 
 **Completed**:
 - ✅ Core financial tracking (income, expenses, assets, liabilities)
 - ✅ Dashboard with 4 KPIs + 5 charts
 - ✅ Google Sheets integration with 24h caching
 - ✅ Advanced visualizations (net worth evolution, YoY comparison, merchant breakdown)
-- ✅ Benefit-driven documentation
-- ✅ Multi-currency support with browser locale auto-detection
+- ✅ Multi-currency support (10 currencies) with browser locale auto-detection
 - ✅ Dark/light mode
+- ✅ AG Grid data tables with sorting, filtering, CSV export
+- ✅ Quick Add Expense form with auto-complete
 
-**Next Focus**: v0.6.0 - Data Tables & UI Improvements
+**Next Focus**: v1.0.0 - Polish, stability, and documentation
 
-**Roadmap** (internal reference): See [ROADMAP.md](./ROADMAP.md) for details
-- Note: ROADMAP.md is detailed for internal use, not currently public
+**Roadmap**: See [ROADMAP.md](./ROADMAP.md) for details
 
 ---
 
