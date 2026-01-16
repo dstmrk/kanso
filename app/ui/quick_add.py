@@ -4,11 +4,11 @@ import asyncio
 import logging
 from datetime import datetime
 
-import pandas as pd
 from nicegui import app, ui
 
-from app.core.constants import CACHE_TTL_SECONDS, COL_CATEGORY, COL_MERCHANT, COL_TYPE
+from app.core.constants import CACHE_TTL_SECONDS
 from app.core.state_manager import state_manager
+from app.logic.finance_calculator import FinanceCalculator
 from app.services import utils
 from app.ui import header
 
@@ -27,38 +27,31 @@ async def get_expense_options() -> tuple[list[str], list[str], list[str]]:
         Returns empty lists if no data available.
     """
 
-    def compute_options() -> tuple[list[str], list[str], list[str]]:
+    def compute_options() -> dict[str, list[str]]:
         """Extract unique merchants, categories and types from expenses sheet."""
         expenses_sheet_str = app.storage.general.get("expenses_sheet")
         if not expenses_sheet_str:
-            return [], [], []
+            return {"merchants": [], "categories": [], "types": []}
 
         try:
             expenses_sheet = utils.read_json(expenses_sheet_str)
-            df = pd.DataFrame(expenses_sheet)
-
-            if df.empty:
-                return [], [], []
-
-            # Extract unique values and sort alphabetically
-            merchants = sorted(df[COL_MERCHANT].dropna().unique().tolist())
-            categories = sorted(df[COL_CATEGORY].dropna().unique().tolist())
-            types = sorted(df[COL_TYPE].dropna().unique().tolist())
-
-            return merchants, categories, types
+            calculator = FinanceCalculator(expenses_df=expenses_sheet)
+            return calculator.get_unique_expense_fields()
         except Exception as e:
             logger.error(f"Error extracting expense options: {e}", exc_info=True)
-            return [], [], []
+            return {"merchants": [], "categories": [], "types": []}
 
     # Cache with same TTL as expenses data
     result = await state_manager.get_or_compute(
         user_storage_key="expenses_sheet",
-        computation_key="expense_options_v2",
+        computation_key="expense_options_v3",
         compute_fn=compute_options,
         ttl_seconds=CACHE_TTL_SECONDS,
     )
 
-    return result if result else ([], [], [])
+    if result:
+        return result["merchants"], result["categories"], result["types"]
+    return [], [], []
 
 
 def render() -> None:

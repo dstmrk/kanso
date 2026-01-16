@@ -73,31 +73,8 @@ async def load_assets_liabilities_data() -> tuple[pd.DataFrame | None, pd.DataFr
         if not calculator:
             return None, None
 
-        # Get valid dates from net worth calculation (filtered by max income date)
-        nw_data = calculator.get_monthly_net_worth()
-        valid_dates = nw_data.get("dates", [])
-
-        if not valid_dates:
-            return None, None
-
-        # Get full DataFrames
-        assets_df = calculator.processed_assets_df
-        liabilities_df = calculator.processed_liabilities_df
-
-        # Filter to valid dates only (same logic as charts)
-        filtered_assets = None
-        if assets_df is not None and not assets_df.empty:
-            filtered_assets = assets_df[
-                assets_df[COL_DATE_DT].dt.strftime("%Y-%m").isin(valid_dates)
-            ].copy()
-
-        filtered_liabilities = None
-        if liabilities_df is not None and not liabilities_df.empty:
-            filtered_liabilities = liabilities_df[
-                liabilities_df[COL_DATE_DT].dt.strftime("%Y-%m").isin(valid_dates)
-            ].copy()
-
-        return filtered_assets, filtered_liabilities
+        # Use centralized filtering logic from FinanceCalculator
+        return calculator.get_filtered_assets_liabilities()
     except Exception as e:
         logger = logging.getLogger(__name__)
         logger.error(f"Error loading assets/liabilities data: {e}", exc_info=True)
