@@ -121,7 +121,7 @@ class DataQualityChecker:
                     )
                     logger.warning(f"Empty sheet: {display_name}")
 
-            except Exception as e:
+            except (ValueError, TypeError) as e:
                 display_name = self.SHEET_DISPLAY_NAMES[sheet_key]
                 logger.error(f"Error checking {display_name} sheet: {e}")
                 warnings.append(
@@ -194,7 +194,7 @@ class DataQualityChecker:
                     )
                     logger.warning(f"Missing columns in {display_name}: {missing_cols}")
 
-            except Exception as e:
+            except (ValueError, TypeError, KeyError) as e:
                 display_name = self.SHEET_DISPLAY_NAMES[sheet_key]
                 logger.error(f"Error checking columns in {display_name} sheet: {e}")
                 warnings.append(
