@@ -4,7 +4,9 @@ import json
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
+import pytest
 
+from app.core.exceptions import ConfigurationError, DataError
 from app.services.data_loader_core import DataLoaderCore
 
 
@@ -110,8 +112,8 @@ class TestDataLoaderCore:
 
         assert result is None
 
-    def test_get_credentials_returns_none_when_invalid_json(self):
-        """Test that get_credentials returns None when JSON is invalid."""
+    def test_get_credentials_raises_error_when_invalid_json(self):
+        """Test that get_credentials raises ConfigurationError when JSON is invalid."""
         storage = MockStorage(
             {
                 "google_credentials_json": "invalid json {",
@@ -121,9 +123,11 @@ class TestDataLoaderCore:
         config = MockConfig()
         loader = DataLoaderCore(storage, config)
 
-        result = loader.get_credentials()
+        with pytest.raises(ConfigurationError) as exc_info:
+            loader.get_credentials()
 
-        assert result is None
+        assert "Invalid credentials JSON" in str(exc_info.value)
+        assert "Google Cloud" in exc_info.value.user_message
 
     def test_load_missing_sheets_loads_all_when_none_exist(self):
         """Test that load_missing_sheets loads all sheets when none exist."""
@@ -173,19 +177,21 @@ class TestDataLoaderCore:
         # Should have called for only 3 missing sheets
         assert mock_service.get_worksheet_as_dataframe.call_count == 3
 
-    def test_load_missing_sheets_returns_false_on_error(self):
-        """Test that load_missing_sheets returns False when an error occurs."""
+    def test_load_missing_sheets_raises_error_on_data_processing_failure(self):
+        """Test that load_missing_sheets raises DataError on data processing errors."""
         storage = MockStorage()
         config = MockConfig()
         loader = DataLoaderCore(storage, config)
 
-        # Mock service that raises exception
+        # Mock service that raises a data processing error
         mock_service = MagicMock()
-        mock_service.get_worksheet_as_dataframe.side_effect = Exception("Connection failed")
+        mock_service.get_worksheet_as_dataframe.side_effect = ValueError("Invalid data format")
 
-        result = loader.load_missing_sheets(mock_service)
+        with pytest.raises(DataError) as exc_info:
+            loader.load_missing_sheets(mock_service)
 
-        assert result is False
+        assert "Failed to process sheet data" in str(exc_info.value)
+        assert "spreadsheet" in exc_info.value.user_message.lower()
 
     def test_create_google_sheet_service_with_valid_credentials(self):
         """Test creating GoogleSheetService with valid credentials."""
@@ -292,20 +298,21 @@ class TestDataLoaderCore:
         assert changed is False
         assert "No changes" in message
 
-    def test_refresh_sheet_handles_errors_gracefully(self):
-        """Test that refresh_sheet handles errors gracefully."""
+    def test_refresh_sheet_handles_data_errors_gracefully(self):
+        """Test that refresh_sheet handles data processing errors gracefully."""
         storage = MockStorage()
         config = MockConfig()
         loader = DataLoaderCore(storage, config)
 
-        # Mock service that raises exception
+        # Mock service that raises a data processing error
         mock_service = MagicMock()
-        mock_service.get_worksheet_as_dataframe.side_effect = Exception("Network error")
+        mock_service.get_worksheet_as_dataframe.side_effect = ValueError("Invalid data")
 
         changed, message = loader.refresh_sheet(mock_service, "Data", "data_sheet")
 
         assert changed is False
         assert "Failed" in message
+        assert "data format error" in message
 
     def test_refresh_all_sheets_returns_detailed_results(self):
         """Test that refresh_all_sheets returns detailed results."""

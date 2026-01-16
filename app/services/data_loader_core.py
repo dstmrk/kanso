@@ -7,6 +7,8 @@ from typing import Any, Protocol
 
 import pandas as pd
 
+from app.core.exceptions import ConfigurationError, DataError, ExternalServiceError
+
 logger = logging.getLogger(__name__)
 
 
@@ -65,7 +67,10 @@ class DataLoaderCore:
             return (creds_dict, url)
         except json.JSONDecodeError as e:
             logger.error(f"Invalid credentials JSON: {e}")
-            return None
+            raise ConfigurationError(
+                f"Invalid credentials JSON format: {e}",
+                user_message="Invalid credentials format. Please paste the complete JSON from Google Cloud.",
+            ) from e
 
     def load_missing_sheets(self, service) -> bool:
         """Load any missing sheets from Google Sheets.
@@ -123,9 +128,15 @@ class DataLoaderCore:
                 logger.debug("All data sheets already loaded (skipped)")
             return True
 
-        except Exception as e:
-            logger.error(f"Failed to load sheets: {e}")
-            return False
+        except ExternalServiceError:
+            # Re-raise external service errors with context
+            raise
+        except (ValueError, TypeError, KeyError) as e:
+            logger.error(f"Data processing error while loading sheets: {e}", exc_info=True)
+            raise DataError(
+                f"Failed to process sheet data: {e}",
+                user_message="Could not read your spreadsheet data. Please check the format.",
+            ) from e
 
     def create_google_sheet_service(self, credentials_dict: dict, url: str):
         """Create GoogleSheetService with credentials dict.
@@ -197,9 +208,13 @@ class DataLoaderCore:
 
             return True, f"Updated {sheet_name}"
 
-        except Exception as e:
-            error_msg = f"Failed to refresh {sheet_name}: {str(e)}"
+        except ExternalServiceError as e:
+            error_msg = f"Failed to refresh {sheet_name}: {e.user_message}"
             logger.error(error_msg)
+            return False, error_msg
+        except (ValueError, TypeError, KeyError) as e:
+            error_msg = f"Failed to refresh {sheet_name}: data format error"
+            logger.error(f"{error_msg}: {e}", exc_info=True)
             return False, error_msg
 
     def refresh_all_sheets(self, service) -> dict[str, Any]:

@@ -30,6 +30,7 @@ from tenacity import (
     wait_exponential,
 )
 
+from app.core.exceptions import ExternalServiceError
 from app.core.monitoring import track_performance
 from app.core.validators import ExpenseRow, validate_dataframe_structure
 
@@ -292,6 +293,23 @@ class GoogleSheetService:
 
             logger.info(f"Expense added: {amount} at {merchant} on {date}")
             return True
-        except Exception as e:
-            logger.error(f"Failed to append expense: {e}", exc_info=True)
-            return False
+        except gspread.exceptions.APIError as e:
+            logger.error(f"Google Sheets API error while appending expense: {e}", exc_info=True)
+            raise ExternalServiceError(
+                f"Failed to add expense: {e}",
+                user_message="Could not save expense. Please check your internet connection.",
+                details={"merchant": merchant, "amount": amount},
+            ) from e
+        except gspread.exceptions.WorksheetNotFound as e:
+            logger.error(f"Worksheet '{worksheet_name}' not found: {e}", exc_info=True)
+            raise ExternalServiceError(
+                f"Worksheet '{worksheet_name}' not found",
+                user_message=f"Worksheet '{worksheet_name}' not found. Please check your spreadsheet.",
+                is_retryable=False,
+            ) from e
+        except (ConnectionError, TimeoutError) as e:
+            logger.error(f"Network error while appending expense: {e}", exc_info=True)
+            raise ExternalServiceError(
+                f"Network error: {e}",
+                user_message="Connection failed. Please check your internet and try again.",
+            ) from e
