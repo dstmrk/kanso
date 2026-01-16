@@ -30,6 +30,7 @@ For deep dives, see `.claude/` directory:
 | [architecture-principles.md](.claude/architecture-principles.md) | Before adding features or refactoring |
 | [project-context.md](.claude/project-context.md) | For full project overview and history |
 | [development-guidelines.md](.claude/development-guidelines.md) | Before testing, committing, or CI work |
+| [ROADMAP.md](.claude/ROADMAP.md) | For v1.0 tasks and future plans |
 
 ---
 
@@ -194,7 +195,7 @@ docs: rewrite README with benefit-driven approach
 
 **Next Focus**: v1.0.0 - Polish, stability, and documentation
 
-**Roadmap**: See [ROADMAP.md](./ROADMAP.md) for details
+**Roadmap**: See [ROADMAP.md](./.claude/ROADMAP.md) for v1.0 tasks and future plans
 
 ---
 
@@ -261,6 +262,7 @@ Before writing docs, ask:
 - **Architecture**: Read [.claude/architecture-principles.md](.claude/architecture-principles.md)
 - **Testing/CI**: Read [.claude/development-guidelines.md](.claude/development-guidelines.md)
 - **Project History**: Read [.claude/project-context.md](.claude/project-context.md)
+- **Roadmap**: Read [.claude/ROADMAP.md](.claude/ROADMAP.md)
 
 ---
 
