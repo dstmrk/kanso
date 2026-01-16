@@ -59,7 +59,7 @@ class ErrorMessages:
     EXPENSE_ADDED = "Expense added successfully!"
     SETTINGS_SAVED = "Settings saved successfully!"
     DATA_REFRESHED = "Data refreshed successfully!"
-    CONFIG_VALID = "Configuration is valid!"
+    CONFIG_SAVED_AND_VERIFIED = "Configuration saved and connection verified!"
 
     # === Generic Fallbacks ===
     GENERIC_ERROR = "An error occurred. Please try again."

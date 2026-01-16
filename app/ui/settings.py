@@ -1,6 +1,10 @@
+import logging
+
 from nicegui import app, ui
 
 from app.core.constants import APP_VERSION, CURRENCY_OPTIONS_SHORT
+from app.core.error_messages import ErrorMessages, get_user_message
+from app.core.exceptions import ConfigurationError, ExternalServiceError, KansoError
 from app.core.state_manager import state_manager
 from app.core.validators import (
     clean_google_sheets_url,
@@ -11,6 +15,8 @@ from app.services import pages, utils
 from app.services.data_loader import refresh_all_data
 from app.services.utils import get_user_currency
 from app.ui import header, styles
+
+logger = logging.getLogger(__name__)
 
 
 def render() -> None:
@@ -230,13 +236,24 @@ def render() -> None:
                             # Test connection using temporary sheet service
                             with utils.temporary_sheet_service(credentials_content, clean_url):
                                 # Connection successful if no exception raised
-                                ui.notify(
-                                    "✓ Configuration saved and connection verified!",
-                                    type="positive",
-                                )
-                        except Exception as e:
+                                ui.notify(ErrorMessages.CONFIG_SAVED_AND_VERIFIED, type="positive")
+                        except ExternalServiceError as e:
+                            logger.warning(f"Connection test failed: {e}")
                             ui.notify(
-                                f"⚠ Configuration saved, but connection failed: {str(e)}",
+                                f"⚠ Configuration saved, but connection failed: {get_user_message(e)}",
+                                type="warning",
+                            )
+                        except KansoError as e:
+                            logger.warning(f"Connection test failed: {e}")
+                            ui.notify(
+                                f"⚠ Configuration saved, but: {get_user_message(e)}",
+                                type="warning",
+                            )
+                        except (ValueError, RuntimeError) as e:
+                            # Catch errors from sheet_service_from_json
+                            logger.warning(f"Connection test failed: {e}")
+                            ui.notify(
+                                f"⚠ Configuration saved, but connection test failed: {str(e)}",
                                 type="warning",
                             )
 
@@ -307,9 +324,18 @@ def render() -> None:
 
                             result_dialog.open()
 
-                        except Exception as e:
+                        except ConfigurationError as e:
                             loading_dialog.close()
-                            ui.notify(f"Failed to refresh data: {str(e)}", type="negative")
+                            logger.error(f"Configuration error during refresh: {e}")
+                            ui.notify(get_user_message(e), type="negative")
+                        except ExternalServiceError as e:
+                            loading_dialog.close()
+                            logger.error(f"External service error during refresh: {e}")
+                            ui.notify(get_user_message(e), type="negative")
+                        except KansoError as e:
+                            loading_dialog.close()
+                            logger.error(f"Error during refresh: {e}")
+                            ui.notify(get_user_message(e), type="negative")
 
                     # Refresh Data button with icon
                     refresh_button = ui.button(on_click=refresh_data).classes(

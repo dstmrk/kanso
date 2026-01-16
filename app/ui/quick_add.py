@@ -7,6 +7,8 @@ from datetime import datetime
 from nicegui import app, ui
 
 from app.core.constants import CACHE_TTL_SECONDS
+from app.core.error_messages import ErrorMessages, get_user_message
+from app.core.exceptions import ExternalServiceError, KansoError
 from app.core.state_manager import state_manager
 from app.logic.finance_calculator import FinanceCalculator
 from app.services import utils
@@ -194,7 +196,7 @@ def render() -> None:
 
                 if not custom_creds_json or not custom_url:
                     loading_overlay.set_visibility(False)
-                    ui.notify("Configuration missing. Please complete onboarding.", type="negative")
+                    ui.notify(ErrorMessages.CONFIG_INCOMPLETE, type="negative")
                     return
 
                 # Define the blocking operation to run in thread pool
@@ -236,11 +238,18 @@ def render() -> None:
                         loading_overlay.set_visibility(False)
                         ui.notify("Failed to add expense. Check logs for details.", type="negative")
 
-                except Exception as e:
-                    logger.error(f"Error adding expense: {e}", exc_info=True)
-                    # Hide overlay on error
+                except ExternalServiceError as e:
+                    logger.error(f"External service error adding expense: {e}", exc_info=True)
                     loading_overlay.set_visibility(False)
-                    ui.notify(f"Error: {str(e)}", type="negative")
+                    ui.notify(get_user_message(e), type="negative")
+                except KansoError as e:
+                    logger.error(f"Error adding expense: {e}", exc_info=True)
+                    loading_overlay.set_visibility(False)
+                    ui.notify(get_user_message(e), type="negative")
+                except (ValueError, TypeError) as e:
+                    logger.error(f"Data error adding expense: {e}", exc_info=True)
+                    loading_overlay.set_visibility(False)
+                    ui.notify(ErrorMessages.GENERIC_ERROR, type="negative")
 
             with ui.row().classes("w-full gap-4 mt-6"):
                 with (

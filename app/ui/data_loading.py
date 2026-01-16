@@ -4,11 +4,16 @@ This module provides utilities to standardize data loading patterns across pages
 eliminating duplication and ensuring consistent behavior.
 """
 
+import logging
 from collections.abc import Awaitable, Callable
 
 from nicegui import app, ui
 
+from app.core.error_messages import ErrorMessages, get_user_message
+from app.core.exceptions import ConfigurationError, DataError, ExternalServiceError, KansoError
 from app.ui.rendering_utils import render_error_message
+
+logger = logging.getLogger(__name__)
 
 
 def render_with_data_loading(
@@ -61,13 +66,19 @@ def render_with_data_loading(
                         await render_fn()
                 else:
                     # Failed to load data - show error
-                    render_error_message(
-                        error_container,
-                        "Failed to load data. Please check your configuration in Advanced Settings.",
-                    )
-            except Exception as e:
-                # Exception during loading - show error
-                render_error_message(error_container, f"Error loading data: {str(e)}")
+                    render_error_message(error_container, ErrorMessages.INVALID_DATA_FORMAT)
+            except ConfigurationError as e:
+                logger.error(f"Configuration error loading data: {e}")
+                render_error_message(error_container, get_user_message(e))
+            except ExternalServiceError as e:
+                logger.error(f"External service error loading data: {e}")
+                render_error_message(error_container, get_user_message(e))
+            except DataError as e:
+                logger.error(f"Data error loading data: {e}")
+                render_error_message(error_container, get_user_message(e))
+            except KansoError as e:
+                logger.error(f"Error loading data: {e}")
+                render_error_message(error_container, get_user_message(e))
 
         # Start loading data asynchronously (non-blocking)
         ui.timer(background_delay, load_data_in_background, once=True)
