@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 from nicegui import app
 
-from app.core.constants import COL_CATEGORY, COL_MERCHANT, COL_TYPE
+from app.core.constants import COL_AMOUNT, COL_CATEGORY, COL_DATE, COL_MERCHANT, COL_TYPE
 from app.ui.quick_add import get_expense_options
 
 
@@ -20,12 +20,36 @@ class TestGetExpenseOptions:
     @pytest.mark.asyncio
     async def test_get_expense_options_with_data(self):
         """Test extracting unique merchants, categories, and types from expenses data."""
-        # Prepare sample expenses data
+        # Prepare sample expenses data (Date and Amount columns required for FinanceCalculator)
         sample_data = [
-            {COL_MERCHANT: "Amazon", COL_CATEGORY: "Shopping", COL_TYPE: "Discretionary"},
-            {COL_MERCHANT: "Walmart", COL_CATEGORY: "Food", COL_TYPE: "Essential"},
-            {COL_MERCHANT: "Amazon", COL_CATEGORY: "Electronics", COL_TYPE: "Discretionary"},
-            {COL_MERCHANT: "Target", COL_CATEGORY: "Food", COL_TYPE: "Essential"},
+            {
+                COL_DATE: "2024-01",
+                COL_MERCHANT: "Amazon",
+                COL_AMOUNT: "€ 50",
+                COL_CATEGORY: "Shopping",
+                COL_TYPE: "Discretionary",
+            },
+            {
+                COL_DATE: "2024-01",
+                COL_MERCHANT: "Walmart",
+                COL_AMOUNT: "€ 30",
+                COL_CATEGORY: "Food",
+                COL_TYPE: "Essential",
+            },
+            {
+                COL_DATE: "2024-01",
+                COL_MERCHANT: "Amazon",
+                COL_AMOUNT: "€ 100",
+                COL_CATEGORY: "Electronics",
+                COL_TYPE: "Discretionary",
+            },
+            {
+                COL_DATE: "2024-01",
+                COL_MERCHANT: "Target",
+                COL_AMOUNT: "€ 25",
+                COL_CATEGORY: "Food",
+                COL_TYPE: "Essential",
+            },
         ]
 
         # Store in app.storage.general (using pandas split-oriented format)
@@ -71,11 +95,29 @@ class TestGetExpenseOptions:
     @pytest.mark.asyncio
     async def test_get_expense_options_with_nan_values(self):
         """Test handling of NaN values in data."""
-        # Prepare data with some NaN values
+        # Prepare data with some NaN values (Date and Amount columns required)
         sample_data = [
-            {COL_MERCHANT: "Amazon", COL_CATEGORY: "Shopping", COL_TYPE: "Discretionary"},
-            {COL_MERCHANT: None, COL_CATEGORY: "Food", COL_TYPE: "Essential"},
-            {COL_MERCHANT: "Target", COL_CATEGORY: None, COL_TYPE: "Essential"},
+            {
+                COL_DATE: "2024-01",
+                COL_MERCHANT: "Amazon",
+                COL_AMOUNT: "€ 50",
+                COL_CATEGORY: "Shopping",
+                COL_TYPE: "Discretionary",
+            },
+            {
+                COL_DATE: "2024-01",
+                COL_MERCHANT: None,
+                COL_AMOUNT: "€ 30",
+                COL_CATEGORY: "Food",
+                COL_TYPE: "Essential",
+            },
+            {
+                COL_DATE: "2024-01",
+                COL_MERCHANT: "Target",
+                COL_AMOUNT: "€ 25",
+                COL_CATEGORY: None,
+                COL_TYPE: "Essential",
+            },
         ]
 
         app.storage.general["expenses_sheet"] = to_storage_format(sample_data)
@@ -91,11 +133,29 @@ class TestGetExpenseOptions:
     @pytest.mark.asyncio
     async def test_get_expense_options_sorting(self):
         """Test that results are sorted alphabetically."""
-        # Prepare unsorted data
+        # Prepare unsorted data (Date and Amount columns required)
         sample_data = [
-            {COL_MERCHANT: "Zebra Store", COL_CATEGORY: "Utilities", COL_TYPE: "Essential"},
-            {COL_MERCHANT: "Apple Store", COL_CATEGORY: "Entertainment", COL_TYPE: "Discretionary"},
-            {COL_MERCHANT: "Market", COL_CATEGORY: "Food", COL_TYPE: "Essential"},
+            {
+                COL_DATE: "2024-01",
+                COL_MERCHANT: "Zebra Store",
+                COL_AMOUNT: "€ 50",
+                COL_CATEGORY: "Utilities",
+                COL_TYPE: "Essential",
+            },
+            {
+                COL_DATE: "2024-01",
+                COL_MERCHANT: "Apple Store",
+                COL_AMOUNT: "€ 30",
+                COL_CATEGORY: "Entertainment",
+                COL_TYPE: "Discretionary",
+            },
+            {
+                COL_DATE: "2024-01",
+                COL_MERCHANT: "Market",
+                COL_AMOUNT: "€ 25",
+                COL_CATEGORY: "Food",
+                COL_TYPE: "Essential",
+            },
         ]
 
         app.storage.general["expenses_sheet"] = to_storage_format(sample_data)
@@ -143,12 +203,36 @@ class TestGetExpenseOptions:
     @pytest.mark.asyncio
     async def test_get_expense_options_deduplication(self):
         """Test that duplicate values are removed."""
-        # Data with duplicates
+        # Data with duplicates (Date and Amount columns required)
         sample_data = [
-            {COL_MERCHANT: "Amazon", COL_CATEGORY: "Shopping", COL_TYPE: "Discretionary"},
-            {COL_MERCHANT: "Amazon", COL_CATEGORY: "Shopping", COL_TYPE: "Discretionary"},
-            {COL_MERCHANT: "Amazon", COL_CATEGORY: "Food", COL_TYPE: "Essential"},
-            {COL_MERCHANT: "Target", COL_CATEGORY: "Food", COL_TYPE: "Essential"},
+            {
+                COL_DATE: "2024-01",
+                COL_MERCHANT: "Amazon",
+                COL_AMOUNT: "€ 50",
+                COL_CATEGORY: "Shopping",
+                COL_TYPE: "Discretionary",
+            },
+            {
+                COL_DATE: "2024-01",
+                COL_MERCHANT: "Amazon",
+                COL_AMOUNT: "€ 60",
+                COL_CATEGORY: "Shopping",
+                COL_TYPE: "Discretionary",
+            },
+            {
+                COL_DATE: "2024-01",
+                COL_MERCHANT: "Amazon",
+                COL_AMOUNT: "€ 30",
+                COL_CATEGORY: "Food",
+                COL_TYPE: "Essential",
+            },
+            {
+                COL_DATE: "2024-01",
+                COL_MERCHANT: "Target",
+                COL_AMOUNT: "€ 25",
+                COL_CATEGORY: "Food",
+                COL_TYPE: "Essential",
+            },
         ]
 
         app.storage.general["expenses_sheet"] = to_storage_format(sample_data)

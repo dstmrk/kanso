@@ -1281,3 +1281,87 @@ class FinanceCalculator:
             "previous_year_label": str(previous_year),
             "last_valid_month": last_valid_month,
         }
+
+    def get_unique_expense_fields(self) -> dict[str, list[str]]:
+        """Get unique values for expense fields (merchants, categories, types).
+
+        Extracts unique, non-null values from the expenses DataFrame for use
+        in autocomplete fields and dropdowns.
+
+        Returns:
+            Dictionary with keys 'merchants', 'categories', 'types', each containing
+            a sorted list of unique values. Returns empty lists if no data available.
+
+        Example:
+            {
+                'merchants': ['Amazon', 'Grocery Store', 'Netflix'],
+                'categories': ['Entertainment', 'Food', 'Subscriptions'],
+                'types': ['Essential', 'Discretionary']
+            }
+        """
+        if self.processed_expenses_df is None or self.processed_expenses_df.empty:
+            return {"merchants": [], "categories": [], "types": []}
+
+        df = self.processed_expenses_df
+
+        # Extract unique values and sort alphabetically
+        merchants = (
+            sorted(df[COL_MERCHANT].dropna().unique().tolist())
+            if COL_MERCHANT in df.columns
+            else []
+        )
+        categories = (
+            sorted(df[COL_CATEGORY].dropna().unique().tolist())
+            if COL_CATEGORY in df.columns
+            else []
+        )
+        types = sorted(df[COL_TYPE].dropna().unique().tolist()) if COL_TYPE in df.columns else []
+
+        return {
+            "merchants": merchants,
+            "categories": categories,
+            "types": types,
+        }
+
+    def get_filtered_assets_liabilities(
+        self,
+    ) -> tuple[pd.DataFrame | None, pd.DataFrame | None]:
+        """Get assets and liabilities DataFrames filtered to valid dates.
+
+        Filters DataFrames to only include dates that have corresponding entries
+        in the net worth calculation (i.e., dates up to max income date).
+
+        Returns:
+            Tuple of (filtered_assets_df, filtered_liabilities_df).
+            Either can be None if no data available.
+
+        Example:
+            >>> calc = FinanceCalculator(assets_df=assets, liabilities_df=liabilities)
+            >>> assets, liabilities = calc.get_filtered_assets_liabilities()
+        """
+        # Get valid dates from net worth calculation
+        nw_data = self.get_monthly_net_worth()
+        valid_dates = nw_data.get("dates", [])
+
+        if not valid_dates:
+            return None, None
+
+        # Filter assets to valid dates
+        filtered_assets = None
+        if self.processed_assets_df is not None and not self.processed_assets_df.empty:
+            filtered_assets = self.processed_assets_df[
+                self.processed_assets_df[COL_DATE_DT]
+                .dt.strftime(DATE_FORMAT_STORAGE)
+                .isin(valid_dates)
+            ].copy()
+
+        # Filter liabilities to valid dates
+        filtered_liabilities = None
+        if self.processed_liabilities_df is not None and not self.processed_liabilities_df.empty:
+            filtered_liabilities = self.processed_liabilities_df[
+                self.processed_liabilities_df[COL_DATE_DT]
+                .dt.strftime(DATE_FORMAT_STORAGE)
+                .isin(valid_dates)
+            ].copy()
+
+        return filtered_assets, filtered_liabilities
