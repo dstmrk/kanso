@@ -52,6 +52,7 @@ nav:
       - Installation: installation.md
       - Google Sheets Setup: google-sheets-setup.md
       - Configuration: configuration.md
+      - Troubleshooting: troubleshooting.md
   - Technical:
       - Architecture: architecture.md
       - API Reference: api-reference.md
