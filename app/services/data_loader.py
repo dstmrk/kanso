@@ -6,6 +6,7 @@ from datetime import UTC
 
 from nicegui import app
 
+from app.core.exceptions import ConfigurationError, ExternalServiceError
 from app.services.data_loader_core import DataLoaderCore
 
 logger = logging.getLogger(__name__)
@@ -65,8 +66,9 @@ async def ensure_data_loaded():
             # Get credentials
             credentials = loader.get_credentials()
             if not credentials:
-                raise RuntimeError(
-                    "Google Sheets not configured. Please complete the onboarding setup."
+                raise ConfigurationError(
+                    "Google Sheets credentials not configured",
+                    user_message="Please complete the setup in Settings to connect your Google Sheet.",
                 )
 
             creds_dict, url = credentials
@@ -82,8 +84,14 @@ async def ensure_data_loaded():
 
             return success
 
-        except Exception as e:
-            logger.error(f"Failed to load data: {e}")
+        except ConfigurationError:
+            # Re-raise configuration errors to be handled by caller
+            raise
+        except ExternalServiceError:
+            # Re-raise external service errors to be handled by caller
+            raise
+        except (ValueError, TypeError, KeyError) as e:
+            logger.error(f"Data processing error: {e}", exc_info=True)
             return False
 
     # Run the blocking I/O operation in a separate thread using asyncio.to_thread
@@ -116,8 +124,9 @@ async def refresh_all_data():
             # Get credentials
             credentials = loader.get_credentials()
             if not credentials:
-                raise RuntimeError(
-                    "Google Sheets not configured. Please complete the onboarding setup."
+                raise ConfigurationError(
+                    "Google Sheets credentials not configured",
+                    user_message="Please complete the setup in Settings to connect your Google Sheet.",
                 )
 
             creds_dict, url = credentials
@@ -135,13 +144,31 @@ async def refresh_all_data():
 
             return results
 
-        except Exception as e:
-            logger.error(f"Failed to refresh data: {e}")
+        except ConfigurationError as e:
+            logger.error(f"Configuration error during refresh: {e}")
             return {
                 "updated_count": 0,
                 "unchanged_count": 0,
-                "failed_count": 4,  # All sheets failed (Assets, Liabilities, Expenses, Incomes)
-                "details": [("All sheets", False, f"Error: {str(e)}")],
+                "failed_count": 4,
+                "details": [("All sheets", False, f"Configuration error: {e.user_message}")],
+                "error": e.user_message,
+            }
+        except ExternalServiceError as e:
+            logger.error(f"External service error during refresh: {e}")
+            return {
+                "updated_count": 0,
+                "unchanged_count": 0,
+                "failed_count": 4,
+                "details": [("All sheets", False, f"Connection error: {e.user_message}")],
+                "error": e.user_message,
+            }
+        except (ValueError, TypeError, KeyError) as e:
+            logger.error(f"Data processing error during refresh: {e}", exc_info=True)
+            return {
+                "updated_count": 0,
+                "unchanged_count": 0,
+                "failed_count": 4,
+                "details": [("All sheets", False, f"Data error: {str(e)}")],
                 "error": str(e),
             }
 
