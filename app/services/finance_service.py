@@ -64,7 +64,7 @@ class FinanceService:
         if assets_sheet_str:
             try:
                 assets_df = utils.read_json(assets_sheet_str)
-            except Exception as e:
+            except (ValueError, TypeError) as e:
                 logger.error(f"Failed to deserialize assets_sheet: {e}")
 
         # Load Liabilities
@@ -72,7 +72,7 @@ class FinanceService:
         if liabilities_sheet_str:
             try:
                 liabilities_df = utils.read_json(liabilities_sheet_str)
-            except Exception as e:
+            except (ValueError, TypeError) as e:
                 logger.error(f"Failed to deserialize liabilities_sheet: {e}")
 
         # Load Expenses
@@ -80,7 +80,7 @@ class FinanceService:
         if expenses_sheet_str:
             try:
                 expenses_df = utils.read_json(expenses_sheet_str)
-            except Exception as e:
+            except (ValueError, TypeError) as e:
                 logger.error(f"Failed to deserialize expenses_sheet: {e}")
 
         # Load Incomes (optional)
@@ -88,7 +88,7 @@ class FinanceService:
         if incomes_sheet_str:
             try:
                 incomes_df = utils.read_json(incomes_sheet_str)
-            except Exception as e:
+            except (ValueError, TypeError) as e:
                 logger.error(f"Failed to deserialize incomes_sheet: {e}")
 
         return assets_df, liabilities_df, expenses_df, incomes_df
