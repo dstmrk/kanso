@@ -231,19 +231,31 @@ def render() -> None:
                                 del app.storage.general[sheet_key]
                                 state_manager.invalidate_cache(sheet_key)
 
+                        # Show loading dialog during connection test
+                        with ui.dialog() as test_dialog, ui.card().classes("items-center gap-4"):
+                            ui.label("Testing connection...").classes("text-lg")
+                            ui.spinner(
+                                size=styles.LOADING_SPINNER_SIZE, color=styles.LOADING_SPINNER_COLOR
+                            )
+
+                        test_dialog.open()
+
                         # Test the connection with cleaned URL
                         try:
                             # Test connection using temporary sheet service
                             with utils.temporary_sheet_service(credentials_content, clean_url):
                                 # Connection successful if no exception raised
+                                test_dialog.close()
                                 ui.notify(ErrorMessages.CONFIG_SAVED_AND_VERIFIED, type="positive")
                         except ExternalServiceError as e:
+                            test_dialog.close()
                             logger.warning(f"Connection test failed: {e}")
                             ui.notify(
                                 f"⚠ Configuration saved, but connection failed: {get_user_message(e)}",
                                 type="warning",
                             )
                         except KansoError as e:
+                            test_dialog.close()
                             logger.warning(f"Connection test failed: {e}")
                             ui.notify(
                                 f"⚠ Configuration saved, but: {get_user_message(e)}",
@@ -251,6 +263,7 @@ def render() -> None:
                             )
                         except (ValueError, RuntimeError) as e:
                             # Catch errors from sheet_service_from_json
+                            test_dialog.close()
                             logger.warning(f"Connection test failed: {e}")
                             ui.notify(
                                 f"⚠ Configuration saved, but connection test failed: {str(e)}",
@@ -269,9 +282,11 @@ def render() -> None:
                     async def refresh_data() -> None:
                         """Force refresh all data from Google Sheets and clear cache."""
                         # Show loading state
-                        with ui.dialog() as loading_dialog, ui.card():
-                            ui.label("Refreshing data from Google Sheets...")
-                            ui.spinner(size="lg")
+                        with ui.dialog() as loading_dialog, ui.card().classes("items-center gap-4"):
+                            ui.label("Refreshing data from Google Sheets...").classes("text-lg")
+                            ui.spinner(
+                                size=styles.LOADING_SPINNER_SIZE, color=styles.LOADING_SPINNER_COLOR
+                            )
 
                         loading_dialog.open()
 

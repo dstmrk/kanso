@@ -3,6 +3,14 @@
 # Animation and timing constants
 SKELETON_ANIMATION_SPEED: float = 1.5  # Slower, smoother animation (lower = slower)
 
+# Loading state constants
+LOADING_SPINNER_SIZE: str = "lg"  # Consistent spinner size across app
+LOADING_OVERLAY_CLASSES: str = (
+    "absolute inset-0 bg-base-300/50 backdrop-blur-sm "
+    "flex items-center justify-center z-50 rounded-lg"
+)
+LOADING_SPINNER_COLOR: str = "primary"
+
 # Stat card styles (DaisyUI)
 STAT_CARDS_CLASSES: str = " stat bg-base-100 shadow-md"
 STAT_CARDS_LABEL_CLASSES: str = " stat-title text-lg"
