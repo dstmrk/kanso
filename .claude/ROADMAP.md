@@ -27,8 +27,8 @@
 - [x] Troubleshooting guide
 
 **Deployment:**
-- [ ] Docker image optimization
-- [ ] Publish to Docker Hub
+- [x] Docker image optimization
+- [x] Publish to Docker Hub (ghcr.io)
 
 ---
 
