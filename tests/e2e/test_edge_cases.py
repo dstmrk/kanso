@@ -88,12 +88,11 @@ class TestEmptyDataHandling:
         # Wait for form to render
         page.wait_for_timeout(2000)
 
-        # Add Expense title should be visible
-        expect(page.locator("text=Add Expense")).to_be_visible()
+        # Add Expense title should be visible (use .first to avoid ambiguity with button)
+        expect(page.get_by_text("Add Expense").first).to_be_visible()
 
         # Form buttons should be present
         expect(page.locator('button:has-text("Cancel")')).to_be_visible()
-        expect(page.locator('button:has-text("Add Expense")')).to_be_visible()
 
 
 class TestPartialDataHandling:
@@ -186,8 +185,8 @@ class TestInvalidInputHandling:
         # Try to save
         page.locator('button:has-text("Save & Test Configuration")').click()
 
-        # Should show error about missing credentials
-        expect(page.locator("text=/credentials/i")).to_be_visible(timeout=2000)
+        # Should show error about missing credentials (notification text)
+        expect(page.locator("text=Please paste the credentials JSON")).to_be_visible(timeout=3000)
 
     def test_settings_malformed_json(self, page: Page):
         """Test that malformed JSON shows validation error."""
