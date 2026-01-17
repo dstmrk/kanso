@@ -12,7 +12,7 @@ from app.core.exceptions import ExternalServiceError, KansoError
 from app.core.state_manager import state_manager
 from app.logic.finance_calculator import FinanceCalculator
 from app.services import utils
-from app.ui import header
+from app.ui import header, styles
 
 logger = logging.getLogger(__name__)
 
@@ -141,7 +141,7 @@ def render() -> None:
                 "absolute inset-0 bg-base-300/40 backdrop-blur-sm flex items-center justify-center z-50 min-h-full"
             ) as loading_overlay:
                 with ui.column().classes("items-center gap-4"):
-                    ui.spinner(size="xl", color="primary")
+                    ui.spinner(size=styles.LOADING_SPINNER_SIZE, color=styles.LOADING_SPINNER_COLOR)
                     ui.label("Saving expense...").classes("text-xl font-semibold")
             loading_overlay.set_visibility(False)
 

@@ -174,6 +174,7 @@ This is not a tool for daily micro-management. It's for people who want to check
 - **[Dashboard Guide](https://dstmrk.github.io/kanso/features/dashboard/)** - Understand the metrics
 - **[Installation](https://dstmrk.github.io/kanso/installation/)** - Get started in 5 minutes
 - **[Google Sheets Setup](https://dstmrk.github.io/kanso/google-sheets-setup/)** - Prepare your data
+- **[Troubleshooting](https://dstmrk.github.io/kanso/troubleshooting/)** - Common issues and solutions
 - **[Architecture](https://dstmrk.github.io/kanso/architecture/)** - Technical design
 - **[Contributing](https://dstmrk.github.io/kanso/contributing/)** - Development guide
 
