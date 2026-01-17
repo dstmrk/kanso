@@ -3,8 +3,8 @@
 # Build stage: Install dependencies
 FROM python:3.13-slim AS builder
 
-# Install uv (uvx not needed for dependency installation)
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/
+# Install uv (pinned version for reproducibility)
+COPY --from=ghcr.io/astral-sh/uv:0.5 /uv /bin/
 
 # Set working directory
 WORKDIR /app
@@ -27,6 +27,13 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 # Production stage: Minimal runtime image
 FROM python:3.13-slim
+
+# OCI labels for container metadata
+LABEL org.opencontainers.image.title="Kanso"
+LABEL org.opencontainers.image.description="Self-hosted personal finance dashboard"
+LABEL org.opencontainers.image.url="https://github.com/dstmrk/kanso"
+LABEL org.opencontainers.image.source="https://github.com/dstmrk/kanso"
+LABEL org.opencontainers.image.licenses="MIT"
 
 # Set working directory
 WORKDIR /app
