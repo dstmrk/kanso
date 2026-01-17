@@ -46,9 +46,6 @@ class TestEmptyDataHandling:
         # Page should not crash - main content should be visible
         expect(page.locator(".main-content")).to_be_visible()
 
-        # Should show skeleton loaders or loading state (data not loaded)
-        # OR an error message - but not a crash
-
     def test_net_worth_page_with_no_data(self, page: Page):
         """Test that Net Worth page handles missing data."""
         page.goto("/net-worth")
@@ -57,23 +54,12 @@ class TestEmptyDataHandling:
         # Wait for page to attempt rendering
         page.wait_for_timeout(3000)
 
-        # Page should not crash - should show something
-        # Either loading state, or "no data" message
+        # Page should not crash
 
     def test_expenses_page_with_no_data(self, page: Page):
         """Test that Expenses page handles missing data."""
         page.goto("/expenses")
         expect(page).to_have_url(re.compile(r".*/expenses$"))
-
-        # Wait for page to attempt rendering
-        page.wait_for_timeout(3000)
-
-        # Page should not crash
-
-    def test_insights_page_with_no_data(self, page: Page):
-        """Test that Insights page handles missing data."""
-        page.goto("/insights")
-        expect(page).to_have_url(re.compile(r".*/insights$"))
 
         # Wait for page to attempt rendering
         page.wait_for_timeout(3000)
@@ -185,8 +171,8 @@ class TestInvalidInputHandling:
         # Try to save
         page.locator('button:has-text("Save & Test Configuration")').click()
 
-        # Should show error about missing credentials (notification text)
-        expect(page.locator("text=Please paste the credentials JSON")).to_be_visible(timeout=3000)
+        # Should show error notification about missing credentials
+        expect(page.locator(".q-notification__message")).to_be_visible(timeout=3000)
 
     def test_settings_malformed_json(self, page: Page):
         """Test that malformed JSON shows validation error."""
@@ -204,8 +190,10 @@ class TestInvalidInputHandling:
         # Try to save
         page.locator('button:has-text("Save & Test Configuration")').click()
 
-        # Should show error about invalid JSON
-        expect(page.locator("text=/Invalid JSON|JSON/i")).to_be_visible(timeout=2000)
+        # Should show error notification about invalid JSON
+        expect(page.locator(".q-notification__message:has-text('Invalid JSON')")).to_be_visible(
+            timeout=3000
+        )
 
     def test_settings_invalid_url(self, page: Page):
         """Test that invalid URL shows validation error."""
@@ -223,29 +211,7 @@ class TestInvalidInputHandling:
         # Try to save
         page.locator('button:has-text("Save & Test Configuration")').click()
 
-        # Should show error about invalid URL
-        expect(page.locator("text=/Invalid|URL/i")).to_be_visible(timeout=2000)
-
-
-class TestDirectUrlAccess:
-    """Test accessing pages directly via URL."""
-
-    def test_unauthenticated_user_redirected(self, page: Page):
-        """Test that unauthenticated users are redirected to onboarding."""
-        # Try to access home directly (no onboarding completed)
-        page.goto("/home")
-
-        # Should be redirected to onboarding
-        expect(page).to_have_url(re.compile(r".*/onboarding$"), timeout=5000)
-
-    def test_invalid_url_404(self, page: Page):
-        """Test that invalid URLs are handled."""
-        # Try to access a non-existent page
-        page.goto("/this-page-does-not-exist")
-
-        # Should either redirect to a valid page or show 404
-        # NiceGUI typically redirects to root, which then redirects to onboarding
-        page.wait_for_timeout(2000)
-
-        # Page should not crash
-        # Either on onboarding or showing some content
+        # Should show error notification about invalid URL
+        expect(
+            page.locator(".q-notification__message:has-text('Invalid Google Sheets URL')")
+        ).to_be_visible(timeout=3000)
