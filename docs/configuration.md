@@ -104,13 +104,18 @@ Settings configured via the web UI are stored in **browser local storage** and a
 
 **Supported Currencies:**
 
-| Code | Currency          | Symbol | Decimal |
-|------|-------------------|--------|---------|
-| EUR  | Euro              | €      | Comma   |
-| USD  | US Dollar         | $      | Dot     |
-| GBP  | British Pound     | £      | Dot     |
-| CHF  | Swiss Franc       | Fr     | Comma   |
-| JPY  | Japanese Yen      | ¥      | None    |
+| Code | Currency           | Symbol | Decimal |
+|------|--------------------|--------|---------|
+| EUR  | Euro               | €      | Comma   |
+| USD  | US Dollar          | $      | Dot     |
+| GBP  | British Pound      | £      | Dot     |
+| CHF  | Swiss Franc        | Fr     | Comma   |
+| JPY  | Japanese Yen       | ¥      | None    |
+| CAD  | Canadian Dollar    | C$     | Dot     |
+| AUD  | Australian Dollar  | A$     | Dot     |
+| CNY  | Chinese Yuan       | ¥      | Dot     |
+| INR  | Indian Rupee       | ₹      | Dot     |
+| BRL  | Brazilian Real     | R$     | Comma   |
 
 **Effects:**
 - Chart axis labels and tooltips

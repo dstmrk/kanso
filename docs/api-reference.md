@@ -234,6 +234,11 @@ Parse monetary value with intelligent currency detection.
 | GBP      | £1,234.56      | 1234.56      |
 | CHF      | Fr 1 234,56    | 1234.56      |
 | JPY      | ¥1,234         | 1234.0       |
+| CAD      | C$1,234.56     | 1234.56      |
+| AUD      | A$1,234.56     | 1234.56      |
+| CNY      | ¥1,234.56      | 1234.56      |
+| INR      | ₹1,234.56      | 1234.56      |
+| BRL      | R$ 1.234,56    | 1234.56      |
 
 **Example:**
 ```python

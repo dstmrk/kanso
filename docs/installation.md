@@ -139,8 +139,8 @@ When you first access Kanso, you'll see the **onboarding wizard**:
 
 After completing onboarding, you'll be redirected to the dashboard.
 
-!!! warning "Google Sheets Required (v0.3.0)"
-    Current version requires Google Sheets as data backend. SQLite local storage is coming in v0.8.0.
+!!! info "Google Sheets Required"
+    Kanso uses Google Sheets as its data backend. This gives you the flexibility to edit your financial data from any device.
 
 ## Next Steps
 

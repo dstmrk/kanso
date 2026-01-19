@@ -64,8 +64,7 @@ Most personal finance tools overwhelm you with daily notifications, complex budg
 
 - You need **automatic bank sync** (we don't connect to banks)
 - You want **envelope budgeting** or detailed category limits
-- You prefer **mobile-first** native apps (we're web-based)
-- You need **shared household tracking** (coming in v2.0)
+- You prefer **mobile-first** native apps (we're web-based, mobile-responsive)
 - You want **set-and-forget** automation (Kanso requires monthly data entry)
 
 ---

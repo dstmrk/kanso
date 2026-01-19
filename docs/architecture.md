@@ -368,7 +368,7 @@ kanso/
 **Multi-stage build:**
 1. **Builder stage**: Install dependencies with uv
 2. **Runtime stage**: Copy only necessary files
-3. **Result**: Slim image (~200MB)
+3. **Result**: Optimized, minimal image
 
 ### Data Persistence
 
