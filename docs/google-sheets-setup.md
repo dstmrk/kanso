@@ -21,10 +21,9 @@ Kanso expects a Google Sheet with **4 specific tabs**:
 
 ### Option A: Use the Template (Recommended)
 
-1. **[Open the Kanso Template](https://docs.google.com/spreadsheets/d/YOUR_TEMPLATE_ID)** _(coming soon)_
-2. Click **File → Make a copy**
-3. Rename it to "My Finances" or similar
-4. Copy the sheet URL - you'll need it later
+1. **[Open the Kanso Template](https://docs.google.com/spreadsheets/d/1BROgBjWEwFZbelGN31LKcQYpXG7QbPMGkIfmIx3t3SY/copy)** - this opens the copy dialog directly
+2. Click **Make a copy** to add it to your Google Drive
+3. Copy the sheet URL - you'll need it later
 
 ### Option B: Create from Scratch
 
@@ -145,7 +144,7 @@ If you want to configure manually, edit `.env.test` or use the browser's local s
 
 ### Currency Symbols
 
-Kanso supports multiple currency formats:
+Kanso automatically detects and parses currency symbols. Supported formats include:
 
 | Currency | Symbol | Example     |
 |----------|--------|-------------|
@@ -154,8 +153,13 @@ Kanso supports multiple currency formats:
 | GBP      | £      | £1,234.56   |
 | CHF      | Fr     | Fr 1'234.56 |
 | JPY      | ¥      | ¥1,234      |
+| CAD      | C$     | C$1,234.56  |
+| AUD      | A$     | A$1,234.56  |
+| CNY      | ¥      | ¥1,234.56   |
+| INR      | ₹      | ₹1,234.56   |
+| BRL      | R$     | R$ 1.234,56 |
 
-You can mix formats - Kanso will detect and parse correctly.
+You can mix formats within your sheet - Kanso will detect and parse correctly.
 
 ### Multi-Level Headers
 
