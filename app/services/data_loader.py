@@ -11,6 +11,8 @@ from app.services.data_loader_core import DataLoaderCore
 
 logger = logging.getLogger(__name__)
 
+ALL_SHEETS_LABEL: str = "All sheets"
+
 
 async def ensure_data_loaded():
     """Lazy load data sheets from Google Sheets if not already in storage.
@@ -150,7 +152,7 @@ async def refresh_all_data():
                 "updated_count": 0,
                 "unchanged_count": 0,
                 "failed_count": 4,
-                "details": [("All sheets", False, f"Configuration error: {e.user_message}")],
+                "details": [(ALL_SHEETS_LABEL, False, f"Configuration error: {e.user_message}")],
                 "error": e.user_message,
             }
         except ExternalServiceError as e:
@@ -159,7 +161,7 @@ async def refresh_all_data():
                 "updated_count": 0,
                 "unchanged_count": 0,
                 "failed_count": 4,
-                "details": [("All sheets", False, f"Connection error: {e.user_message}")],
+                "details": [(ALL_SHEETS_LABEL, False, f"Connection error: {e.user_message}")],
                 "error": e.user_message,
             }
         except (ValueError, TypeError, KeyError) as e:
@@ -168,7 +170,7 @@ async def refresh_all_data():
                 "updated_count": 0,
                 "unchanged_count": 0,
                 "failed_count": 4,
-                "details": [("All sheets", False, f"Data error: {str(e)}")],
+                "details": [(ALL_SHEETS_LABEL, False, f"Data error: {str(e)}")],
                 "error": str(e),
             }
 

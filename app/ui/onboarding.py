@@ -7,6 +7,11 @@ from app.core.validators import (
     validate_google_sheets_url,
 )
 from app.services import utils
+from app.ui.styles import (
+    ONBOARDING_HEADING_CLASSES,
+    ONBOARDING_PARAGRAPH_CLASSES,
+    ONBOARDING_SECONDARY_BUTTON_CLASSES,
+)
 
 
 def render() -> None:
@@ -52,10 +57,10 @@ def render() -> None:
                 # Step 1: Welcome
                 step1_content = ui.column().classes("w-full")
                 with step1_content:
-                    ui.label("🎉 Welcome to your first setup!").classes("text-2xl font-bold mb-4")
+                    ui.label("🎉 Welcome to your first setup!").classes(ONBOARDING_HEADING_CLASSES)
                     ui.label(
                         "Kanso helps you visualize and track your personal finances using Google Sheets as your data source."
-                    ).classes("text-base mb-4")
+                    ).classes(ONBOARDING_PARAGRAPH_CLASSES)
 
                     ui.label("To get started, you'll need:").classes("text-lg font-semibold mb-2")
                     with ui.column().classes("gap-2 ml-4"):
@@ -72,17 +77,17 @@ def render() -> None:
 
                     with ui.row().classes("w-full justify-end mt-8"):
                         ui.button("Get Started", on_click=lambda: go_to_step(2)).classes(
-                            "btn bg-secondary hover:bg-secondary/80 text-secondary-content"
+                            ONBOARDING_SECONDARY_BUTTON_CLASSES
                         )
 
                 # Step 2: Currency Selection
                 step2_content = ui.column().classes("w-full hidden")
                 with step2_content:
-                    ui.label("💱 Currency Preference").classes("text-2xl font-bold mb-4")
+                    ui.label("💱 Currency Preference").classes(ONBOARDING_HEADING_CLASSES)
 
                     ui.label(
                         "Select your preferred currency for displaying amounts throughout the app."
-                    ).classes("text-base mb-4")
+                    ).classes(ONBOARDING_PARAGRAPH_CLASSES)
 
                     # Auto-detect currency from browser locale
                     detected_currency = "USD"  # Fallback default
@@ -113,17 +118,17 @@ def render() -> None:
                             "btn btn-outline"
                         )
                         ui.button("Next →", on_click=lambda: go_to_step(3)).classes(
-                            "btn bg-secondary hover:bg-secondary/80 text-secondary-content"
+                            ONBOARDING_SECONDARY_BUTTON_CLASSES
                         )
 
                 # Step 3: Google Sheets Configuration (Credentials + Sheet URL)
                 step3_content = ui.column().classes("w-full hidden")
                 with step3_content:
-                    ui.label("📋 Google Sheets Configuration").classes("text-2xl font-bold mb-4")
+                    ui.label("📋 Google Sheets Configuration").classes(ONBOARDING_HEADING_CLASSES)
 
                     ui.label(
                         "Connect Kanso to your Google Sheet with your financial data."
-                    ).classes("text-base mb-4")
+                    ).classes(ONBOARDING_PARAGRAPH_CLASSES)
 
                     # Credentials section
                     ui.label("1. Service Account Credentials").classes(
@@ -159,7 +164,7 @@ def render() -> None:
                     ui.label("2. Google Sheet URL").classes("text-lg font-semibold mt-6 mb-2")
                     ui.label(
                         "Enter the URL of your Google Sheet where your financial data is stored."
-                    ).classes("text-base mb-4")
+                    ).classes(ONBOARDING_PARAGRAPH_CLASSES)
 
                     # Sheet URL input label (external, theme-aware)
                     ui.label("Google Sheet URL").classes("text-base-content font-semibold mt-4")

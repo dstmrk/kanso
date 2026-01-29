@@ -15,6 +15,12 @@ from app.services import pages, utils
 from app.services.data_loader import refresh_all_data
 from app.services.utils import get_user_currency
 from app.ui import header, styles
+from app.ui.styles import (
+    SETTINGS_RESOURCE_LINK_CLASSES,
+    SETTINGS_ROW_CLASSES,
+    SETTINGS_SECTION_CLASSES,
+    SETTINGS_SECTION_TITLE_CLASSES,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -38,9 +44,9 @@ def render() -> None:
         with ui.tab_panels(tabs, value=account_tab).classes("w-full mt-6 bg-base-100"):
             # ========== Account Tab ==========
             with ui.tab_panel(account_tab):
-                with ui.column().classes("w-full gap-6"):
+                with ui.column().classes(SETTINGS_SECTION_CLASSES):
                     # Appearance section
-                    ui.label("Appearance").classes("text-xl font-semibold")
+                    ui.label("Appearance").classes(SETTINGS_SECTION_TITLE_CLASSES)
 
                     # Theme toggle
                     def save_theme_preference() -> None:
@@ -64,7 +70,7 @@ def render() -> None:
                         """
                         ui.run_javascript(script)
 
-                    with ui.row().classes("items-center gap-4"):
+                    with ui.row().classes(SETTINGS_ROW_CLASSES):
                         ui.label("Theme:").classes("text-base")
                         with ui.element("label").classes("flex cursor-pointer gap-2 items-center"):
                             ui.html(styles.SUN_SVG, sanitize=False)
@@ -138,7 +144,7 @@ def render() -> None:
 
                     # Account Actions section
                     ui.separator().classes("my-6")
-                    ui.label("Account").classes("text-xl font-semibold")
+                    ui.label("Account").classes(SETTINGS_SECTION_TITLE_CLASSES)
 
                     # Logout button
                     with (
@@ -150,9 +156,9 @@ def render() -> None:
 
             # ========== Data Tab ==========
             with ui.tab_panel(data_tab):
-                with ui.column().classes("w-full gap-6"):
+                with ui.column().classes(SETTINGS_SECTION_CLASSES):
                     # Google Sheets Configuration section
-                    ui.label("Google Sheets Configuration").classes("text-xl font-semibold")
+                    ui.label("Google Sheets Configuration").classes(SETTINGS_SECTION_TITLE_CLASSES)
 
                     # Credentials JSON textarea
                     ui.label("Google Service Account Credentials JSON:").classes(
@@ -232,7 +238,7 @@ def render() -> None:
                                 state_manager.invalidate_cache(sheet_key)
 
                         # Show loading dialog during connection test
-                        with ui.dialog() as test_dialog, ui.card().classes("items-center gap-4"):
+                        with ui.dialog() as test_dialog, ui.card().classes(SETTINGS_ROW_CLASSES):
                             ui.label("Testing connection...").classes("text-lg")
                             ui.spinner(
                                 size=styles.LOADING_SPINNER_SIZE, color=styles.LOADING_SPINNER_COLOR
@@ -276,13 +282,13 @@ def render() -> None:
 
                     # Data Management section
                     ui.separator().classes("my-6")
-                    ui.label("Data Management").classes("text-xl font-semibold")
+                    ui.label("Data Management").classes(SETTINGS_SECTION_TITLE_CLASSES)
 
                     # Refresh Data button
                     async def refresh_data() -> None:
                         """Force refresh all data from Google Sheets and clear cache."""
                         # Show loading state
-                        with ui.dialog() as loading_dialog, ui.card().classes("items-center gap-4"):
+                        with ui.dialog() as loading_dialog, ui.card().classes(SETTINGS_ROW_CLASSES):
                             ui.label("Refreshing data from Google Sheets...").classes("text-lg")
                             ui.spinner(
                                 size=styles.LOADING_SPINNER_SIZE, color=styles.LOADING_SPINNER_COLOR
@@ -363,27 +369,27 @@ def render() -> None:
 
             # ========== About Tab ==========
             with ui.tab_panel(about_tab):
-                with ui.column().classes("w-full gap-6"):
+                with ui.column().classes(SETTINGS_SECTION_CLASSES):
                     # Version info
-                    ui.label(f"Kanso v{APP_VERSION}").classes("text-xl font-semibold")
+                    ui.label(f"Kanso v{APP_VERSION}").classes(SETTINGS_SECTION_TITLE_CLASSES)
                     ui.label("Personal Finance Dashboard").classes("text-base opacity-70")
 
                     # Resources section
                     ui.separator().classes("my-6")
-                    ui.label("Resources").classes("text-xl font-semibold")
+                    ui.label("Resources").classes(SETTINGS_SECTION_TITLE_CLASSES)
 
                     with ui.column().classes("gap-2"):
                         # Documentation link with icon
                         with ui.link(
                             target="https://dstmrk.github.io/kanso/", new_tab=True
-                        ).classes("flex items-center gap-2 text-primary hover:underline"):
+                        ).classes(SETTINGS_RESOURCE_LINK_CLASSES):
                             ui.html(styles.DOCUMENT_SVG, sanitize=False)
                             ui.label("Documentation")
 
                         # GitHub repository link with icon
                         with ui.link(
                             target="https://github.com/dstmrk/kanso", new_tab=True
-                        ).classes("flex items-center gap-2 text-primary hover:underline"):
+                        ).classes(SETTINGS_RESOURCE_LINK_CLASSES):
                             ui.html(styles.GITHUB_SVG, sanitize=False)
                             ui.label("GitHub")
 
