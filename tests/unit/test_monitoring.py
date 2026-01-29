@@ -21,7 +21,7 @@ class TestMetricsCollector:
 
         assert "test_op" in collector.metrics
         assert len(collector.metrics["test_op"]) == 1
-        assert collector.metrics["test_op"][0]["duration"] == 0.123
+        assert collector.metrics["test_op"][0]["duration"] == pytest.approx(0.123)
         assert collector.metrics["test_op"][0]["success"] is True
 
     def test_record_execution_failure(self, collector):
@@ -75,8 +75,8 @@ class TestMetricsCollector:
         assert stats["op1"]["successful_calls"] == 2
         assert stats["op1"]["failed_calls"] == 1
         assert stats["op1"]["avg_duration"] == pytest.approx(0.2)
-        assert stats["op1"]["min_duration"] == 0.1
-        assert stats["op1"]["max_duration"] == 0.3
+        assert stats["op1"]["min_duration"] == pytest.approx(0.1)
+        assert stats["op1"]["max_duration"] == pytest.approx(0.3)
         assert stats["op1"]["total_duration"] == pytest.approx(0.6)
 
         # Check cache stats
@@ -84,7 +84,7 @@ class TestMetricsCollector:
         assert stats["cache"]["hits"] == 1
         assert stats["cache"]["misses"] == 1
         assert stats["cache"]["total_operations"] == 2
-        assert stats["cache"]["hit_rate"] == 0.5
+        assert stats["cache"]["hit_rate"] == pytest.approx(0.5)
 
     def test_get_statistics_empty(self, collector):
         """Should return empty stats when no data collected."""
@@ -94,7 +94,7 @@ class TestMetricsCollector:
         assert stats["cache"]["hits"] == 0
         assert stats["cache"]["misses"] == 0
         assert stats["cache"]["total_operations"] == 0
-        assert stats["cache"]["hit_rate"] == 0.0
+        assert stats["cache"]["hit_rate"] == pytest.approx(0.0)
 
     def test_get_statistics_cache_hit_rate_calculation(self, collector):
         """Should calculate cache hit rate correctly."""
@@ -105,7 +105,7 @@ class TestMetricsCollector:
 
         stats = collector.get_statistics()
 
-        assert stats["cache"]["hit_rate"] == 0.75
+        assert stats["cache"]["hit_rate"] == pytest.approx(0.75)
 
     def test_save_to_file(self, collector, tmp_path):
         """Should save statistics to JSON file."""

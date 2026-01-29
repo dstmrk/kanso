@@ -1,6 +1,7 @@
 """Unit tests for table formatting logic (AG Grid column/row preparation)."""
 
 import pandas as pd
+import pytest
 
 from app.logic.table_formatters import (
     build_aggrid_columns_from_dataframe,
@@ -160,12 +161,11 @@ class TestPrepareDataframeForAggrid:
 
         # First row
         assert rows[0]["Date"] == "2024-01"
-        assert rows[0]["Cash"] == 5000.50
-        assert rows[0]["Stocks"] == 50000.00
-
+        assert rows[0]["Cash"] == pytest.approx(5000.50)
+        assert rows[0]["Stocks"] == pytest.approx(50000.00)
         # Second row
         assert rows[1]["Date"] == "2024-02"
-        assert rows[1]["Cash"] == 6000.75
+        assert rows[1]["Cash"] == pytest.approx(6000.75)
 
     def test_multi_level_dataframe(self):
         """Test with multi-level (tuple) columns."""
@@ -183,8 +183,8 @@ class TestPrepareDataframeForAggrid:
 
         assert len(rows) == 1
         assert rows[0]["Date"] == "2024-01"
-        assert rows[0]["Cash_Checking"] == 5000.00
-        assert rows[0]["Cash_Savings"] == 10000.00
+        assert rows[0]["Cash_Checking"] == pytest.approx(5000.00)
+        assert rows[0]["Cash_Savings"] == pytest.approx(10000.00)
 
     def test_date_formatting(self):
         """Test various date format handling."""
@@ -216,11 +216,11 @@ class TestPrepareDataframeForAggrid:
 
         rows = prepare_dataframe_for_aggrid(df)
 
-        assert rows[0]["EUR"] == 1234.56
-        assert rows[0]["USD"] == 1234.56
-        assert rows[0]["Plain"] == 1234.56
-        assert rows[0]["Spaces"] == 5000.00
-        assert rows[0]["JPY"] == 1234.00
+        assert rows[0]["EUR"] == pytest.approx(1234.56)
+        assert rows[0]["USD"] == pytest.approx(1234.56)
+        assert rows[0]["Plain"] == pytest.approx(1234.56)
+        assert rows[0]["Spaces"] == pytest.approx(5000.00)
+        assert rows[0]["JPY"] == pytest.approx(1234.00)
 
     def test_none_and_empty_handling(self):
         """Test handling of None and empty string values."""
@@ -236,9 +236,9 @@ class TestPrepareDataframeForAggrid:
         rows = prepare_dataframe_for_aggrid(df)
 
         # Should convert to 0.0
-        assert rows[0]["WithNone"] == 0.0
-        assert rows[0]["WithEmpty"] == 0.0
-        assert rows[0]["WithDash"] == 0.0
+        assert rows[0]["WithNone"] == pytest.approx(0.0)
+        assert rows[0]["WithEmpty"] == pytest.approx(0.0)
+        assert rows[0]["WithDash"] == pytest.approx(0.0)
 
     def test_empty_dataframe(self):
         """Test with empty DataFrame."""
@@ -266,8 +266,8 @@ class TestParseDataframeMonetaryValues:
         result = parse_dataframe_monetary_values(df)
 
         # Check values are parsed
-        assert result["Cash"].iloc[0] == 1234.56
-        assert result["Stocks"].iloc[0] == 5000.00
+        assert result["Cash"].iloc[0] == pytest.approx(1234.56)
+        assert result["Stocks"].iloc[0] == pytest.approx(5000.00)
         # Check Date_DT is preserved
         assert result["date_dt"].iloc[0] == pd.Timestamp("2024-01-01")
 
@@ -290,9 +290,9 @@ class TestParseDataframeMonetaryValues:
         assert ("Investments", "Stocks") in result.columns
 
         # Check values are parsed
-        assert result[("Cash", "Checking")].iloc[0] == 1000.00
-        assert result[("Cash", "Savings")].iloc[0] == 5000.00
-        assert result[("Investments", "Stocks")].iloc[0] == 10000.00
+        assert result[("Cash", "Checking")].iloc[0] == pytest.approx(1000.00)
+        assert result[("Cash", "Savings")].iloc[0] == pytest.approx(5000.00)
+        assert result[("Investments", "Stocks")].iloc[0] == pytest.approx(10000.00)
 
     def test_nan_handling(self):
         """Test that NaN values are converted to 0.0."""
@@ -306,8 +306,8 @@ class TestParseDataframeMonetaryValues:
 
         result = parse_dataframe_monetary_values(df)
 
-        assert result["WithNaN"].iloc[0] == 0.0
-        assert result["WithValue"].iloc[0] == 100.00
+        assert result["WithNaN"].iloc[0] == pytest.approx(0.0)
+        assert result["WithValue"].iloc[0] == pytest.approx(100.00)
 
     def test_skips_date_dt_column(self):
         """Test that date_dt column is not parsed as monetary."""
@@ -323,7 +323,7 @@ class TestParseDataframeMonetaryValues:
         # date_dt should remain datetime, not parsed
         assert pd.api.types.is_datetime64_any_dtype(result["date_dt"])
         assert result["date_dt"].iloc[0] == pd.Timestamp("2024-01-01")
-        assert result["Value"].iloc[0] == 100.00
+        assert result["Value"].iloc[0] == pytest.approx(100.00)
 
     def test_skips_date_column(self):
         """Test that Date column (string dates) is not parsed as monetary."""
@@ -341,8 +341,8 @@ class TestParseDataframeMonetaryValues:
         assert result["Date"].iloc[0] == "2024-01"
         assert result["Date"].iloc[1] == "2024-02"
         # Value column should be parsed
-        assert result["Value"].iloc[0] == 100.00
-        assert result["Value"].iloc[1] == 200.00
+        assert result["Value"].iloc[0] == pytest.approx(100.00)
+        assert result["Value"].iloc[1] == pytest.approx(200.00)
 
     def test_field_name_flattening(self):
         """Test that multi-level columns are flattened to Category_Item format."""
@@ -359,7 +359,7 @@ class TestParseDataframeMonetaryValues:
         # Spaces should be replaced with underscores
         assert "Real_Estate_Apartment" in rows[0]
         assert "Real_Estate_Land" in rows[0]
-        assert rows[0]["Real_Estate_Apartment"] == 200000.00
+        assert rows[0]["Real_Estate_Apartment"] == pytest.approx(200000.00)
 
     def test_preserves_all_rows(self):
         """Test that all DataFrame rows are converted."""
@@ -373,7 +373,7 @@ class TestParseDataframeMonetaryValues:
         rows = prepare_dataframe_for_aggrid(df)
 
         assert len(rows) == 4
-        assert rows[0]["Value"] == 100.0
-        assert rows[1]["Value"] == 200.0
-        assert rows[2]["Value"] == 300.0
-        assert rows[3]["Value"] == 400.0
+        assert rows[0]["Value"] == pytest.approx(100.0)
+        assert rows[1]["Value"] == pytest.approx(200.0)
+        assert rows[2]["Value"] == pytest.approx(300.0)
+        assert rows[3]["Value"] == pytest.approx(400.0)

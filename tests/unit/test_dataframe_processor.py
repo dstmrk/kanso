@@ -5,6 +5,7 @@ assets, liabilities, and incomes DataFrames with various column structures.
 """
 
 import pandas as pd
+import pytest
 
 from app.core.constants import COL_AMOUNT_PARSED, COL_DATE_DT
 from app.logic.dataframe_processor import DataFrameProcessor
@@ -59,13 +60,13 @@ class TestSumMonetaryColumns:
         """Test summing simple numeric row."""
         row = pd.Series({"Date": "2024-01", "Cash": "1000", "Stocks": "5000"})
         total = DataFrameProcessor.sum_monetary_columns_for_row(row, ["Date"])
-        assert total == 6000.0
+        assert total == pytest.approx(6000.0)
 
     def test_sum_with_currency_symbols(self):
         """Test summing row with currency symbols."""
         row = pd.Series({"Date": "2024-01", "Cash": "€ 1.000", "Stocks": "€ 5.000"})
         total = DataFrameProcessor.sum_monetary_columns_for_row(row, ["Date"])
-        assert total == 6000.0
+        assert total == pytest.approx(6000.0)
 
     def test_sum_exclude_multiple_patterns(self):
         """Test excluding multiple column patterns."""
@@ -81,7 +82,7 @@ class TestSumMonetaryColumns:
         total = DataFrameProcessor.sum_monetary_columns_for_row(
             row, ["Date", "date_dt", "Category"]
         )
-        assert total == 6000.0
+        assert total == pytest.approx(6000.0)
 
     def test_sum_multiindex_columns(self):
         """Test summing MultiIndex columns."""
@@ -94,13 +95,13 @@ class TestSumMonetaryColumns:
             }
         )
         total = DataFrameProcessor.sum_monetary_columns_for_row(row, ["Date", "date_dt"])
-        assert total == 8000.0
+        assert total == pytest.approx(8000.0)
 
     def test_sum_with_nan_values(self):
         """Test summing row with NaN values (should be skipped)."""
         row = pd.Series({"Date": "2024-01", "Cash": "1000", "Stocks": None, "Bonds": ""})
         total = DataFrameProcessor.sum_monetary_columns_for_row(row, ["Date"])
-        assert total == 1000.0
+        assert total == pytest.approx(1000.0)
 
     def test_sum_exclude_pattern_in_multiindex(self):
         """Test excluding patterns in MultiIndex column names."""
@@ -112,19 +113,19 @@ class TestSumMonetaryColumns:
             }
         )
         total = DataFrameProcessor.sum_monetary_columns_for_row(row, ["Date", "date_dt"])
-        assert total == 1000.0
+        assert total == pytest.approx(1000.0)
 
     def test_sum_empty_row(self):
         """Test summing empty row."""
         row = pd.Series({})
         total = DataFrameProcessor.sum_monetary_columns_for_row(row, [])
-        assert total == 0.0
+        assert total == pytest.approx(0.0)
 
     def test_sum_all_excluded(self):
         """Test when all columns are excluded."""
         row = pd.Series({"Date": "2024-01", "Category": "Foo"})
         total = DataFrameProcessor.sum_monetary_columns_for_row(row, ["Date", "Category"])
-        assert total == 0.0
+        assert total == pytest.approx(0.0)
 
 
 class TestPreprocessExpenses:

@@ -57,86 +57,86 @@ class TestParseMonetaryValue:
 
     def test_parse_european_format(self):
         """Test parsing European format: € 1.234,56"""
-        assert parse_monetary_value("€ 1.234,56") == 1234.56
-        assert parse_monetary_value("€ 1.000,00") == 1000.0
-        assert parse_monetary_value("€ 123,45") == 123.45
+        assert parse_monetary_value("€ 1.234,56") == pytest.approx(1234.56)
+        assert parse_monetary_value("€ 1.000,00") == pytest.approx(1000.0)
+        assert parse_monetary_value("€ 123,45") == pytest.approx(123.45)
 
     def test_parse_us_format(self):
         """Test parsing US format: $1,234.56"""
         # Now correctly parsed with intelligent detection
-        assert parse_monetary_value("$1,234.56") == 1234.56
-        assert parse_monetary_value("$1,000.00") == 1000.0
-        assert parse_monetary_value("$123.45") == 123.45
+        assert parse_monetary_value("$1,234.56") == pytest.approx(1234.56)
+        assert parse_monetary_value("$1,000.00") == pytest.approx(1000.0)
+        assert parse_monetary_value("$123.45") == pytest.approx(123.45)
 
     def test_parse_gbp_format(self):
         """Test parsing GBP format: £1,234.56"""
-        assert parse_monetary_value("£1,234.56") == 1234.56
-        assert parse_monetary_value("£1,000.00") == 1000.0
-        assert parse_monetary_value("£123.45") == 123.45
+        assert parse_monetary_value("£1,234.56") == pytest.approx(1234.56)
+        assert parse_monetary_value("£1,000.00") == pytest.approx(1000.0)
+        assert parse_monetary_value("£123.45") == pytest.approx(123.45)
 
     def test_parse_chf_format(self):
         """Test parsing CHF format: Fr 1.234,56"""
-        assert parse_monetary_value("Fr 1.234,56") == 1234.56
-        assert parse_monetary_value("CHF 1.000,00") == 1000.0
-        assert parse_monetary_value("Fr 123,45") == 123.45
+        assert parse_monetary_value("Fr 1.234,56") == pytest.approx(1234.56)
+        assert parse_monetary_value("CHF 1.000,00") == pytest.approx(1000.0)
+        assert parse_monetary_value("Fr 123,45") == pytest.approx(123.45)
 
     def test_parse_jpy_format(self):
         """Test parsing JPY format (no decimals): ¥1,234"""
-        assert parse_monetary_value("¥1,234") == 1234.0
-        assert parse_monetary_value("JPY 1,000") == 1000.0
-        assert parse_monetary_value("¥123") == 123.0
+        assert parse_monetary_value("¥1,234") == pytest.approx(1234.0)
+        assert parse_monetary_value("JPY 1,000") == pytest.approx(1000.0)
+        assert parse_monetary_value("¥123") == pytest.approx(123.0)
 
     def test_parse_plain_number(self):
         """Test parsing plain numbers without currency symbols."""
         # Plain numbers without separators
-        assert parse_monetary_value("1234.56") == 1234.56
-        assert parse_monetary_value("1000") == 1000.0
-        assert parse_monetary_value("0") == 0.0
+        assert parse_monetary_value("1234.56") == pytest.approx(1234.56)
+        assert parse_monetary_value("1000") == pytest.approx(1000.0)
+        assert parse_monetary_value("0") == pytest.approx(0.0)
 
     def test_parse_with_spaces(self):
         """Test parsing with spaces."""
-        assert parse_monetary_value("€ 1 234,56") == 1234.56
-        assert parse_monetary_value("$ 1 234.56") == 1234.56
-        assert parse_monetary_value("  1000  ") == 1000.0
+        assert parse_monetary_value("€ 1 234,56") == pytest.approx(1234.56)
+        assert parse_monetary_value("$ 1 234.56") == pytest.approx(1234.56)
+        assert parse_monetary_value("  1000  ") == pytest.approx(1000.0)
 
     def test_parse_currency_override(self):
         """Test parsing with explicit currency parameter."""
         # Force EUR interpretation on plain number
-        assert parse_monetary_value("1.234,56", currency="EUR") == 1234.56
+        assert parse_monetary_value("1.234,56", currency="EUR") == pytest.approx(1234.56)
         # Force USD interpretation on plain number
-        assert parse_monetary_value("1,234.56", currency="USD") == 1234.56
+        assert parse_monetary_value("1,234.56", currency="USD") == pytest.approx(1234.56)
         # Override detected currency
-        assert parse_monetary_value("€ 1,234.56", currency="USD") == 1234.56
+        assert parse_monetary_value("€ 1,234.56", currency="USD") == pytest.approx(1234.56)
 
     def test_parse_numeric_types(self):
         """Test parsing numeric types directly."""
-        assert parse_monetary_value(1234.56) == 1234.56
-        assert parse_monetary_value(1000) == 1000.0
-        assert parse_monetary_value(0) == 0.0
+        assert parse_monetary_value(1234.56) == pytest.approx(1234.56)
+        assert parse_monetary_value(1000) == pytest.approx(1000.0)
+        assert parse_monetary_value(0) == pytest.approx(0.0)
 
     def test_parse_none(self):
         """Test parsing None returns 0.0"""
-        assert parse_monetary_value(None) == 0.0
+        assert parse_monetary_value(None) == pytest.approx(0.0)
 
     def test_parse_empty_string(self):
         """Test parsing empty string returns 0.0"""
-        assert parse_monetary_value("") == 0.0
-        assert parse_monetary_value("   ") == 0.0
+        assert parse_monetary_value("") == pytest.approx(0.0)
+        assert parse_monetary_value("   ") == pytest.approx(0.0)
 
     def test_parse_invalid_format(self):
         """Test parsing invalid format returns 0.0"""
-        assert parse_monetary_value("abc") == 0.0
-        assert parse_monetary_value("€€€") == 0.0
-        assert parse_monetary_value("not a number") == 0.0
+        assert parse_monetary_value("abc") == pytest.approx(0.0)
+        assert parse_monetary_value("€€€") == pytest.approx(0.0)
+        assert parse_monetary_value("not a number") == pytest.approx(0.0)
 
     def test_parse_mixed_formats(self):
         """Test parsing with different separators."""
         # EUR with thousands
-        assert parse_monetary_value("€ 10.000,00") == 10000.0
+        assert parse_monetary_value("€ 10.000,00") == pytest.approx(10000.0)
         # USD with thousands
-        assert parse_monetary_value("$10,000.00") == 10000.0
+        assert parse_monetary_value("$10,000.00") == pytest.approx(10000.0)
         # JPY with thousands (no decimals)
-        assert parse_monetary_value("¥10,000") == 10000.0
+        assert parse_monetary_value("¥10,000") == pytest.approx(10000.0)
 
 
 class TestFinanceCalculator:
@@ -295,7 +295,7 @@ class TestFinanceCalculator:
     def test_get_current_net_worth(self, calculator):
         """Test getting current net worth."""
         net_worth = calculator.get_current_net_worth()
-        assert net_worth == 22000.0
+        assert net_worth == pytest.approx(22000.0)
 
     def test_get_last_update_date(self, calculator):
         """Test getting last update date."""
@@ -311,18 +311,18 @@ class TestFinanceCalculator:
     def test_get_month_over_month_variation_absolute(self, calculator):
         """Test getting month-over-month variation absolute."""
         variation = calculator.get_month_over_month_net_worth_variation_absolute()
-        assert variation == 1000.0
+        assert variation == pytest.approx(1000.0)
 
     def test_get_year_over_year_variation_percentage(self, calculator):
         """Test getting year-over-year variation percentage."""
         variation = calculator.get_year_over_year_net_worth_variation_percentage()
         # From 10,000 to 22,000 = 12,000 / 10,000 = 1.2 (120%)
-        assert variation == 1.2
+        assert variation == pytest.approx(1.2)
 
     def test_get_year_over_year_variation_absolute(self, calculator):
         """Test getting year-over-year variation absolute."""
         variation = calculator.get_year_over_year_net_worth_variation_absolute()
-        assert variation == 12000.0
+        assert variation == pytest.approx(12000.0)
 
     def test_get_average_saving_ratio_percentage(self, calculator):
         """Test getting average saving ratio percentage."""
@@ -334,7 +334,7 @@ class TestFinanceCalculator:
         """Test getting average monthly savings absolute."""
         savings = calculator.get_average_saving_ratio_last_12_months_absolute()
         # (3000 - 2000) * 12 months / 12 = 1000
-        assert savings == 1000.0
+        assert savings == pytest.approx(1000.0)
 
     def test_get_monthly_net_worth(self, calculator):
         """Test getting monthly net worth data."""
@@ -343,8 +343,8 @@ class TestFinanceCalculator:
         assert len(data["values"]) == 13
         assert data["dates"][0] == "2024-01"
         assert data["dates"][-1] == "2025-01"
-        assert data["values"][0] == 10000.0
-        assert data["values"][-1] == 22000.0
+        assert data["values"][0] == pytest.approx(10000.0)
+        assert data["values"][-1] == pytest.approx(22000.0)
 
     def test_get_cash_flow_last_12_months(self, calculator_with_expenses):
         """Test getting cash flow data."""
@@ -352,19 +352,19 @@ class TestFinanceCalculator:
         assert "Savings" in cash_flow
         assert "Expenses" in cash_flow
         # Total expenses from sample_expenses = 500+300+800+200+200 = 2000 (only 1 month)
-        assert cash_flow["Expenses"] == 2000.0
+        assert cash_flow["Expenses"] == pytest.approx(2000.0)
         # Income last 12 months = 12 × 3000 = 36000, Expenses (1 month) = 2000
         # Savings = 36000 - 2000 = 34000
-        assert cash_flow["Savings"] == 36000.0 - 2000.0
+        assert cash_flow["Savings"] == pytest.approx(36000.0 - 2000.0)
 
     def test_get_average_expenses_by_category(self, calculator_with_expenses):
         """Test getting average expenses by category."""
         expenses = calculator_with_expenses.get_average_expenses_by_category_last_12_months()
-        assert expenses["Food"] == 500.0
-        assert expenses["Transport"] == 300.0
-        assert expenses["Housing"] == 800.0
-        assert expenses["Entertainment"] == 200.0
-        assert expenses["Other"] == 200.0
+        assert expenses["Food"] == pytest.approx(500.0)
+        assert expenses["Transport"] == pytest.approx(300.0)
+        assert expenses["Housing"] == pytest.approx(800.0)
+        assert expenses["Entertainment"] == pytest.approx(200.0)
+        assert expenses["Other"] == pytest.approx(200.0)
 
     def test_get_incomes_vs_expenses(self, calculator):
         """Test getting income vs expenses data."""
@@ -373,7 +373,7 @@ class TestFinanceCalculator:
         assert len(data["incomes"]) == 12
         assert len(data["expenses"]) == 12
         # All incomes should be 3000
-        assert all(income == 3000.0 for income in data["incomes"])
+        assert all(income == pytest.approx(3000.0) for income in data["incomes"])
         # All expenses should be negative 2000
         assert all(expense == -2000.0 for expense in data["expenses"])
 
@@ -387,15 +387,13 @@ class TestFinanceCalculator:
 
         # Assets should contain Cash with latest value (€ 50,000)
         assert "Cash" in breakdown["Assets"]
-        assert breakdown["Assets"]["Cash"] == 50000.0
-
+        assert breakdown["Assets"]["Cash"] == pytest.approx(50000.0)
         # Assets should contain Stocks with latest value (€ 72,000)
         assert "Stocks" in breakdown["Assets"]
-        assert breakdown["Assets"]["Stocks"] == 72000.0
-
+        assert breakdown["Assets"]["Stocks"] == pytest.approx(72000.0)
         # Liabilities should contain Mortgage with latest value (€ 100,000)
         assert "Mortgage" in breakdown["Liabilities"]
-        assert breakdown["Liabilities"]["Mortgage"] == 100000.0
+        assert breakdown["Liabilities"]["Mortgage"] == pytest.approx(100000.0)
 
     def test_get_assets_liabilities_empty_data(self):
         """Test get_assets_liabilities with no data returns empty dicts."""
@@ -412,7 +410,7 @@ class TestFinanceCalculator:
         # Should return dict with expense types
         assert isinstance(expenses, dict)
         # Sample data has various types
-        assert "Essential" in expenses or "Discretionary" in expenses or len(expenses) >= 0
+        assert "Essential" in expenses or "Discretionary" in expenses or len(expenses) > 0
 
     def test_get_fi_progress(self, calculator):
         """Test FI (Financial Independence) progress calculation."""
@@ -429,14 +427,14 @@ class TestFinanceCalculator:
         fi_progress = calc.get_fi_progress()
 
         # Currently returns placeholder value
-        assert fi_progress == 0.263
+        assert fi_progress == pytest.approx(0.263)
 
     def test_missing_columns(self):
         """Test behavior when no assets/liabilities are provided."""
         # No assets or liabilities provided
         calc = FinanceCalculator()
         # Should return 0.0 when no data available
-        assert calc.get_current_net_worth() == 0.0
+        assert calc.get_current_net_worth() == pytest.approx(0.0)
 
     def test_insufficient_data_for_yoy(self):
         """Test year-over-year with insufficient data (less than 13 months)."""
@@ -455,5 +453,5 @@ class TestFinanceCalculator:
         )
         calc = FinanceCalculator(assets_df=assets, liabilities_df=liabilities)
         # Should return 0.0 when not enough data (< 13 months)
-        assert calc.get_year_over_year_net_worth_variation_percentage() == 0.0
-        assert calc.get_year_over_year_net_worth_variation_absolute() == 0.0
+        assert calc.get_year_over_year_net_worth_variation_percentage() == pytest.approx(0.0)
+        assert calc.get_year_over_year_net_worth_variation_absolute() == pytest.approx(0.0)
