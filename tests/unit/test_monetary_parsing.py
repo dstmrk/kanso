@@ -4,8 +4,9 @@ Tests the monetary_parsing module's currency detection and value parsing
 functions with comprehensive edge cases and error scenarios.
 """
 
-from app.logic.monetary_parsing import detect_currency, parse_monetary_value
 import pytest
+
+from app.logic.monetary_parsing import detect_currency, parse_monetary_value
 
 
 class TestDetectCurrency:
