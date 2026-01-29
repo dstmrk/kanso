@@ -4,6 +4,7 @@ Tests for state_manager module.
 Tests StateManager cache logic.
 """
 
+import asyncio
 import time
 from unittest.mock import Mock, patch
 
@@ -77,7 +78,7 @@ class TestStateManager:
             assert result1 == 1
 
             # Wait for cache to expire
-            time.sleep(1.1)
+            await asyncio.sleep(1.1)
 
             # Second call - cache should be expired
             result2 = await manager.get_or_compute("data", "test_key", compute_fn, ttl_seconds=1)
