@@ -175,10 +175,10 @@ class TestParseMonetaryValue:
     # Mixed formats in same value (edge case)
     def test_parse_ambiguous_format(self):
         """Test handling of ambiguous formats (relies on currency detection)."""
-        # With EUR symbol, should use European format
-        assert parse_monetary_value("€ 1.234") == pytest.approx(1234.0)  # dot = thousands
-        # With USD symbol, should use US format
-        assert parse_monetary_value("$ 1,234") == pytest.approx(1234.0)  # comma = thousands
+        # With EUR symbol, dot is interpreted as thousands separator
+        assert parse_monetary_value("€ 1.234") == pytest.approx(1234.0)
+        # With USD symbol, comma is interpreted as thousands separator
+        assert parse_monetary_value("$ 1,234") == pytest.approx(1234.0)
 
     # Zero values
     def test_parse_zero_values(self):
