@@ -186,7 +186,7 @@ def render() -> None:
                         value=current_url,
                     ).classes("w-full max-w-2xl mt-2")
 
-                    async def save_and_test_configuration():
+                    def save_and_test_configuration():
                         """Validate, save and test both credentials and URL."""
                         # Get values
                         credentials_content = credentials_textarea.value.strip()
@@ -329,13 +329,12 @@ def render() -> None:
                                     if results["details"]:
                                         with ui.expansion("Details", icon="info").classes("w-full"):
                                             for _sheet_name, changed, message in results["details"]:
-                                                status_icon = (
-                                                    "✓"
-                                                    if changed
-                                                    else "•"
-                                                    if "No changes" in message
-                                                    else "✗"
-                                                )
+                                                if changed:
+                                                    status_icon = "✓"
+                                                elif "No changes" in message:
+                                                    status_icon = "•"
+                                                else:
+                                                    status_icon = "✗"
                                                 ui.label(f"{status_icon} {message}").classes(
                                                     "text-sm"
                                                 )

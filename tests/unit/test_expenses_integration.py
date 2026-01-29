@@ -86,7 +86,7 @@ class TestExpensesIntegration:
 
         # All calculations should work using Expenses sheet
         saving_ratio = calculator.get_average_saving_ratio_last_12_months_percentage()
-        assert saving_ratio > 0  # (3000*2 - 2000*2) / (3000*2) = 0.33
+        assert saving_ratio > 0  # Expected ~33% savings ratio
 
         category_totals = calculator.get_average_expenses_by_category_last_12_months()
         assert len(category_totals) > 0

@@ -54,7 +54,7 @@ async def load_net_worth_evolution_data():
         return None
 
 
-async def load_assets_liabilities_data() -> tuple[pd.DataFrame | None, pd.DataFrame | None]:
+def load_assets_liabilities_data() -> tuple[pd.DataFrame | None, pd.DataFrame | None]:
     """Load assets and liabilities DataFrames, filtered to valid dates.
 
     Uses the same date filtering logic as the net worth chart: only shows dates
@@ -163,7 +163,7 @@ def render() -> None:
 
     async def render_assets_liabilities_tables():
         """Render assets and liabilities tables."""
-        assets_df, liabilities_df = await load_assets_liabilities_data()
+        assets_df, liabilities_df = load_assets_liabilities_data()
 
         # Render Assets table
         assets_container.clear()

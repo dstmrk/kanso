@@ -38,8 +38,7 @@ def test_net_worth_with_negative_liabilities():
     # Get current net worth
     net_worth = calculator.get_current_net_worth()
 
-    # Expected: 12.000 + (-98.000) = -86.000
-    # NOT: 12.000 - (-98.000) = 110.000
+    # Expected: assets plus negative liabilities (liabilities are already negative in sheet)
     expected_net_worth = 12_000 + (-98_000)
 
     print(f"\nNet worth: {net_worth}")
