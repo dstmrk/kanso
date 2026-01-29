@@ -87,9 +87,9 @@ class TestAssetsDataFrameStructure:
         assert "Real Estate" in df.columns
 
         # Verify data can be parsed
-        assert parse_monetary_value(df["Cash"].iloc[0]) == 5000.0
-        assert parse_monetary_value(df["Stocks"].iloc[1]) == 11000.0
-        assert parse_monetary_value(df["Real Estate"].iloc[2]) == 200000.0
+        assert parse_monetary_value(df["Cash"].iloc[0]) == pytest.approx(5000.0)
+        assert parse_monetary_value(df["Stocks"].iloc[1]) == pytest.approx(11000.0)
+        assert parse_monetary_value(df["Real Estate"].iloc[2]) == pytest.approx(200000.0)
 
     def test_assets_multi_index_structure(self, assets_multi_index_data):
         """Test that multi-index Assets DataFrame is correctly structured."""
@@ -105,9 +105,11 @@ class TestAssetsDataFrameStructure:
         assert ("Real Estate", "Primary") in df.columns
 
         # Verify data can be parsed
-        assert parse_monetary_value(df[("Liquid", "Cash")].iloc[0]) == 5000.0
-        assert parse_monetary_value(df[("Investments", "Stocks")].iloc[1]) == 55000.0
-        assert parse_monetary_value(df[("Real Estate", "Rental")].iloc[2]) == 150000.0
+        assert parse_monetary_value(df[("Liquid", "Cash")].iloc[0]) == pytest.approx(5000.0)
+        assert parse_monetary_value(df[("Investments", "Stocks")].iloc[1]) == pytest.approx(55000.0)
+        assert parse_monetary_value(df[("Real Estate", "Rental")].iloc[2]) == pytest.approx(
+            150000.0
+        )
 
     def test_assets_single_index_with_calculator(self, assets_single_index_data):
         """Test FinanceCalculator with single-index Assets DataFrame."""
@@ -181,8 +183,8 @@ class TestLiabilitiesDataFrameStructure:
         assert "Car Loan" in df.columns
 
         # Verify data can be parsed
-        assert parse_monetary_value(df["Mortgage"].iloc[0]) == 180000.0
-        assert parse_monetary_value(df["Car Loan"].iloc[1]) == 4500.0
+        assert parse_monetary_value(df["Mortgage"].iloc[0]) == pytest.approx(180000.0)
+        assert parse_monetary_value(df["Car Loan"].iloc[1]) == pytest.approx(4500.0)
 
     def test_liabilities_multi_index_structure(self, liabilities_multi_index_data):
         """Test that multi-index Liabilities DataFrame is correctly structured."""
@@ -197,8 +199,10 @@ class TestLiabilitiesDataFrameStructure:
         assert ("Unsecured", "Credit Card") in df.columns
 
         # Verify data can be parsed
-        assert parse_monetary_value(df[("Secured", "Mortgage")].iloc[0]) == 180000.0
-        assert parse_monetary_value(df[("Unsecured", "Personal Loan")].iloc[2]) == 4000.0
+        assert parse_monetary_value(df[("Secured", "Mortgage")].iloc[0]) == pytest.approx(180000.0)
+        assert parse_monetary_value(df[("Unsecured", "Personal Loan")].iloc[2]) == pytest.approx(
+            4000.0
+        )
 
     def test_liabilities_single_index_with_calculator(self, liabilities_single_index_data):
         """Test FinanceCalculator with single-index Liabilities DataFrame."""
@@ -290,14 +294,13 @@ class TestIncomesDataFrameStructure:
         assert "Side Hustle" in df.columns
 
         # Verify data can be parsed
-        assert parse_monetary_value(df["Salary"].iloc[0]) == 2500.0
-        assert parse_monetary_value(df["Side Hustle"].iloc[1]) == 300.0
-
+        assert parse_monetary_value(df["Salary"].iloc[0]) == pytest.approx(2500.0)
+        assert parse_monetary_value(df["Side Hustle"].iloc[1]) == pytest.approx(300.0)
         # Verify total income can be calculated
         total_month_1 = parse_monetary_value(df["Salary"].iloc[0]) + parse_monetary_value(
             df["Side Hustle"].iloc[0]
         )
-        assert total_month_1 == 2700.0
+        assert total_month_1 == pytest.approx(2700.0)
 
     def test_incomes_multi_index_structure(self, incomes_multi_index_data):
         """Test that multi-index Incomes DataFrame is correctly structured."""
@@ -312,14 +315,13 @@ class TestIncomesDataFrameStructure:
         assert ("One-off", "Freelance") in df.columns
 
         # Verify data can be parsed
-        assert parse_monetary_value(df[("Regular", "Salary")].iloc[0]) == 2500.0
-        assert parse_monetary_value(df[("One-off", "Freelance")].iloc[1]) == 1200.0
-
+        assert parse_monetary_value(df[("Regular", "Salary")].iloc[0]) == pytest.approx(2500.0)
+        assert parse_monetary_value(df[("One-off", "Freelance")].iloc[1]) == pytest.approx(1200.0)
         # Verify total income can be calculated for a specific category
         regular_income_month_2 = parse_monetary_value(
             df[("Regular", "Salary")].iloc[1]
         ) + parse_monetary_value(df[("Regular", "Rent")].iloc[1])
-        assert regular_income_month_2 == 3100.0
+        assert regular_income_month_2 == pytest.approx(3100.0)
 
     def test_incomes_single_index_total_calculation(self, incomes_single_index_data):
         """Test calculating total income from single-index Incomes DataFrame."""
@@ -331,9 +333,9 @@ class TestIncomesDataFrameStructure:
 
         df["Total"] = df["Salary_parsed"] + df["Side Hustle_parsed"]
 
-        assert df["Total"].iloc[0] == 2700.0
-        assert df["Total"].iloc[1] == 2900.0
-        assert df["Total"].iloc[2] == 3100.0
+        assert df["Total"].iloc[0] == pytest.approx(2700.0)
+        assert df["Total"].iloc[1] == pytest.approx(2900.0)
+        assert df["Total"].iloc[2] == pytest.approx(3100.0)
 
     def test_incomes_multi_index_total_calculation(self, incomes_multi_index_data):
         """Test calculating total income from multi-index Incomes DataFrame."""
@@ -348,6 +350,6 @@ class TestIncomesDataFrameStructure:
                     row_total += parse_monetary_value(df[col].iloc[idx])
             total_income.append(row_total)
 
-        assert total_income[0] == 4000.0  # 2500 + 500 + 1000 + 0
-        assert total_income[1] == 4800.0  # 2600 + 500 + 1200 + 500
-        assert total_income[2] == 4000.0  # 2700 + 500 + 800 + 0
+        assert total_income[0] == pytest.approx(4000.0)  # 2500 + 500 + 1000 + 0
+        assert total_income[1] == pytest.approx(4800.0)  # 2600 + 500 + 1200 + 500
+        assert total_income[2] == pytest.approx(4000.0)  # 2700 + 500 + 800 + 0

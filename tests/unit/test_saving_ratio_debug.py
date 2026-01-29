@@ -4,6 +4,7 @@ Test to identify why saving ratio shows 0.0% in production.
 """
 
 import pandas as pd
+import pytest
 
 from app.logic.finance_calculator import FinanceCalculator
 
@@ -89,7 +90,7 @@ def test_saving_ratio_with_no_expenses():
     ratio = calculator.get_average_saving_ratio_last_12_months_percentage()
 
     print(f"\nSaving ratio with no expenses: {ratio:.2%}")
-    assert ratio == 0.0, "Should return 0.0 when expenses sheet is missing"
+    assert ratio == pytest.approx(0.0), "Should return 0.0 when expenses sheet is missing"
 
 
 def test_saving_ratio_with_no_income():
@@ -110,7 +111,7 @@ def test_saving_ratio_with_no_income():
     ratio = calculator.get_average_saving_ratio_last_12_months_percentage()
 
     print(f"\nSaving ratio with no income: {ratio:.2%}")
-    assert ratio == 0.0, "Should return 0.0 when income is 0"
+    assert ratio == pytest.approx(0.0), "Should return 0.0 when income is 0"
 
 
 def test_income_calculation_debug():

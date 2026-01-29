@@ -27,8 +27,7 @@ class TestExpensesIntegration:
 
         # Without Expenses sheet, all expense calculations should return 0 or empty
         saving_ratio = calculator.get_average_saving_ratio_last_12_months_percentage()
-        assert saving_ratio == 0.0
-
+        assert saving_ratio == pytest.approx(0.0)
         income_vs_expenses = calculator.get_incomes_vs_expenses()
         assert len(income_vs_expenses["dates"]) == 0
         assert len(income_vs_expenses["expenses"]) == 0

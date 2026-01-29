@@ -19,6 +19,7 @@ Example:
 """
 
 import logging
+import math
 import re
 from typing import Any
 
@@ -74,7 +75,10 @@ def parse_monetary_value(value: Any, currency: str | None = None) -> float:
         123456.0  # Interprets as European: dot = thousand separator
     """
     if not isinstance(value, str):
-        return float(value) if value is not None else 0.0
+        if value is None:
+            return 0.0
+        result = float(value)
+        return 0.0 if math.isnan(result) else result
 
     # Detect or use provided currency
     detected_currency = currency or detect_currency(value)

@@ -229,9 +229,8 @@ def test_chart_structure_with_two_sources():
     salary_link = next(
         link for link in links if link["source"] == "Salary" and link["target"] == "Total Income"
     )
-    assert salary_link["value"] == 30000.0
-
+    assert salary_link["value"] == pytest.approx(30000.0)
     freelance_link = next(
         link for link in links if link["source"] == "Freelance" and link["target"] == "Total Income"
     )
-    assert freelance_link["value"] == 5000.0
+    assert freelance_link["value"] == pytest.approx(5000.0)
