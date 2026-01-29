@@ -81,7 +81,7 @@ class ExpensesRenderer:
         container.clear()
 
         if not expenses_data or not expenses_data.get("transactions"):
-            with container:
+            async with container:
                 ui.label("No expenses data available").classes("text-center text-gray-500 py-8")
             return
 
@@ -89,11 +89,11 @@ class ExpensesRenderer:
         user_currency: str = app.storage.general.get("currency", utils.get_user_currency())
 
         # Mobile-only message (hidden on desktop/tablet)
-        with container:
+        async with container:
             render_mobile_table_message()
 
         # Desktop/tablet table (hidden on mobile)
-        with container:
+        async with container:
             with ui.column().classes("max-md:hidden w-full"):
                 with ui.row().classes("w-full justify-between items-center mb-4"):
                     ui.label(f"All Transactions ({expenses_data['total_count']})").classes(
@@ -282,7 +282,7 @@ class ExpensesRenderer:
         options = chart_options_fn(data, prefs.user_agent, prefs.currency)
 
         # Render chart
-        with container:
+        async with container:
             ui.label(title).classes(styles.CHART_CARDS_LABEL_CLASSES)
             ui.tooltip(tooltip_text)
             ui.echart(options=options, theme=prefs.echart_theme).classes("h-96 w-full")

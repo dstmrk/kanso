@@ -62,14 +62,14 @@ class HomeRenderer:
         container.clear()
 
         if not kpi_data:
-            with container:
+            async with container:
                 ui.label("No data available").classes("text-center text-gray-500")
             return
 
         # Get user currency preference (from general storage - shared across devices)
         user_currency: str = app.storage.general.get("currency", utils.get_user_currency())
 
-        with container:
+        async with container:
             net_worth_value = utils.format_currency(kpi_data["net_worth"], user_currency)
             mom_variation_percentage_value = utils.format_percentage(
                 abs(kpi_data["mom_variation_percentage"]), user_currency
@@ -165,7 +165,7 @@ class HomeRenderer:
         # Get user preferences using centralized utility
         prefs = get_user_preferences()
 
-        with container:
+        async with container:
             ui.label(title).classes(styles.CHART_CARDS_LABEL_CLASSES)
 
             if tooltip:
