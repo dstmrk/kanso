@@ -191,11 +191,10 @@ def create_cash_flow_options(
     # Parse keys in order to identify structure
     found_expenses_key = False
     for key, value in cash_flow_data.items():
-        if key == "Expenses":
-            found_expenses_key = True
+        if key in ("Expenses", "Savings"):
+            if key == "Expenses":
+                found_expenses_key = True
             continue
-        elif key == "Savings":
-            pass
         elif not found_expenses_key:
             # Before "Expenses" key = income sources
             income_sources[key] = value
