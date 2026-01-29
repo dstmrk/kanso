@@ -2,6 +2,10 @@ from typing import Any, Literal
 
 from app.core.currency_formats import get_currency_format
 
+# Chart series names
+NET_WORTH_LABEL: str = "Net Worth"
+TOTAL_INCOME_LABEL: str = "Total Income"
+
 
 class ChartOptionsBuilder:
     """Centralized chart options builder with common formatting."""
@@ -86,7 +90,7 @@ def create_net_worth_chart_options(
         },
         "series": [
             {
-                "name": "Net Worth",
+                "name": NET_WORTH_LABEL,
                 "type": "line",
                 "smooth": True,
                 "data": net_worth_data.get("values", []),
@@ -127,7 +131,7 @@ def create_asset_vs_liabilities_chart(
         data.append(category)
 
     # Sort data to ensure consistent color assignment: Assets (green), Liabilities (red)
-    category_order = {"Assets": 0, "Liabilities": 1, "Net Worth": 2}
+    category_order = {"Assets": 0, "Liabilities": 1, NET_WORTH_LABEL: 2}
     data.sort(key=lambda x: category_order.get(x["name"], 999))
 
     return {
@@ -223,7 +227,7 @@ def create_cash_flow_options(
                 for i, source in enumerate(income_sources)
             ],
             # Aggregation node
-            {"name": "Total Income", "itemStyle": {"color": "#2b821d"}},
+            {"name": TOTAL_INCOME_LABEL, "itemStyle": {"color": "#2b821d"}},
             # Output nodes
             {"name": "Savings", "itemStyle": {"color": "#005eaa"}},
             {"name": "Expenses", "itemStyle": {"color": "#c12e34"}},
@@ -237,12 +241,12 @@ def create_cash_flow_options(
         links = [
             # Income sources → Total Income
             *[
-                {"source": source, "target": "Total Income", "value": round(amount, 2)}
+                {"source": source, "target": TOTAL_INCOME_LABEL, "value": round(amount, 2)}
                 for source, amount in income_sources.items()
             ],
             # Total Income → Savings/Expenses
-            {"source": "Total Income", "target": "Savings", "value": round(savings, 2)},
-            {"source": "Total Income", "target": "Expenses", "value": round(expenses_total, 2)},
+            {"source": TOTAL_INCOME_LABEL, "target": "Savings", "value": round(savings, 2)},
+            {"source": TOTAL_INCOME_LABEL, "target": "Expenses", "value": round(expenses_total, 2)},
             # Expenses → Categories
             *[
                 {"source": "Expenses", "target": category, "value": round(amount, 2)}
@@ -500,7 +504,7 @@ def create_net_worth_evolution_by_class_options(
     liability_classes = net_worth_data.get("liability_classes", {})
 
     # Build legend data (all classes + Total Net Worth)
-    legend_data = list(asset_classes.keys()) + list(liability_classes.keys()) + ["Net Worth"]
+    legend_data = list(asset_classes.keys()) + list(liability_classes.keys()) + [NET_WORTH_LABEL]
 
     # Build series: asset classes (stacked, green shades), liability classes (stacked, red shades)
     series: list[dict[str, Any]] = []
@@ -556,7 +560,7 @@ def create_net_worth_evolution_by_class_options(
     # Total Net Worth - bold line on top (no stack)
     series.append(
         {
-            "name": "Net Worth",
+            "name": NET_WORTH_LABEL,
             "type": "line",
             "data": total,
             "smooth": True,

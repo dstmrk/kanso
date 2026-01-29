@@ -26,6 +26,22 @@ CHART_CARDS_CHARTS_CLASSES: str = " h-64 w-full"
 DEFAULT_ECHART_THEME_FOLDER: str = "themes/"
 DEFAULT_ECHARTS_THEME_SUFFIX: str = "_default_echarts_theme.json"
 
+# Header button style
+HEADER_BUTTON_PROPS: str = "flat color=white"
+
+# Onboarding styles
+ONBOARDING_HEADING_CLASSES: str = "text-2xl font-bold mb-4"
+ONBOARDING_PARAGRAPH_CLASSES: str = "text-base mb-4"
+ONBOARDING_SECONDARY_BUTTON_CLASSES: str = (
+    "btn bg-secondary hover:bg-secondary/80 text-secondary-content"
+)
+
+# Settings styles
+SETTINGS_SECTION_CLASSES: str = "w-full gap-6"
+SETTINGS_SECTION_TITLE_CLASSES: str = "text-xl font-semibold"
+SETTINGS_ROW_CLASSES: str = "items-center gap-4"
+SETTINGS_RESOURCE_LINK_CLASSES: str = "flex items-center gap-2 text-primary hover:underline"
+
 # SVG Icons (minified for performance)
 LOGO_SVG: str = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 230 64" class="h-8"><circle cx="32" cy="32" r="27" fill="#fff"/><g transform="translate(10.4,10.4)scale(1.8)" fill="none" stroke="#009688" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16l6-7 5 5 5-6"/><path d="M15 14m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0"/><path d="M10 9m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0"/><path d="M4 16m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0"/><path d="M20 8m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0"/></g><text x="70" y="50" font-family="sans-serif" font-size="50" font-weight="bold" fill="#fff" letter-spacing="1">Kanso</text></svg>'
 

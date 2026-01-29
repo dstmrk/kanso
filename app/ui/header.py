@@ -3,6 +3,7 @@ from nicegui import app, ui
 from app.services import pages
 from app.services.utils import format_timestamp_relative
 from app.ui import styles
+from app.ui.styles import HEADER_BUTTON_PROPS
 
 
 def render_last_refresh_timestamp() -> None:
@@ -135,7 +136,7 @@ def render() -> None:
     with ui.header().classes("bg-secondary p-2 mobile-hide"):
         with ui.row().classes("w-full items-center gap-4"):
             # Hamburger menu icon (toggle drawer)
-            hamburger = ui.button(icon="menu").props("flat color=white")
+            hamburger = ui.button(icon="menu").props(HEADER_BUTTON_PROPS)
             hamburger.on("click", left_drawer.toggle)
 
             # Logo Kanso (clickable to go home)
@@ -147,7 +148,7 @@ def render() -> None:
 
             # Quick add expense button (desktop: icon + text)
             with ui.link(target="/quick-add").classes("no-underline"):
-                with ui.button().props("flat color=white"):
+                with ui.button().props(HEADER_BUTTON_PROPS):
                     ui.html(styles.ADD_SVG, sanitize=False)
                     ui.label("Add").classes("ml-1")
                 ui.tooltip("Add Expense")
@@ -156,7 +157,7 @@ def render() -> None:
     with ui.header().classes("bg-secondary p-2 md:hidden"):
         with ui.row().classes("w-full items-center relative"):
             # Hamburger menu icon (toggle drawer) - left side
-            hamburger = ui.button(icon="menu").props("flat color=white")
+            hamburger = ui.button(icon="menu").props(HEADER_BUTTON_PROPS)
             hamburger.on("click", left_drawer.toggle)
 
             # Logo Kanso (clickable to go home) - absolutely centered
@@ -169,6 +170,6 @@ def render() -> None:
 
             # Quick add expense button (mobile: icon only)
             with ui.link(target="/quick-add").classes("no-underline"):
-                with ui.button().props("flat color=white"):
+                with ui.button().props(HEADER_BUTTON_PROPS):
                     ui.html(styles.ADD_SVG, sanitize=False)
                 ui.tooltip("Add Expense")
