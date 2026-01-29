@@ -2,8 +2,13 @@
 
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/dstmrk/kanso)
 ![CI](https://github.com/dstmrk/kanso/workflows/CI/badge.svg)
-[![codecov](https://codecov.io/gh/dstmrk/kanso/branch/main/graph/badge.svg)](https://codecov.io/gh/dstmrk/kanso)
 ![GitHub](https://img.shields.io/github/license/dstmrk/kanso)
+
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=dstmrk_kanso&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=dstmrk_kanso)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=dstmrk_kanso&metric=coverage)](https://sonarcloud.io/summary/new_code?id=dstmrk_kanso)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=dstmrk_kanso&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=dstmrk_kanso)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=dstmrk_kanso&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=dstmrk_kanso)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=dstmrk_kanso&metric=maintainability_rating)](https://sonarcloud.io/summary/new_code?id=dstmrk_kanso)
 
 > **Check your financial health in 5 minutes per month.**
 > See exactly where your money goes, spot trends before they become problems, and make confident decisions about your finances.
