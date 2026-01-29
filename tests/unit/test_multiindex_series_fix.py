@@ -127,5 +127,5 @@ def test_single_index_still_works():
     calculator = FinanceCalculator(assets_df=assets_df, liabilities_df=liabilities_df)
 
     net_worth = calculator.get_current_net_worth()
-    # 5500 - 900 = 4600
+    # Expected: assets 5500 minus liabilities 900
     assert abs(net_worth - 4600) < 1.0

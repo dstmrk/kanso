@@ -300,6 +300,8 @@ When we added 5 new currencies and reorganized onboarding:
 
 **Target**: 90%+ for business logic (app/logic/, app/core/)
 
+**SonarCloud Quality Gate**: New code must have **≥80% coverage**. PRs failing this gate will be blocked.
+
 **Not required**: UI files (hard to unit test, covered by E2E)
 
 **View coverage**:

@@ -137,6 +137,16 @@ class TestParseMonetaryValue:
         """Test parsing None returns 0.0."""
         assert parse_monetary_value(None) == pytest.approx(0.0)
 
+    def test_parse_nan(self):
+        """Test parsing NaN (e.g. from pandas) returns 0.0."""
+        assert parse_monetary_value(float("nan")) == pytest.approx(0.0)
+
+    def test_parse_numpy_nan(self):
+        """Test parsing numpy NaN returns 0.0 (common when pandas converts None)."""
+        import numpy as np
+
+        assert parse_monetary_value(np.nan) == pytest.approx(0.0)
+
     def test_parse_empty_string(self):
         """Test parsing empty string returns 0.0."""
         assert parse_monetary_value("") == pytest.approx(0.0)

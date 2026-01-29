@@ -412,7 +412,7 @@ def clean_google_sheets_url(url: str) -> str:
     return f"https://docs.google.com/spreadsheets/d/{workbook_id}/edit"
 
 
-def validate_google_sheets_url(url: str) -> tuple[bool, str]:
+def validate_google_sheets_url(url: str | None) -> tuple[bool, str]:
     """Validate Google Sheets URL format.
 
     Args:
@@ -448,7 +448,7 @@ def validate_google_sheets_url(url: str) -> tuple[bool, str]:
 
 
 def validate_google_credentials_json(
-    credentials_json: str,
+    credentials_json: str | None,
 ) -> tuple[Literal[True], dict] | tuple[Literal[False], str]:
     """Validate Google Service Account credentials JSON.
 

@@ -109,7 +109,7 @@ def create_asset_vs_liabilities_chart(
         if hasattr(chart_data[key], "items"):
             chart_data[key] = dict(chart_data[key])
             # Handle nested dicts
-            for subkey in list(chart_data[key].keys()):
+            for subkey in chart_data[key].keys():
                 if hasattr(chart_data[key][subkey], "items"):
                     chart_data[key][subkey] = dict(chart_data[key][subkey])
 
@@ -191,10 +191,9 @@ def create_cash_flow_options(
     # Parse keys in order to identify structure
     found_expenses_key = False
     for key, value in cash_flow_data.items():
-        if key == "Expenses":
-            found_expenses_key = True
-            continue
-        elif key == "Savings":
+        if key in ("Expenses", "Savings"):
+            if key == "Expenses":
+                found_expenses_key = True
             continue
         elif not found_expenses_key:
             # Before "Expenses" key = income sources
@@ -297,7 +296,9 @@ def create_cash_flow_options(
 
 
 def create_avg_expenses_options(
-    expenses_data: dict[str, float], user_agent: Literal["mobile", "desktop"], currency: str = "USD"
+    expenses_data: dict[str, float],
+    _user_agent: Literal["mobile", "desktop"],
+    currency: str = "USD",
 ) -> dict[str, Any]:
     data = [{"name": category, "value": value} for category, value in expenses_data.items()]
 

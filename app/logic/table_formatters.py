@@ -185,10 +185,7 @@ def prepare_dataframe_for_aggrid(df: pd.DataFrame) -> list[dict]:
         else:
             # Try to find Date in record keys (for multi-index)
             for key in record:
-                if isinstance(key, tuple) and COL_DATE in key:
-                    date_value = record[key]
-                    break
-                elif key == COL_DATE:
+                if key == COL_DATE or (isinstance(key, tuple) and COL_DATE in key):
                     date_value = record[key]
                     break
 

@@ -92,7 +92,7 @@ class TestFinanceServiceLoadDataframes:
             "expenses_sheet": expenses_df_test.to_json(orient="split"),
         }
         service = FinanceService(storage=storage)
-        assets_df, liabilities_df, expenses_df, incomes_df = service._load_dataframes()
+        assets_df, liabilities_df, expenses_df, _ = service._load_dataframes()
 
         assert assets_df is None  # Failed to deserialize
         assert liabilities_df is not None  # Successfully loaded

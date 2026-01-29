@@ -187,7 +187,7 @@ class TestFormatTimestampRelative:
         now = datetime.now(UTC)
         timestamp = (now - timedelta(minutes=5)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-        formatted, relative = format_timestamp_relative(timestamp)
+        _, relative = format_timestamp_relative(timestamp)
         assert "minute" in relative
         assert "ago" in relative
 
@@ -196,7 +196,7 @@ class TestFormatTimestampRelative:
         now = datetime.now(UTC)
         timestamp = (now - timedelta(minutes=1, seconds=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-        formatted, relative = format_timestamp_relative(timestamp)
+        _, relative = format_timestamp_relative(timestamp)
         assert relative == "1 minute ago"
 
     def test_multiple_minutes_ago(self):
@@ -204,7 +204,7 @@ class TestFormatTimestampRelative:
         now = datetime.now(UTC)
         timestamp = (now - timedelta(minutes=15)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-        formatted, relative = format_timestamp_relative(timestamp)
+        _, relative = format_timestamp_relative(timestamp)
         assert "minutes ago" in relative
 
     def test_hours_ago(self):
@@ -212,7 +212,7 @@ class TestFormatTimestampRelative:
         now = datetime.now(UTC)
         timestamp = (now - timedelta(hours=3)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-        formatted, relative = format_timestamp_relative(timestamp)
+        _, relative = format_timestamp_relative(timestamp)
         assert "hour" in relative
         assert "ago" in relative
 
@@ -221,7 +221,7 @@ class TestFormatTimestampRelative:
         now = datetime.now(UTC)
         timestamp = (now - timedelta(hours=1, minutes=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-        formatted, relative = format_timestamp_relative(timestamp)
+        _, relative = format_timestamp_relative(timestamp)
         assert relative == "1 hour ago"
 
     def test_days_ago(self):
@@ -229,7 +229,7 @@ class TestFormatTimestampRelative:
         now = datetime.now(UTC)
         timestamp = (now - timedelta(days=3)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-        formatted, relative = format_timestamp_relative(timestamp)
+        _, relative = format_timestamp_relative(timestamp)
         assert "day" in relative
         assert "ago" in relative
 
@@ -238,7 +238,7 @@ class TestFormatTimestampRelative:
         now = datetime.now(UTC)
         timestamp = (now - timedelta(days=1, hours=12)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-        formatted, relative = format_timestamp_relative(timestamp)
+        _, relative = format_timestamp_relative(timestamp)
         assert relative == "1 day ago"
 
     def test_weeks_ago(self):
@@ -246,7 +246,7 @@ class TestFormatTimestampRelative:
         now = datetime.now(UTC)
         timestamp = (now - timedelta(weeks=2)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-        formatted, relative = format_timestamp_relative(timestamp)
+        _, relative = format_timestamp_relative(timestamp)
         assert "week" in relative
         assert "ago" in relative
 
@@ -255,14 +255,14 @@ class TestFormatTimestampRelative:
         now = datetime.now(UTC)
         timestamp = (now - timedelta(days=60)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-        formatted, relative = format_timestamp_relative(timestamp)
+        _, relative = format_timestamp_relative(timestamp)
         assert "month" in relative
         assert "ago" in relative
 
     def test_formatted_absolute_time(self):
         """Should return formatted absolute time in YYYY-MM-DD HH:MM:SS format."""
         timestamp = "2025-10-18T14:30:45Z"
-        formatted, relative = format_timestamp_relative(timestamp)
+        formatted, _ = format_timestamp_relative(timestamp)
 
         # Check format
         assert formatted == "2025-10-18 14:30:45"
