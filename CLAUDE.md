@@ -148,6 +148,8 @@ app/
 - ✅ Critical user paths (onboarding, dashboard load)
 - ❌ UI layout, third-party libraries, styling
 
+**SonarCloud Quality Gate**: New code must have **≥80% coverage** or the PR will be blocked.
+
 ---
 
 ## 🔄 CI/CD Strategy
