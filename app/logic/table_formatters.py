@@ -19,6 +19,43 @@ from app.core.constants import (
 from app.logic.monetary_parsing import parse_monetary_value
 
 
+def _is_date_col(col: object) -> bool:
+    """Check if a column is a date column (Date or date_dt), handling tuples."""
+    if col == COL_DATE_DT or col == COL_DATE:
+        return True
+    return isinstance(col, tuple) and (COL_DATE_DT in col or COL_DATE in col)
+
+
+def _flatten_field_name(col_key: object) -> str:
+    """Convert a column key (string or tuple) to a flat AG Grid field name."""
+    if isinstance(col_key, tuple) and len(col_key) == 2:
+        category, item = col_key[0].strip(), col_key[1].strip()
+        return f"{category}_{item}".replace(" ", "_")
+    return str(col_key)
+
+
+def _format_date_value(date_value: object) -> str:
+    """Format a date value to YYYY-MM string."""
+    if date_value is None or pd.isna(date_value):
+        return ""
+    if isinstance(date_value, (pd.Timestamp, datetime)):
+        return date_value.strftime("%Y-%m")
+    try:
+        return pd.to_datetime(date_value).strftime("%Y-%m")
+    except Exception:
+        return str(date_value)
+
+
+def _extract_date_from_record(record: dict) -> object:
+    """Find and return the date value from a row record."""
+    if COL_DATE_DT in record:
+        return record[COL_DATE_DT]
+    for key in record:
+        if key == COL_DATE or (isinstance(key, tuple) and COL_DATE in key):
+            return record[key]
+    return None
+
+
 def parse_dataframe_monetary_values(df: pd.DataFrame) -> pd.DataFrame:
     """Parse monetary values in DataFrame to numeric, preserving multi-level column structure.
 
@@ -42,10 +79,7 @@ def parse_dataframe_monetary_values(df: pd.DataFrame) -> pd.DataFrame:
 
     # Iterate through all columns and parse monetary values
     for col in df_clean.columns:
-        # Skip Date columns (both Date and Date_DT)
-        if col == COL_DATE_DT or col == COL_DATE:
-            continue
-        if isinstance(col, tuple) and (COL_DATE_DT in col or COL_DATE in col):
+        if _is_date_col(col):
             continue
 
         # Parse each value in the column
@@ -91,10 +125,7 @@ def build_aggrid_columns_from_dataframe(df: pd.DataFrame, currency_formatter: st
     column_groups: dict[str, list[tuple[str | None, str]]] = {}
 
     for col in df.columns:
-        # Skip date columns (both original and computed)
-        if col == COL_DATE_DT or col == COL_DATE:
-            continue
-        if isinstance(col, tuple) and (COL_DATE in col or COL_DATE_DT in col):
+        if _is_date_col(col):
             continue
 
         if isinstance(col, tuple) and len(col) == 2:
@@ -177,53 +208,17 @@ def prepare_dataframe_for_aggrid(df: pd.DataFrame) -> list[dict]:
 
     for record in df_records:
         row_dict: dict[str, str | float] = {}
+        row_dict["Date"] = _format_date_value(_extract_date_from_record(record))
 
-        # Extract and format date
-        date_value = None
-        if COL_DATE_DT in record:
-            date_value = record[COL_DATE_DT]
-        else:
-            # Try to find Date in record keys (for multi-index)
-            for key in record:
-                if key == COL_DATE or (isinstance(key, tuple) and COL_DATE in key):
-                    date_value = record[key]
-                    break
-
-        # Format date value
-        if date_value is not None and not pd.isna(date_value):
-            if isinstance(date_value, (pd.Timestamp, datetime)):
-                row_dict["Date"] = date_value.strftime("%Y-%m")
-            else:
-                try:
-                    row_dict["Date"] = pd.to_datetime(date_value).strftime("%Y-%m")
-                except Exception:
-                    row_dict["Date"] = str(date_value)
-        else:
-            row_dict["Date"] = ""
-
-        # Process all other columns
         for col_key, value in record.items():
-            # Skip date columns (already handled)
-            if col_key == COL_DATE_DT or col_key == COL_DATE:
-                continue
-            if isinstance(col_key, tuple) and (COL_DATE in col_key or COL_DATE_DT in col_key):
+            if _is_date_col(col_key):
                 continue
 
-            # Parse monetary value using the same parser as finance_calculator
             parsed_value = parse_monetary_value(value)
             if parsed_value is None:
                 parsed_value = 0.0
 
-            # Create field name matching columnDefs
-            if isinstance(col_key, tuple) and len(col_key) == 2:
-                # Multi-level: flatten to Category_Item
-                category, item = col_key[0].strip(), col_key[1].strip()
-                field_name = f"{category}_{item}".replace(" ", "_")
-            else:
-                # Single-level: use column name as-is
-                field_name = str(col_key)
-
-            row_dict[field_name] = parsed_value
+            row_dict[_flatten_field_name(col_key)] = parsed_value
 
         rows.append(row_dict)
 

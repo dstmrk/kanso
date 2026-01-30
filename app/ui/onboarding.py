@@ -1,11 +1,7 @@
 from nicegui import app, ui
 
 from app.core.constants import CURRENCY_OPTIONS_FULL
-from app.core.validators import (
-    clean_google_sheets_url,
-    validate_google_credentials_json,
-    validate_google_sheets_url,
-)
+from app.core.validators import validate_credentials_and_url
 from app.services import utils
 from app.ui.styles import (
     ONBOARDING_HEADING_CLASSES,
@@ -184,35 +180,20 @@ def render() -> None:
 
             def go_to_step(step: int):
                 """Navigate to a specific step."""
-                # Update stepper visual
-                if step >= 1:
-                    step1.classes(add="step-primary")
-                else:
-                    step1.classes(remove="step-primary")
+                steps = [step1, step2, step3]
+                contents = [step1_content, step2_content, step3_content]
 
-                if step >= 2:
-                    step2.classes(add="step-primary")
-                else:
-                    step2.classes(remove="step-primary")
+                for i, step_el in enumerate(steps, start=1):
+                    if step >= i:
+                        step_el.classes(add="step-primary")
+                    else:
+                        step_el.classes(remove="step-primary")
 
-                if step >= 3:
-                    step3.classes(add="step-primary")
-                else:
-                    step3.classes(remove="step-primary")
-
-                # Show/hide content
-                if step == 1:
-                    step1_content.classes(remove="hidden")
-                    step2_content.classes(add="hidden")
-                    step3_content.classes(add="hidden")
-                elif step == 2:
-                    step1_content.classes(add="hidden")
-                    step2_content.classes(remove="hidden")
-                    step3_content.classes(add="hidden")
-                elif step == 3:
-                    step1_content.classes(add="hidden")
-                    step2_content.classes(add="hidden")
-                    step3_content.classes(remove="hidden")
+                for i, content_el in enumerate(contents, start=1):
+                    if i == step:
+                        content_el.classes(remove="hidden")
+                    else:
+                        content_el.classes(add="hidden")
 
             def save_and_complete():
                 """Validate, save and test configuration, then complete onboarding."""
@@ -220,44 +201,27 @@ def render() -> None:
                 import tempfile
                 from pathlib import Path
 
-                # Get values directly from inputs
                 credentials_content = credentials_textarea.value.strip()
                 url = url_input.value.strip()
                 selected_currency = currency_select.value
 
-                # Validate all fields are present
-                if not credentials_content:
-                    ui.notify("✗ Please paste the credentials JSON", type="negative")
+                # Validate required fields
+                for value, msg in [
+                    (credentials_content, "Please paste the credentials JSON"),
+                    (url, "Please enter a Google Sheet URL"),
+                    (selected_currency, "Please select a currency"),
+                ]:
+                    if not value:
+                        ui.notify(f"✗ {msg}", type="negative")
+                        return
+
+                # Validate credentials + URL together
+                is_valid, result, clean_url = validate_credentials_and_url(credentials_content, url)
+                if not is_valid:
+                    ui.notify(f"✗ {result}", type="negative")
                     return
 
-                if not url:
-                    ui.notify("✗ Please enter a Google Sheet URL", type="negative")
-                    return
-
-                if not selected_currency:
-                    ui.notify("✗ Please select a currency", type="negative")
-                    return
-
-                # Validate credentials JSON using centralized validator
-                is_valid_creds, creds_result = validate_google_credentials_json(credentials_content)
-                if not is_valid_creds:
-                    ui.notify(f"✗ {creds_result}", type="negative")
-                    return
-
-                json_data = creds_result  # creds_result is the parsed JSON dict
-
-                # Validate and clean URL using centralized validators
-                is_valid_url, url_error = validate_google_sheets_url(url)
-                if not is_valid_url:
-                    ui.notify(f"✗ {url_error}", type="negative")
-                    return
-
-                # Clean URL to extract only workbook ID (removes query params, fragments)
-                try:
-                    clean_url = clean_google_sheets_url(url)
-                except ValueError as e:
-                    ui.notify(f"✗ {str(e)}", type="negative")
-                    return
+                json_data = result
 
                 # Save to general storage (shared across devices)
                 app.storage.general["google_credentials_json"] = credentials_content
@@ -272,19 +236,14 @@ def render() -> None:
                     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=True) as tmp:
                         json.dump(json_data, tmp, indent=2)
                         tmp.flush()
-                        tmp_path = Path(tmp.name)
-
-                        # Test connection with cleaned URL
-                        GoogleSheetService(tmp_path, clean_url)
+                        GoogleSheetService(Path(tmp.name), clean_url)
                         ui.notify(
                             "✓ Configuration saved! Redirecting to dashboard...", type="positive"
                         )
-
                 except Exception as e:
                     ui.notify(
                         f"⚠ Configuration saved, but connection test failed: {str(e)}",
                         type="warning",
                     )
 
-                # Redirect immediately to home - data will load with placeholders
                 ui.navigate.to("/")

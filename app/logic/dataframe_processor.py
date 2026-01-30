@@ -131,6 +131,23 @@ class DataFrameProcessor:
         return None
 
     @staticmethod
+    def _column_matches_pattern(col: Any, pattern: str) -> bool:
+        """Check if a column name matches an exclude pattern.
+
+        Handles both single-level and MultiIndex (tuple) column names.
+        """
+        if isinstance(col, tuple):
+            return pattern in (col[0], col[1]) or pattern in str(col)
+        return col == pattern or pattern in str(col)
+
+    @staticmethod
+    def _should_exclude_column(col: Any, exclude_patterns: list[str]) -> bool:
+        """Check if a column should be excluded based on any of the patterns."""
+        return any(
+            DataFrameProcessor._column_matches_pattern(col, pattern) for pattern in exclude_patterns
+        )
+
+    @staticmethod
     def sum_monetary_columns_for_row(row: pd.Series, exclude_patterns: list[str]) -> float:
         """Sum all monetary columns in a row, excluding specified patterns.
 
@@ -151,28 +168,11 @@ class DataFrameProcessor:
         """
         total = 0.0
         for col, value in row.items():
-            # Skip excluded columns
-            skip = False
-            for pattern in exclude_patterns:
-                if isinstance(col, tuple):
-                    # MultiIndex column - check if pattern in either level
-                    if pattern in (col[0], col[1]) or pattern in str(col):
-                        skip = True
-                        break
-                else:
-                    # Single-level column
-                    if col == pattern or pattern in str(col):
-                        skip = True
-                        break
-
-            if skip:
+            if DataFrameProcessor._should_exclude_column(col, exclude_patterns):
                 continue
-
-            # Parse and add monetary value
             parsed_value = parse_monetary_value(value)
             if parsed_value is not None:
                 total += parsed_value
-
         return total
 
     @staticmethod

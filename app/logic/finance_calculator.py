@@ -194,6 +194,19 @@ class FinanceCalculator:
 
         return monthly_totals
 
+    @staticmethod
+    def _sum_monetary_by_date(
+        df: pd.DataFrame, exclude_cols: list[str]
+    ) -> dict[pd.Timestamp, float]:
+        """Group a preprocessed DataFrame by date and sum all monetary columns per date."""
+        result: dict[pd.Timestamp, float] = {}
+        for date, group in df.groupby(COL_DATE_DT):
+            if isinstance(date, pd.Series):
+                date = date.iloc[0]
+            row = group.iloc[0]
+            result[date] = DataFrameProcessor.sum_monetary_columns_for_row(row, exclude_cols)
+        return result
+
     def _calculate_net_worth_from_assets_liabilities(self) -> pd.DataFrame:
         """Calculate monthly Net Worth from Assets and Liabilities sheets.
 
@@ -237,38 +250,16 @@ class FinanceCalculator:
         exclude_date_cols = [COL_DATE, COL_DATE_DT, "date_dt"]
         exclude_liability_cols = exclude_date_cols + [COL_CATEGORY]
 
-        # Process Assets using vectorized operations
-        assets_by_date: dict[pd.Timestamp, float] = {}
-        if assets_df is not None and not assets_df.empty:
-            # Group by date and sum monetary columns
-            for date, group in assets_df.groupby(COL_DATE_DT):
-                # Handle case where date might be a Series (multi-index edge case)
-                if isinstance(date, pd.Series):
-                    date = date.iloc[0]
-
-                # Sum all monetary columns for this date's row
-                # Since groupby returns a DataFrame, get the first (and only) row
-                row = group.iloc[0]
-                total_assets = DataFrameProcessor.sum_monetary_columns_for_row(
-                    row, exclude_date_cols
-                )
-                assets_by_date[date] = total_assets
-
-        # Process Liabilities using vectorized operations
-        liabilities_by_date: dict[pd.Timestamp, float] = {}
-        if liabilities_df is not None and not liabilities_df.empty:
-            # Group by date and sum monetary columns
-            for date, group in liabilities_df.groupby(COL_DATE_DT):
-                # Handle case where date might be a Series (multi-index edge case)
-                if isinstance(date, pd.Series):
-                    date = date.iloc[0]
-
-                # Sum all monetary columns for this date's row
-                row = group.iloc[0]
-                total_liabilities = DataFrameProcessor.sum_monetary_columns_for_row(
-                    row, exclude_liability_cols
-                )
-                liabilities_by_date[date] = total_liabilities
+        assets_by_date: dict[pd.Timestamp, float] = (
+            self._sum_monetary_by_date(assets_df, exclude_date_cols)
+            if assets_df is not None and not assets_df.empty
+            else {}
+        )
+        liabilities_by_date: dict[pd.Timestamp, float] = (
+            self._sum_monetary_by_date(liabilities_df, exclude_liability_cols)
+            if liabilities_df is not None and not liabilities_df.empty
+            else {}
+        )
 
         # Get all unique dates
         all_dates = set(assets_by_date.keys()) | set(liabilities_by_date.keys())
@@ -341,6 +332,36 @@ class FinanceCalculator:
 
         return total
 
+    @staticmethod
+    def _extract_source_name(col: Any) -> str:
+        """Extract a meaningful source name from a column key (str or tuple).
+
+        For tuple columns (MultiIndex), filters out empty parts, monetary values,
+        and pure numbers, returning the last meaningful text part.
+        """
+        if not isinstance(col, tuple):
+            return str(col)
+
+        meaningful_parts = []
+        for part in col:
+            part_str = str(part).strip()
+            if not part_str:
+                continue
+            # Skip if it parses as a non-zero monetary value
+            try:
+                parsed = parse_monetary_value(part_str)
+                if parsed is not None and parsed != 0:
+                    continue
+            except Exception:
+                pass
+            # Skip pure numbers or date-like strings
+            test_str = part_str.replace(".", "").replace(",", "").replace("-", "")
+            if test_str.isdigit():
+                continue
+            meaningful_parts.append(part_str)
+
+        return meaningful_parts[-1] if meaningful_parts else "Income"
+
     def _get_income_sources_for_period(
         self, start_date: pd.Timestamp | None = None, end_date: pd.Timestamp | None = None
     ) -> dict[str, float]:
@@ -380,51 +401,13 @@ class FinanceCalculator:
         income_sources: dict[str, float] = {}
 
         for col in df.columns:
-            # Skip date columns (Date, date_dt, and variants)
             if is_date_column(col):
                 continue
 
-            # Get income source name and amount
             try:
-                if isinstance(col, tuple):
-                    # MultiIndex: use the LAST (most specific) non-empty part as source name
-                    # BUT skip parts that look like monetary values or dates
-                    # Example: ('Income', 'Salary') → 'Salary'
-                    # Example: ('Salary', 'Company Name') → 'Company Name'
-                    # Example: ('Salary', '€ 3.000') → 'Salary' (skip monetary value)
-                    # Example: ('Date', '2024-01') → skip entirely
-
-                    # Filter out parts that are actual monetary values or dates
-                    meaningful_parts = []
-                    for part in col:
-                        part_str = str(part).strip()
-                        if not part_str:
-                            continue
-
-                        # Try to parse as monetary value - if successful, it's a value not a name
-                        try:
-                            parsed_value = parse_monetary_value(part_str)
-                            if parsed_value is not None and parsed_value != 0:
-                                # Successfully parsed as monetary value, skip it
-                                continue
-                        except Exception:
-                            pass
-
-                        # Skip if it's a pure number or date-like (YYYY-MM format)
-                        test_str = part_str.replace(".", "").replace(",", "").replace("-", "")
-                        if test_str.isdigit():
-                            continue
-
-                        meaningful_parts.append(part_str)
-
-                    # Use the last meaningful part, or fallback to "Income"
-                    source_name = meaningful_parts[-1] if meaningful_parts else "Income"
-                else:
-                    source_name = str(col)
-
+                source_name = self._extract_source_name(col)
                 amount = float(df[col].apply(parse_monetary_value).sum())
 
-                # Add to existing source or create new entry
                 if source_name in income_sources:
                     income_sources[source_name] += amount
                 else:
@@ -660,6 +643,61 @@ class FinanceCalculator:
             "values": [float(v) for v in df[COL_NET_WORTH_PARSED].tolist()],
         }
 
+    @staticmethod
+    def _build_class_series(
+        df: pd.DataFrame,
+        dates: list[str],
+        negate: bool = False,
+        extra_skip_cols: list[str] | None = None,
+    ) -> dict[str, list[float]]:
+        """Build time-series data grouped by column category from a financial DataFrame.
+
+        For MultiIndex columns, aggregates by the first level (category).
+        For single-index columns, each column becomes its own series.
+
+        Args:
+            df: Preprocessed DataFrame with COL_DATE_DT column.
+            dates: List of YYYY-MM date strings defining the time series.
+            negate: If True, negate all values (used for liabilities).
+            extra_skip_cols: Additional column names to skip beyond date columns.
+        """
+        skip_cols = set(extra_skip_cols or [])
+        df_filtered = df[df[COL_DATE_DT].dt.strftime(DATE_FORMAT_STORAGE).isin(dates)]
+        columns = [col for col in df.columns if not is_date_column(col)]
+
+        classes: dict[str, list[float]] = {}
+
+        for col in columns:
+            if isinstance(col, tuple) and len(col) == 2:
+                category = col[0].strip()
+                if not category or category in skip_cols:
+                    continue
+                if category not in classes:
+                    classes[category] = [0.0] * len(dates)
+                for i, date in enumerate(dates):
+                    row = df_filtered[
+                        df_filtered[COL_DATE_DT].dt.strftime(DATE_FORMAT_STORAGE) == date
+                    ]
+                    if not row.empty:
+                        value = parse_monetary_value(row.iloc[0][col])
+                        classes[category][i] += -value if negate else value
+            else:
+                item = str(col)
+                if item in (COL_DATE, COL_CATEGORY) or item in skip_cols:
+                    continue
+                classes[item] = []
+                for date in dates:
+                    row = df_filtered[
+                        df_filtered[COL_DATE_DT].dt.strftime(DATE_FORMAT_STORAGE) == date
+                    ]
+                    if not row.empty:
+                        value = parse_monetary_value(row.iloc[0][col])
+                        classes[item].append(-value if negate else value)
+                    else:
+                        classes[item].append(0.0)
+
+        return classes
+
     @track_performance("get_monthly_net_worth_by_asset_class")
     def get_monthly_net_worth_by_asset_class(self) -> dict[str, Any]:
         """Get monthly net worth evolution broken down by asset and liability classes.
@@ -714,112 +752,21 @@ class FinanceCalculator:
         dates = nw_data["dates"]
         total = nw_data["values"]
 
-        # Use preprocessed DataFrames
         assets_df = self.processed_assets_df
         liabilities_df = self.processed_liabilities_df
 
-        # Initialize result structure
-        asset_classes: dict[str, list[float]] = {}
-        liability_classes: dict[str, list[float]] = {}
-
-        # Process Assets
-        if assets_df is not None and not assets_df.empty:
-            # Filter to matching dates
-            assets_df_filtered = assets_df[
-                assets_df[COL_DATE_DT].dt.strftime(DATE_FORMAT_STORAGE).isin(dates)
-            ]
-
-            # Identify columns (skip date columns)
-            asset_columns = [col for col in assets_df.columns if not is_date_column(col)]
-
-            # Group columns by category (for multi-index) or use column name (for single-index)
-            for col in asset_columns:
-                if isinstance(col, tuple) and len(col) == 2:
-                    # MultiIndex: aggregate by category (first level)
-                    category = col[0].strip()
-                    if not category or category == COL_CATEGORY:
-                        continue
-
-                    # Initialize category if not exists
-                    if category not in asset_classes:
-                        asset_classes[category] = [0.0] * len(dates)
-
-                    # Add values for this item to its category
-                    for i, date in enumerate(dates):
-                        row = assets_df_filtered[
-                            assets_df_filtered[COL_DATE_DT].dt.strftime(DATE_FORMAT_STORAGE) == date
-                        ]
-                        if not row.empty:
-                            value = parse_monetary_value(row.iloc[0][col])
-                            asset_classes[category][i] += value
-                else:
-                    # Single header: each column is its own series
-                    item = str(col)
-                    if item == COL_DATE or item == COL_CATEGORY:
-                        continue
-
-                    asset_classes[item] = []
-                    for date in dates:
-                        row = assets_df_filtered[
-                            assets_df_filtered[COL_DATE_DT].dt.strftime(DATE_FORMAT_STORAGE) == date
-                        ]
-                        if not row.empty:
-                            value = parse_monetary_value(row.iloc[0][col])
-                            asset_classes[item].append(value)
-                        else:
-                            asset_classes[item].append(0.0)
-
-        # Process Liabilities (same logic but with negative values)
-        if liabilities_df is not None and not liabilities_df.empty:
-            # Filter to matching dates
-            liabilities_df_filtered = liabilities_df[
-                liabilities_df[COL_DATE_DT].dt.strftime(DATE_FORMAT_STORAGE).isin(dates)
-            ]
-
-            # Identify columns (skip date columns and Category)
-            liability_columns = [
-                col
-                for col in liabilities_df.columns
-                if not is_date_column(col) and col != COL_CATEGORY
-            ]
-
-            for col in liability_columns:
-                if isinstance(col, tuple) and len(col) == 2:
-                    # MultiIndex: aggregate by category
-                    category = col[0].strip()
-                    if not category or category == COL_CATEGORY:
-                        continue
-
-                    # Initialize category if not exists
-                    if category not in liability_classes:
-                        liability_classes[category] = [0.0] * len(dates)
-
-                    # Add values (as negative) for this item to its category
-                    for i, date in enumerate(dates):
-                        row = liabilities_df_filtered[
-                            liabilities_df_filtered[COL_DATE_DT].dt.strftime(DATE_FORMAT_STORAGE)
-                            == date
-                        ]
-                        if not row.empty:
-                            value = parse_monetary_value(row.iloc[0][col])
-                            liability_classes[category][i] -= value  # Negative
-                else:
-                    # Single header: each column is its own series (negative)
-                    item = str(col)
-                    if item in (COL_DATE, COL_CATEGORY):
-                        continue
-
-                    liability_classes[item] = []
-                    for date in dates:
-                        row = liabilities_df_filtered[
-                            liabilities_df_filtered[COL_DATE_DT].dt.strftime(DATE_FORMAT_STORAGE)
-                            == date
-                        ]
-                        if not row.empty:
-                            value = parse_monetary_value(row.iloc[0][col])
-                            liability_classes[item].append(-value)  # Negative
-                        else:
-                            liability_classes[item].append(0.0)
+        asset_classes: dict[str, list[float]] = (
+            self._build_class_series(assets_df, dates, extra_skip_cols=[COL_CATEGORY])
+            if assets_df is not None and not assets_df.empty
+            else {}
+        )
+        liability_classes: dict[str, list[float]] = (
+            self._build_class_series(
+                liabilities_df, dates, negate=True, extra_skip_cols=[COL_CATEGORY]
+            )
+            if liabilities_df is not None and not liabilities_df.empty
+            else {}
+        )
 
         return {
             "dates": dates,
@@ -827,6 +774,38 @@ class FinanceCalculator:
             "asset_classes": asset_classes,
             "liability_classes": liability_classes,
         }
+
+    @staticmethod
+    def _extract_values_from_row(
+        df: pd.DataFrame,
+        row: pd.Series,
+        skip_category: bool = False,
+    ) -> dict[str, Any]:
+        """Extract monetary values from a DataFrame row, grouped by column structure.
+
+        For MultiIndex columns, groups values under their category (first level).
+        For single-index columns, maps column name directly to value.
+        """
+        result: dict[str, Any] = {}
+        for col in df.columns:
+            if is_date_column(col):
+                continue
+            if skip_category and (
+                col == COL_CATEGORY or (isinstance(col, tuple) and COL_CATEGORY in col)
+            ):
+                continue
+
+            if isinstance(col, tuple) and len(col) == 2:
+                category, item = col[0].strip(), col[1].strip()
+                if not category or (skip_category and category == COL_CATEGORY):
+                    continue
+                value = parse_monetary_value(row[col])
+                if category not in result:
+                    result[category] = {}
+                result[category][item] = value
+            else:
+                result[col] = parse_monetary_value(row[col])
+        return result
 
     @track_performance("get_assets_liabilities")
     def get_assets_liabilities(self) -> dict[str, dict[str, Any]]:
@@ -850,83 +829,34 @@ class FinanceCalculator:
                 }
             }
         """
-        asset_liabilities: dict[str, dict[str, Any]] = {
-            CATEGORY_ASSETS: {},
-            CATEGORY_LIABILITIES: {},
-        }
-        reference_date = None
-
-        # Use preprocessed DataFrames
         assets_df = self.processed_assets_df
         liabilities_df = self.processed_liabilities_df
 
+        # Extract asset values from latest row
+        asset_values: dict[str, Any] = {}
+        reference_date = None
         if assets_df is not None and not assets_df.empty:
-            # Get latest row
-            latest_row = assets_df.iloc[-1]
             reference_date = assets_df[COL_DATE_DT].iloc[-1]
+            asset_values = self._extract_values_from_row(assets_df, assets_df.iloc[-1])
 
-            # Extract values dynamically from columns
-            for col in assets_df.columns:
-                # Skip date columns (Date, date_dt, and variants)
-                if is_date_column(col):
-                    continue
-
-                if isinstance(col, tuple) and len(col) == 2:
-                    # MultiIndex: (category, item)
-                    category, item = col
-                    category = category.strip()
-                    item = item.strip()
-                    if not category:
-                        continue
-                    value = parse_monetary_value(latest_row[col])
-                    if category not in asset_liabilities[CATEGORY_ASSETS]:
-                        asset_liabilities[CATEGORY_ASSETS][category] = {}
-                    asset_liabilities[CATEGORY_ASSETS][category][item] = value
-                else:
-                    # Single header: column name is the item
-                    item = col
-                    value = parse_monetary_value(latest_row[col])
-                    asset_liabilities[CATEGORY_ASSETS][item] = value
-
-        # Process Liabilities DataFrame
+        # Find matching liability row (by reference date from assets)
+        liability_values: dict[str, Any] = {}
         if liabilities_df is not None and not liabilities_df.empty:
-            # Use reference date from Assets to get the corresponding row
             if reference_date is not None:
                 matching_rows = liabilities_df[liabilities_df[COL_DATE_DT] <= reference_date]
-                if not matching_rows.empty:
-                    latest_row = matching_rows.iloc[-1]
-                else:
-                    latest_row = liabilities_df.iloc[-1]
+                latest_row = (
+                    matching_rows.iloc[-1] if not matching_rows.empty else liabilities_df.iloc[-1]
+                )
             else:
                 latest_row = liabilities_df.iloc[-1]
+            liability_values = self._extract_values_from_row(
+                liabilities_df, latest_row, skip_category=True
+            )
 
-            # Extract values dynamically from columns
-            for col in liabilities_df.columns:
-                # Skip date columns (Date, date_dt, and variants)
-                if is_date_column(col):
-                    continue
-                # Skip Category column
-                if col == COL_CATEGORY or (isinstance(col, tuple) and COL_CATEGORY in col):
-                    continue
-
-                if isinstance(col, tuple) and len(col) == 2:
-                    # MultiIndex: (category, item)
-                    category, item = col
-                    category = category.strip()
-                    item = item.strip()
-                    if not category or category == COL_CATEGORY:
-                        continue
-                    value = parse_monetary_value(latest_row[col])
-                    if category not in asset_liabilities[CATEGORY_LIABILITIES]:
-                        asset_liabilities[CATEGORY_LIABILITIES][category] = {}
-                    asset_liabilities[CATEGORY_LIABILITIES][category][item] = value
-                else:
-                    # Single header: column name is the item
-                    item = col
-                    value = parse_monetary_value(latest_row[col])
-                    asset_liabilities[CATEGORY_LIABILITIES][item] = value
-
-        return asset_liabilities
+        return {
+            CATEGORY_ASSETS: asset_values,
+            CATEGORY_LIABILITIES: liability_values,
+        }
 
     @track_performance("get_cash_flow_last_12_months")
     def get_cash_flow_last_12_months(self) -> dict[str, float]:
@@ -1161,6 +1091,47 @@ class FinanceCalculator:
             "expenses": [-x for x in expense_data["total_expenses"].tolist()],  # Negative for chart
         }
 
+    @staticmethod
+    def _build_cumulative_by_month(
+        year_data: pd.DataFrame, last_valid_month: int | None = None
+    ) -> list[float | None]:
+        """Build cumulative expense totals for each month of a year.
+
+        Args:
+            year_data: Expense data filtered to a single year.
+            last_valid_month: If set, months beyond this are returned as None.
+        """
+        result: list[float | None] = []
+        for month in range(1, 13):
+            month_data = year_data[year_data[COL_DATE_DT].dt.month <= month]
+            cumulative = month_data["total_expenses"].sum() if not month_data.empty else 0.0
+            if last_valid_month is not None and month > last_valid_month:
+                result.append(None)
+            else:
+                result.append(cumulative)
+        return result
+
+    @staticmethod
+    def _build_projection(
+        monthly_expenses: pd.DataFrame,
+        current_cumulative: list[float | None],
+        last_valid_month: int,
+    ) -> list[float | None]:
+        """Project future months based on average monthly expenses."""
+        projected: list[float | None] = [None] * 12
+        if last_valid_month >= 12 or last_valid_month == 0:
+            return projected
+
+        last_12 = monthly_expenses.iloc[-MONTHS_IN_YEAR:]
+        avg = last_12["total_expenses"].mean() if not last_12.empty else 0.0
+        base = current_cumulative[last_valid_month - 1]
+        if base is None:
+            return projected
+
+        for month in range(last_valid_month + 1, 13):
+            projected[month - 1] = base + (avg * (month - last_valid_month))
+        return projected
+
     @track_performance("get_expenses_yoy_comparison")
     def get_expenses_yoy_comparison(self) -> dict[str, Any]:
         """Get year-over-year expenses comparison (cumulative by month).
@@ -1222,55 +1193,18 @@ class FinanceCalculator:
             monthly_expenses[COL_DATE_DT].dt.year == previous_year
         ]
 
-        # Calculate cumulative expenses by month for both years
-        current_year_cumulative: list[float | None] = []
-        previous_year_cumulative: list[float] = []
+        last_valid_month = (
+            int(current_year_data[COL_DATE_DT].dt.month.max()) if not current_year_data.empty else 0
+        )
 
-        # Find last valid month in current year (month with actual data)
-        last_valid_month = 0
-        if not current_year_data.empty:
-            last_valid_month = current_year_data[COL_DATE_DT].dt.month.max()
+        current_year_cumulative = self._build_cumulative_by_month(
+            current_year_data, last_valid_month
+        )
+        previous_year_cumulative = self._build_cumulative_by_month(previous_year_data)
 
-        for month in range(1, 13):
-            # Current year cumulative (only up to last valid month)
-            current_month_data = current_year_data[current_year_data[COL_DATE_DT].dt.month <= month]
-            current_cumulative = (
-                current_month_data["total_expenses"].sum() if not current_month_data.empty else 0.0
-            )
-            # Only append data up to last valid month, None for future months
-            if month <= last_valid_month:
-                current_year_cumulative.append(current_cumulative)
-            else:
-                current_year_cumulative.append(None)
-
-            # Previous year cumulative
-            previous_month_data = previous_year_data[
-                previous_year_data[COL_DATE_DT].dt.month <= month
-            ]
-            previous_cumulative = (
-                previous_month_data["total_expenses"].sum()
-                if not previous_month_data.empty
-                else 0.0
-            )
-            previous_year_cumulative.append(previous_cumulative)
-
-        # Calculate projected expenses for remaining months based on avg monthly expenses
-        current_year_projected: list[float | None] = [None] * 12
-        if last_valid_month < 12 and last_valid_month > 0:
-            # Get last 12 months of expense data for average calculation
-            last_12_months = monthly_expenses.iloc[-MONTHS_IN_YEAR:]
-            avg_monthly_expense = (
-                last_12_months["total_expenses"].mean() if not last_12_months.empty else 0.0
-            )
-
-            # Start projection from last valid cumulative value
-            last_cumulative = current_year_cumulative[last_valid_month - 1]
-            if last_cumulative is not None:
-                # Project future months
-                for month in range(last_valid_month + 1, 13):
-                    months_ahead = month - last_valid_month
-                    projected_cumulative = last_cumulative + (avg_monthly_expense * months_ahead)
-                    current_year_projected[month - 1] = projected_cumulative
+        current_year_projected = self._build_projection(
+            monthly_expenses, current_year_cumulative, last_valid_month
+        )
 
         return {
             "months": month_labels,

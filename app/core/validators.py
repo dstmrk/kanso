@@ -501,3 +501,28 @@ def validate_google_credentials_json(
 
     # All good
     return (True, json_data)
+
+
+def validate_credentials_and_url(
+    credentials_content: str, url: str
+) -> tuple[Literal[True], dict, str] | tuple[Literal[False], str, None]:
+    """Validate Google credentials JSON and Sheet URL together.
+
+    Returns:
+        - If valid: (True, parsed_json_dict, cleaned_url)
+        - If invalid: (False, error_message, None)
+    """
+    is_valid_creds, creds_result = validate_google_credentials_json(credentials_content)
+    if not is_valid_creds:
+        return (False, creds_result, None)
+
+    is_valid_url, url_error = validate_google_sheets_url(url)
+    if not is_valid_url:
+        return (False, url_error, None)
+
+    try:
+        cleaned = clean_google_sheets_url(url)
+    except ValueError as e:
+        return (False, str(e), None)
+
+    return (True, creds_result, cleaned)

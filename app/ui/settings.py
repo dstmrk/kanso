@@ -6,11 +6,7 @@ from app.core.constants import APP_VERSION, CURRENCY_OPTIONS_SHORT
 from app.core.error_messages import ErrorMessages, get_user_message
 from app.core.exceptions import ConfigurationError, ExternalServiceError, KansoError
 from app.core.state_manager import state_manager
-from app.core.validators import (
-    clean_google_sheets_url,
-    validate_google_credentials_json,
-    validate_google_sheets_url,
-)
+from app.core.validators import validate_credentials_and_url
 from app.services import pages, utils
 from app.services.data_loader import refresh_all_data
 from app.services.utils import get_user_currency
@@ -192,34 +188,21 @@ def render() -> None:
                         credentials_content = credentials_textarea.value.strip()
                         url_value = url_input.value.strip()
 
-                        # Validate both are present
-                        if not credentials_content:
-                            ui.notify("✗ Please paste the credentials JSON", type="negative")
-                            return
+                        # Validate required fields
+                        for value, msg in [
+                            (credentials_content, "Please paste the credentials JSON"),
+                            (url_value, "Please enter a Google Sheet URL"),
+                        ]:
+                            if not value:
+                                ui.notify(f"✗ {msg}", type="negative")
+                                return
 
-                        if not url_value:
-                            ui.notify("✗ Please enter a Google Sheet URL", type="negative")
-                            return
-
-                        # Validate credentials JSON using centralized validator
-                        is_valid_creds, creds_result = validate_google_credentials_json(
-                            credentials_content
+                        # Validate credentials + URL together
+                        is_valid, result, clean_url = validate_credentials_and_url(
+                            credentials_content, url_value
                         )
-                        if not is_valid_creds:
-                            ui.notify(f"✗ {creds_result}", type="negative")
-                            return
-
-                        # Validate and clean URL using centralized validators
-                        is_valid_url, url_error = validate_google_sheets_url(url_value)
-                        if not is_valid_url:
-                            ui.notify(f"✗ {url_error}", type="negative")
-                            return
-
-                        # Clean URL to extract only workbook ID
-                        try:
-                            clean_url = clean_google_sheets_url(url_value)
-                        except ValueError as e:
-                            ui.notify(f"✗ {str(e)}", type="negative")
+                        if not is_valid:
+                            ui.notify(f"✗ {result}", type="negative")
                             return
 
                         # Data is valid - save to general storage
@@ -248,31 +231,15 @@ def render() -> None:
 
                         # Test the connection with cleaned URL
                         try:
-                            # Test connection using temporary sheet service
                             with utils.temporary_sheet_service(credentials_content, clean_url):
-                                # Connection successful if no exception raised
                                 test_dialog.close()
                                 ui.notify(ErrorMessages.CONFIG_SAVED_AND_VERIFIED, type="positive")
-                        except ExternalServiceError as e:
+                        except (ExternalServiceError, KansoError, ValueError, RuntimeError) as e:
                             test_dialog.close()
                             logger.warning(f"Connection test failed: {e}")
+                            msg = get_user_message(e) if isinstance(e, KansoError) else str(e)
                             ui.notify(
-                                f"⚠ Configuration saved, but connection failed: {get_user_message(e)}",
-                                type="warning",
-                            )
-                        except KansoError as e:
-                            test_dialog.close()
-                            logger.warning(f"Connection test failed: {e}")
-                            ui.notify(
-                                f"⚠ Configuration saved, but: {get_user_message(e)}",
-                                type="warning",
-                            )
-                        except (ValueError, RuntimeError) as e:
-                            # Catch errors from sheet_service_from_json
-                            test_dialog.close()
-                            logger.warning(f"Connection test failed: {e}")
-                            ui.notify(
-                                f"⚠ Configuration saved, but connection test failed: {str(e)}",
+                                f"⚠ Configuration saved, but connection test failed: {msg}",
                                 type="warning",
                             )
 
@@ -344,15 +311,7 @@ def render() -> None:
 
                             result_dialog.open()
 
-                        except ConfigurationError as e:
-                            loading_dialog.close()
-                            logger.error(f"Configuration error during refresh: {e}")
-                            ui.notify(get_user_message(e), type="negative")
-                        except ExternalServiceError as e:
-                            loading_dialog.close()
-                            logger.error(f"External service error during refresh: {e}")
-                            ui.notify(get_user_message(e), type="negative")
-                        except KansoError as e:
+                        except (ConfigurationError, ExternalServiceError, KansoError) as e:
                             loading_dialog.close()
                             logger.error(f"Error during refresh: {e}")
                             ui.notify(get_user_message(e), type="negative")

@@ -12,6 +12,7 @@ from pydantic import ValidationError
 from app.core.validators import (
     ExpenseRow,
     clean_google_sheets_url,
+    validate_credentials_and_url,
     validate_dataframe_structure,
     validate_google_credentials_json,
     validate_google_sheets_url,
@@ -510,3 +511,44 @@ class TestValidateGoogleCredentialsJson:
         assert is_valid is False
         assert "private_key" in error
         assert "client_email" in error
+
+
+class TestValidateCredentialsAndUrl:
+    """Tests for validate_credentials_and_url combined validator."""
+
+    VALID_CREDS = json.dumps(
+        {
+            "type": "service_account",
+            "project_id": "test-project",
+            "private_key_id": "key123",
+            "private_key": "-----BEGIN RSA PRIVATE KEY-----\ntest\n-----END RSA PRIVATE KEY-----\n",
+            "client_email": "test@test.iam.gserviceaccount.com",
+        }
+    )
+    VALID_URL = "https://docs.google.com/spreadsheets/d/abc123/edit"
+
+    def test_valid_credentials_and_url(self):
+        """Both valid credentials and URL should return success with cleaned URL."""
+        is_valid, result, clean_url = validate_credentials_and_url(self.VALID_CREDS, self.VALID_URL)
+        assert is_valid is True
+        assert isinstance(result, dict)
+        assert "abc123" in clean_url
+
+    def test_invalid_credentials(self):
+        """Invalid credentials should return error."""
+        is_valid, error, clean_url = validate_credentials_and_url("not json", self.VALID_URL)
+        assert is_valid is False
+        assert "Invalid JSON" in error
+        assert clean_url is None
+
+    def test_invalid_url(self):
+        """Invalid URL with valid credentials should return URL error."""
+        is_valid, error, clean_url = validate_credentials_and_url(self.VALID_CREDS, "not-a-url")
+        assert is_valid is False
+        assert clean_url is None
+
+    def test_empty_credentials(self):
+        """Empty credentials should return error."""
+        is_valid, error, clean_url = validate_credentials_and_url("", self.VALID_URL)
+        assert is_valid is False
+        assert clean_url is None
