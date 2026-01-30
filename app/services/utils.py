@@ -326,6 +326,27 @@ def get_current_timestamp() -> str:
     return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+_RELATIVE_TIME_THRESHOLDS: list[tuple[int, int, str]] = [
+    (60, 1, ""),  # < 60s → "just now" (handled separately)
+    (3600, 60, "minute"),  # < 1h → minutes
+    (86400, 3600, "hour"),  # < 1d → hours
+    (604800, 86400, "day"),  # < 1w → days
+    (2592000, 604800, "week"),  # < 30d → weeks
+]
+
+
+def _seconds_to_relative(seconds: int) -> str:
+    """Convert elapsed seconds to a human-readable relative time string."""
+    if seconds < 60:
+        return "just now"
+    for threshold, divisor, unit in _RELATIVE_TIME_THRESHOLDS:
+        if seconds < threshold:
+            count = seconds // divisor
+            return f"{count} {unit}{'s' if count != 1 else ''} ago"
+    months = seconds // 2592000
+    return f"{months} month{'s' if months != 1 else ''} ago"
+
+
 def format_timestamp_relative(timestamp_str: str | None) -> tuple[str, str]:
     """Format timestamp with both absolute and relative time.
 
@@ -347,38 +368,10 @@ def format_timestamp_relative(timestamp_str: str | None) -> tuple[str, str]:
         return ("Never", "")
 
     try:
-        # Parse ISO 8601 timestamp
         timestamp = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
-        now = datetime.now(UTC)
-
-        # Calculate time difference
-        diff = now - timestamp
-        seconds = int(diff.total_seconds())
-
-        # Format absolute time
+        seconds = int((datetime.now(UTC) - timestamp).total_seconds())
         formatted = timestamp.strftime("%Y-%m-%d %H:%M:%S")
-
-        # Calculate relative time
-        if seconds < 60:
-            relative = "just now"
-        elif seconds < 3600:  # Less than 1 hour
-            minutes = seconds // 60
-            relative = f"{minutes} minute{'s' if minutes != 1 else ''} ago"
-        elif seconds < 86400:  # Less than 1 day
-            hours = seconds // 3600
-            relative = f"{hours} hour{'s' if hours != 1 else ''} ago"
-        elif seconds < 604800:  # Less than 1 week
-            days = seconds // 86400
-            relative = f"{days} day{'s' if days != 1 else ''} ago"
-        elif seconds < 2592000:  # Less than 30 days
-            weeks = seconds // 604800
-            relative = f"{weeks} week{'s' if weeks != 1 else ''} ago"
-        else:
-            months = seconds // 2592000
-            relative = f"{months} month{'s' if months != 1 else ''} ago"
-
-        return (formatted, relative)
-
+        return (formatted, _seconds_to_relative(seconds))
     except (ValueError, AttributeError):
         return ("Invalid timestamp", "")
 
