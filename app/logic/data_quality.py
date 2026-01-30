@@ -135,6 +135,33 @@ class DataQualityChecker:
 
         return warnings
 
+    @staticmethod
+    def _extract_column_names(df: pd.DataFrame) -> list[Any]:
+        """Extract top-level column names, handling both MultiIndex and single-level columns."""
+        if isinstance(df.columns, pd.MultiIndex):
+            return df.columns.get_level_values(0).tolist()
+        return [col[0] if isinstance(col, tuple) and len(col) > 0 else col for col in df.columns]
+
+    def _check_columns_for_sheet(
+        self, sheet_key: str, df: pd.DataFrame
+    ) -> DataQualityWarning | None:
+        """Check a single sheet for missing required columns. Returns a warning or None."""
+        column_names = self._extract_column_names(df)
+        required_cols = self.REQUIRED_COLUMNS[sheet_key]
+        missing_cols = [col for col in required_cols if col not in column_names]
+
+        if not missing_cols:
+            return None
+
+        display_name = self.SHEET_DISPLAY_NAMES[sheet_key]
+        logger.warning(f"Missing columns in {display_name}: {missing_cols}")
+        return DataQualityWarning(
+            sheet_name=display_name,
+            severity="error",
+            message=f"{display_name} sheet is missing required columns",
+            details=f"Missing: {', '.join(missing_cols)}",
+        )
+
     def check_missing_columns(self, storage: dict[str, Any]) -> list[DataQualityWarning]:
         """Check if any sheets are missing required columns.
 
@@ -147,52 +174,17 @@ class DataQualityChecker:
         warnings = []
 
         for sheet_key in self.REQUIRED_SHEETS:
-            # Skip if sheet is missing (already caught by check_missing_sheets)
             if sheet_key not in storage or not storage[sheet_key]:
                 continue
 
             try:
                 df = pd.read_json(StringIO(storage[sheet_key]), orient="split")
-
-                # Skip if empty (already caught by check_empty_sheets)
                 if df.empty or len(df) == 0:
                     continue
 
-                required_cols = self.REQUIRED_COLUMNS[sheet_key]
-                missing_cols = []
-
-                # Get all column names (handling both MultiIndex and single-level)
-                if isinstance(df.columns, pd.MultiIndex):
-                    # True MultiIndex - check top-level columns
-                    column_names = df.columns.get_level_values(0).tolist()
-                else:
-                    # Single-level columns (could be tuples from JSON deserialization)
-                    column_names = []
-                    for col in df.columns:
-                        # Handle tuple columns from MultiIndex serialization
-                        if isinstance(col, tuple) and len(col) > 0:
-                            # Extract first element from tuple (top-level column name)
-                            column_names.append(col[0])
-                        else:
-                            # Regular string column
-                            column_names.append(col)
-
-                # Check for missing required columns
-                for col in required_cols:
-                    if col not in column_names:
-                        missing_cols.append(col)
-
-                if missing_cols:
-                    display_name = self.SHEET_DISPLAY_NAMES[sheet_key]
-                    warnings.append(
-                        DataQualityWarning(
-                            sheet_name=display_name,
-                            severity="error",
-                            message=f"{display_name} sheet is missing required columns",
-                            details=f"Missing: {', '.join(missing_cols)}",
-                        )
-                    )
-                    logger.warning(f"Missing columns in {display_name}: {missing_cols}")
+                warning = self._check_columns_for_sheet(sheet_key, df)
+                if warning:
+                    warnings.append(warning)
 
             except (ValueError, TypeError, KeyError) as e:
                 display_name = self.SHEET_DISPLAY_NAMES[sheet_key]
