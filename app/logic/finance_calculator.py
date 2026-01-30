@@ -650,9 +650,7 @@ class FinanceCalculator:
         """Pre-compute a mapping from date string to the first matching row (or None)."""
         date_rows: dict[str, pd.Series | None] = {}
         for date in dates:
-            rows = df_filtered[
-                df_filtered[COL_DATE_DT].dt.strftime(DATE_FORMAT_STORAGE) == date
-            ]
+            rows = df_filtered[df_filtered[COL_DATE_DT].dt.strftime(DATE_FORMAT_STORAGE) == date]
             date_rows[date] = rows.iloc[0] if not rows.empty else None
         return date_rows
 
@@ -735,9 +733,7 @@ class FinanceCalculator:
                     classes, col, dates, date_rows, skip_cols, negate
                 )
             else:
-                FinanceCalculator._add_single_col(
-                    classes, col, dates, date_rows, skip_cols, negate
-                )
+                FinanceCalculator._add_single_col(classes, col, dates, date_rows, skip_cols, negate)
 
         return classes
 
@@ -819,9 +815,7 @@ class FinanceCalculator:
         }
 
     @staticmethod
-    def _should_skip_column(
-        col: Any, skip_category: bool
-    ) -> bool:
+    def _should_skip_column(col: Any, skip_category: bool) -> bool:
         """Check if a column should be skipped during value extraction."""
         if is_date_column(col):
             return True

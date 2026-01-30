@@ -637,9 +637,7 @@ class TestShouldSkipColumn:
         assert FinanceCalculator._should_skip_column(COL_CATEGORY, False) is False
 
     def test_tuple_with_category_skipped(self):
-        assert (
-            FinanceCalculator._should_skip_column((COL_CATEGORY, "sub"), True) is True
-        )
+        assert FinanceCalculator._should_skip_column((COL_CATEGORY, "sub"), True) is True
 
     def test_regular_column_not_skipped(self):
         assert FinanceCalculator._should_skip_column("Savings", False) is False
@@ -650,7 +648,7 @@ class TestExtractMultiindexValue:
 
     def test_extracts_value(self):
         col = ("Cash", "Checking")
-        row = pd.Series({"dummy": 0, col: "1,000"})
+        row = pd.Series({"dummy": 0, col: "1000"})
         result: dict = {}
         FinanceCalculator._extract_multiindex_value(result, col, row, False)
         assert result == {"Cash": {"Checking": 1000.0}}
@@ -714,16 +712,12 @@ class TestAddSingleCol:
         )
         date_rows = FinanceCalculator._lookup_date_rows(df, ["2024-01"])
         classes: dict = {}
-        FinanceCalculator._add_single_col(
-            classes, "Savings", ["2024-01"], date_rows, set(), False
-        )
+        FinanceCalculator._add_single_col(classes, "Savings", ["2024-01"], date_rows, set(), False)
         assert classes["Savings"] == [500.0]
 
     def test_skips_date_col(self):
         classes: dict = {}
-        FinanceCalculator._add_single_col(
-            classes, COL_DATE, ["2024-01"], {}, set(), False
-        )
+        FinanceCalculator._add_single_col(classes, COL_DATE, ["2024-01"], {}, set(), False)
         assert classes == {}
 
     def test_missing_date_returns_zero(self):
