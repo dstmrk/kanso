@@ -644,6 +644,66 @@ class FinanceCalculator:
         }
 
     @staticmethod
+    def _lookup_date_rows(
+        df_filtered: pd.DataFrame, dates: list[str]
+    ) -> dict[str, pd.Series | None]:
+        """Pre-compute a mapping from date string to the first matching row (or None)."""
+        date_rows: dict[str, pd.Series | None] = {}
+        for date in dates:
+            rows = df_filtered[df_filtered[COL_DATE_DT].dt.strftime(DATE_FORMAT_STORAGE) == date]
+            date_rows[date] = rows.iloc[0] if not rows.empty else None
+        return date_rows
+
+    @staticmethod
+    def _apply_negate(value: float, negate: bool) -> float:
+        """Return negated value if negate is True."""
+        return -value if negate else value
+
+    @staticmethod
+    def _add_multiindex_col(
+        classes: dict[str, list[float]],
+        col: tuple[str, str],
+        dates: list[str],
+        date_rows: dict[str, pd.Series | None],
+        skip_cols: set[str],
+        negate: bool,
+    ) -> None:
+        """Process a MultiIndex column, aggregating values into its category series."""
+        category = col[0].strip()
+        if not category or category in skip_cols:
+            return
+        if category not in classes:
+            classes[category] = [0.0] * len(dates)
+        for i, date in enumerate(dates):
+            row = date_rows[date]
+            if row is not None:
+                value = parse_monetary_value(row[col])
+                classes[category][i] += FinanceCalculator._apply_negate(value, negate)
+
+    @staticmethod
+    def _add_single_col(
+        classes: dict[str, list[float]],
+        col: str,
+        dates: list[str],
+        date_rows: dict[str, pd.Series | None],
+        skip_cols: set[str],
+        negate: bool,
+    ) -> None:
+        """Process a single-index column, creating its own series."""
+        item = str(col)
+        if item in (COL_DATE, COL_CATEGORY) or item in skip_cols:
+            return
+        series: list[float] = []
+        for date in dates:
+            row = date_rows[date]
+            if row is not None:
+                value = parse_monetary_value(row[col])
+                series.append(FinanceCalculator._apply_negate(value, negate))
+            else:
+                series.append(0.0)
+        classes[item] = series
+
+    @staticmethod
     def _build_class_series(
         df: pd.DataFrame,
         dates: list[str],
@@ -663,38 +723,17 @@ class FinanceCalculator:
         """
         skip_cols = set(extra_skip_cols or [])
         df_filtered = df[df[COL_DATE_DT].dt.strftime(DATE_FORMAT_STORAGE).isin(dates)]
+        date_rows = FinanceCalculator._lookup_date_rows(df_filtered, dates)
         columns = [col for col in df.columns if not is_date_column(col)]
 
         classes: dict[str, list[float]] = {}
-
         for col in columns:
             if isinstance(col, tuple) and len(col) == 2:
-                category = col[0].strip()
-                if not category or category in skip_cols:
-                    continue
-                if category not in classes:
-                    classes[category] = [0.0] * len(dates)
-                for i, date in enumerate(dates):
-                    row = df_filtered[
-                        df_filtered[COL_DATE_DT].dt.strftime(DATE_FORMAT_STORAGE) == date
-                    ]
-                    if not row.empty:
-                        value = parse_monetary_value(row.iloc[0][col])
-                        classes[category][i] += -value if negate else value
+                FinanceCalculator._add_multiindex_col(
+                    classes, col, dates, date_rows, skip_cols, negate
+                )
             else:
-                item = str(col)
-                if item in (COL_DATE, COL_CATEGORY) or item in skip_cols:
-                    continue
-                classes[item] = []
-                for date in dates:
-                    row = df_filtered[
-                        df_filtered[COL_DATE_DT].dt.strftime(DATE_FORMAT_STORAGE) == date
-                    ]
-                    if not row.empty:
-                        value = parse_monetary_value(row.iloc[0][col])
-                        classes[item].append(-value if negate else value)
-                    else:
-                        classes[item].append(0.0)
+                FinanceCalculator._add_single_col(classes, col, dates, date_rows, skip_cols, negate)
 
         return classes
 
@@ -776,6 +815,31 @@ class FinanceCalculator:
         }
 
     @staticmethod
+    def _should_skip_column(col: Any, skip_category: bool) -> bool:
+        """Check if a column should be skipped during value extraction."""
+        if is_date_column(col):
+            return True
+        if not skip_category:
+            return False
+        return col == COL_CATEGORY or (isinstance(col, tuple) and COL_CATEGORY in col)
+
+    @staticmethod
+    def _extract_multiindex_value(
+        result: dict[str, Any],
+        col: tuple[str, str],
+        row: pd.Series,
+        skip_category: bool,
+    ) -> None:
+        """Extract a value from a MultiIndex column into the result dict."""
+        category, item = col[0].strip(), col[1].strip()
+        if not category or (skip_category and category == COL_CATEGORY):
+            return
+        value = parse_monetary_value(row[col])
+        if category not in result:
+            result[category] = {}
+        result[category][item] = value
+
+    @staticmethod
     def _extract_values_from_row(
         df: pd.DataFrame,
         row: pd.Series,
@@ -788,21 +852,10 @@ class FinanceCalculator:
         """
         result: dict[str, Any] = {}
         for col in df.columns:
-            if is_date_column(col):
+            if FinanceCalculator._should_skip_column(col, skip_category):
                 continue
-            if skip_category and (
-                col == COL_CATEGORY or (isinstance(col, tuple) and COL_CATEGORY in col)
-            ):
-                continue
-
             if isinstance(col, tuple) and len(col) == 2:
-                category, item = col[0].strip(), col[1].strip()
-                if not category or (skip_category and category == COL_CATEGORY):
-                    continue
-                value = parse_monetary_value(row[col])
-                if category not in result:
-                    result[category] = {}
-                result[category][item] = value
+                FinanceCalculator._extract_multiindex_value(result, col, row, skip_category)
             else:
                 result[col] = parse_monetary_value(row[col])
         return result
