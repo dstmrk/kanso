@@ -590,3 +590,145 @@ class TestBuildProjection:
         )
         result = FinanceCalculator._build_projection(monthly, [None] * 12, 0)
         assert all(v is None for v in result)
+
+
+class TestApplyNegate:
+    """Tests for _apply_negate helper."""
+
+    def test_negate_true(self):
+        assert FinanceCalculator._apply_negate(100.0, True) == -100.0
+
+    def test_negate_false(self):
+        assert FinanceCalculator._apply_negate(100.0, False) == 100.0
+
+    def test_negate_zero(self):
+        assert FinanceCalculator._apply_negate(0.0, True) == 0.0
+
+
+class TestLookupDateRows:
+    """Tests for _lookup_date_rows helper."""
+
+    def test_matching_dates(self):
+        df = pd.DataFrame(
+            {COL_DATE_DT: pd.to_datetime(["2024-01-01", "2024-02-01"]), "val": [10, 20]}
+        )
+        result = FinanceCalculator._lookup_date_rows(df, ["2024-01", "2024-02"])
+        assert result["2024-01"] is not None
+        assert result["2024-02"] is not None
+
+    def test_missing_date(self):
+        df = pd.DataFrame({COL_DATE_DT: pd.to_datetime(["2024-01-01"]), "val": [10]})
+        result = FinanceCalculator._lookup_date_rows(df, ["2024-01", "2024-03"])
+        assert result["2024-01"] is not None
+        assert result["2024-03"] is None
+
+
+class TestShouldSkipColumn:
+    """Tests for _should_skip_column helper."""
+
+    def test_date_column_skipped(self):
+        assert FinanceCalculator._should_skip_column(COL_DATE, False) is True
+        assert FinanceCalculator._should_skip_column(COL_DATE_DT, False) is True
+
+    def test_category_skipped_when_flag_set(self):
+        assert FinanceCalculator._should_skip_column(COL_CATEGORY, True) is True
+
+    def test_category_not_skipped_when_flag_unset(self):
+        assert FinanceCalculator._should_skip_column(COL_CATEGORY, False) is False
+
+    def test_tuple_with_category_skipped(self):
+        assert (
+            FinanceCalculator._should_skip_column((COL_CATEGORY, "sub"), True) is True
+        )
+
+    def test_regular_column_not_skipped(self):
+        assert FinanceCalculator._should_skip_column("Savings", False) is False
+
+
+class TestExtractMultiindexValue:
+    """Tests for _extract_multiindex_value helper."""
+
+    def test_extracts_value(self):
+        col = ("Cash", "Checking")
+        row = pd.Series({"dummy": 0, col: "1,000"})
+        result: dict = {}
+        FinanceCalculator._extract_multiindex_value(result, col, row, False)
+        assert result == {"Cash": {"Checking": 1000.0}}
+
+    def test_skips_empty_category(self):
+        col = ("", "Checking")
+        row = pd.Series({col: "100"})
+        result: dict = {}
+        FinanceCalculator._extract_multiindex_value(result, col, row, False)
+        assert result == {}
+
+    def test_skips_category_when_flagged(self):
+        col = (COL_CATEGORY, "sub")
+        row = pd.Series({col: "100"})
+        result: dict = {}
+        FinanceCalculator._extract_multiindex_value(result, col, row, True)
+        assert result == {}
+
+    def test_aggregates_under_same_category(self):
+        result: dict = {"Cash": {"Savings": 500.0}}
+        col = ("Cash", "Checking")
+        row = pd.Series({col: "200"})
+        FinanceCalculator._extract_multiindex_value(result, col, row, False)
+        assert result == {"Cash": {"Savings": 500.0, "Checking": 200.0}}
+
+
+class TestAddMultiindexCol:
+    """Tests for _add_multiindex_col helper."""
+
+    def test_adds_values(self):
+        df = pd.DataFrame(
+            {
+                COL_DATE_DT: pd.to_datetime(["2024-01-01", "2024-02-01"]),
+                ("Cash", "Checking"): ["100", "200"],
+            }
+        )
+        date_rows = FinanceCalculator._lookup_date_rows(df, ["2024-01", "2024-02"])
+        classes: dict = {}
+        FinanceCalculator._add_multiindex_col(
+            classes, ("Cash", "Checking"), ["2024-01", "2024-02"], date_rows, set(), False
+        )
+        assert classes["Cash"] == [100.0, 200.0]
+
+    def test_skips_col_in_skip_set(self):
+        classes: dict = {}
+        FinanceCalculator._add_multiindex_col(
+            classes, ("Cash", "X"), ["2024-01"], {}, {"Cash"}, False
+        )
+        assert classes == {}
+
+
+class TestAddSingleCol:
+    """Tests for _add_single_col helper."""
+
+    def test_adds_values(self):
+        df = pd.DataFrame(
+            {
+                COL_DATE_DT: pd.to_datetime(["2024-01-01"]),
+                "Savings": ["500"],
+            }
+        )
+        date_rows = FinanceCalculator._lookup_date_rows(df, ["2024-01"])
+        classes: dict = {}
+        FinanceCalculator._add_single_col(
+            classes, "Savings", ["2024-01"], date_rows, set(), False
+        )
+        assert classes["Savings"] == [500.0]
+
+    def test_skips_date_col(self):
+        classes: dict = {}
+        FinanceCalculator._add_single_col(
+            classes, COL_DATE, ["2024-01"], {}, set(), False
+        )
+        assert classes == {}
+
+    def test_missing_date_returns_zero(self):
+        classes: dict = {}
+        FinanceCalculator._add_single_col(
+            classes, "Savings", ["2024-01"], {"2024-01": None}, set(), False
+        )
+        assert classes["Savings"] == [0.0]

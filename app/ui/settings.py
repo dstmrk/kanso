@@ -4,7 +4,7 @@ from nicegui import app, ui
 
 from app.core.constants import APP_VERSION, CURRENCY_OPTIONS_SHORT
 from app.core.error_messages import ErrorMessages, get_user_message
-from app.core.exceptions import ConfigurationError, ExternalServiceError, KansoError
+from app.core.exceptions import KansoError
 from app.core.state_manager import state_manager
 from app.core.validators import validate_credentials_and_url
 from app.services import pages, utils
@@ -234,7 +234,7 @@ def render() -> None:
                             with utils.temporary_sheet_service(credentials_content, clean_url):
                                 test_dialog.close()
                                 ui.notify(ErrorMessages.CONFIG_SAVED_AND_VERIFIED, type="positive")
-                        except (ExternalServiceError, KansoError, ValueError, RuntimeError) as e:
+                        except (KansoError, ValueError, RuntimeError) as e:
                             test_dialog.close()
                             logger.warning(f"Connection test failed: {e}")
                             msg = get_user_message(e) if isinstance(e, KansoError) else str(e)
@@ -311,7 +311,7 @@ def render() -> None:
 
                             result_dialog.open()
 
-                        except (ConfigurationError, ExternalServiceError, KansoError) as e:
+                        except KansoError as e:
                             loading_dialog.close()
                             logger.error(f"Error during refresh: {e}")
                             ui.notify(get_user_message(e), type="negative")
