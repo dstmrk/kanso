@@ -49,6 +49,75 @@ def detect_currency(value: str) -> str | None:
     return None
 
 
+def _coerce_non_string(value: Any) -> float:
+    """Convert non-string value to float, treating None and NaN as 0.0."""
+    if value is None:
+        return 0.0
+    result = float(value)
+    return 0.0 if math.isnan(result) else result
+
+
+def _resolve_currency_format(currency: str | None, value: str) -> tuple[str | None, str, str]:
+    """Detect currency and return (detected_currency, thousand_sep, decimal_sep)."""
+    detected = currency or detect_currency(value)
+    if detected and detected in CURRENCY_FORMATS:
+        fmt = get_currency_format(detected)
+    else:
+        fmt = get_currency_format("EUR")
+    return detected, fmt.thousands_sep, fmt.decimal_sep
+
+
+def _strip_currency_symbols(value: str) -> str:
+    """Remove currency symbols, codes, and whitespace from a monetary string."""
+    cleaned = re.sub(r"[€$£¥]|Fr|CHF|JPY|USD|EUR|GBP", "", value).strip()
+    return cleaned.replace(" ", "")
+
+
+def _try_parse_plain_number(cleaned: str) -> float | None:
+    """Attempt to parse a plain number (no currency detected).
+
+    Returns the parsed float if the format is unambiguous, or None to signal
+    that currency-specific parsing should be used instead.
+    """
+    dot_count = cleaned.count(".")
+    comma_count = cleaned.count(",")
+
+    if dot_count == 1 and comma_count == 0:
+        return float(cleaned)
+    if comma_count == 1 and dot_count == 0:
+        return float(cleaned.replace(",", "."))
+    if dot_count == 0 and comma_count == 0:
+        return float(cleaned) if cleaned else 0.0
+    # Multiple separators — needs currency-specific logic
+    return None
+
+
+def _parse_with_separators(cleaned: str, thousand_sep: str, decimal_sep: str) -> float:
+    """Parse a cleaned numeric string using explicit thousand/decimal separators."""
+    if thousand_sep not in cleaned and (not decimal_sep or decimal_sep not in cleaned):
+        return float(cleaned) if cleaned else 0.0
+
+    if thousand_sep:
+        cleaned = cleaned.replace(thousand_sep, "")
+    if decimal_sep and decimal_sep != ".":
+        cleaned = cleaned.replace(decimal_sep, ".")
+
+    return float(cleaned) if cleaned else 0.0
+
+
+def _log_parse_error(value: str, cleaned: str, error: Exception) -> None:
+    """Log a parse failure, distinguishing text labels from real data errors."""
+    if cleaned and cleaned.replace("_", "").replace(" ", "").isalpha():
+        logger.debug(
+            f"Skipping text value '{value}' during monetary parsing (likely a header/label)"
+        )
+    else:
+        logger.error(
+            f"Failed to parse monetary value '{value}' (cleaned: '{cleaned}'): {error}. "
+            "This indicates a data quality issue in the source sheet."
+        )
+
+
 def parse_monetary_value(value: Any, currency: str | None = None) -> float:
     """Parse monetary value with intelligent currency detection.
 
@@ -75,80 +144,22 @@ def parse_monetary_value(value: Any, currency: str | None = None) -> float:
         123456.0  # Interprets as European: dot = thousand separator
     """
     if not isinstance(value, str):
-        if value is None:
-            return 0.0
-        result = float(value)
-        return 0.0 if math.isnan(result) else result
+        return _coerce_non_string(value)
 
-    # Detect or use provided currency
-    detected_currency = currency or detect_currency(value)
+    detected_currency, thousand_sep, decimal_sep = _resolve_currency_format(currency, value)
+    cleaned = _strip_currency_symbols(value)
 
-    # Get format config (default to EUR if not found)
-    if detected_currency and detected_currency in CURRENCY_FORMATS:
-        fmt = get_currency_format(detected_currency)
-    else:
-        # Default to EUR format
-        fmt = get_currency_format("EUR")
-
-    thousand_sep = fmt.thousands_sep
-    decimal_sep = fmt.decimal_sep
+    if not cleaned or cleaned == "-":
+        return 0.0
 
     try:
-        # Remove currency symbols and extra spaces
-        cleaned = re.sub(r"[€$£¥]|Fr|CHF|JPY|USD|EUR|GBP", "", value).strip()
-        cleaned = cleaned.replace(" ", "")
-
-        # Special case: empty or just dash (common in Google Sheets for zero with monetary format)
-        if not cleaned or cleaned == "-":
-            return 0.0
-
-        # Special case: plain number without currency symbol
-        # If no currency was detected, treat dots/commas intelligently:
-        # - If only one separator exists, it's likely decimal (most common case)
-        # - Format like "1234.56" or "1234,56" should be treated as decimal
         if detected_currency is None:
-            # Count separators
-            dot_count = cleaned.count(".")
-            comma_count = cleaned.count(",")
+            result = _try_parse_plain_number(cleaned)
+            if result is not None:
+                return result
 
-            # Only one type of separator
-            if dot_count == 1 and comma_count == 0:
-                # Single dot - likely decimal point (standard notation)
-                return float(cleaned)
-            elif comma_count == 1 and dot_count == 0:
-                # Single comma - likely decimal (European)
-                return float(cleaned.replace(",", "."))
-            elif dot_count == 0 and comma_count == 0:
-                # No separators - plain integer or float
-                return float(cleaned) if cleaned else 0.0
-            # Multiple separators - fall through to currency-specific logic
-
-        # Handle the case where there are no separators (plain number)
-        if thousand_sep not in cleaned and (not decimal_sep or decimal_sep not in cleaned):
-            # No separators found - treat as plain number
-            return float(cleaned) if cleaned else 0.0
-
-        # Remove thousand separator
-        if thousand_sep:
-            cleaned = cleaned.replace(thousand_sep, "")
-
-        # Replace decimal separator with dot (Python standard)
-        if decimal_sep and decimal_sep != ".":
-            cleaned = cleaned.replace(decimal_sep, ".")
-
-        return float(cleaned) if cleaned else 0.0
+        return _parse_with_separators(cleaned, thousand_sep, decimal_sep)
 
     except (ValueError, TypeError) as e:
-        # Check if this looks like a text header or label (contains only letters/underscores)
-        if cleaned and cleaned.replace("_", "").replace(" ", "").isalpha():
-            # Silently skip text headers/labels - common in sheets with duplicate header rows
-            # or when iterating over all columns including label columns
-            logger.debug(
-                f"Skipping text value '{value}' during monetary parsing (likely a header/label)"
-            )
-        else:
-            logger.error(
-                f"Failed to parse monetary value '{value}' (cleaned: '{cleaned}'): {e}. "
-                "This indicates a data quality issue in the source sheet."
-            )
+        _log_parse_error(value, cleaned, e)
         return 0.0
