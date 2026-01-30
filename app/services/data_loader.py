@@ -14,6 +14,53 @@ logger = logging.getLogger(__name__)
 ALL_SHEETS_LABEL: str = "All sheets"
 
 
+def _is_data_fresh(storage: dict, ttl_seconds: float) -> bool | None:
+    """Check if cached data is still within TTL.
+
+    Returns True if fresh, False if stale, None if no timestamp exists.
+    """
+    from datetime import datetime
+
+    last_refresh = storage.get("last_data_refresh")
+    if not last_refresh:
+        return None
+
+    try:
+        age_seconds = (datetime.now(UTC) - datetime.fromisoformat(last_refresh)).total_seconds()
+    except (ValueError, TypeError) as e:
+        logger.warning(f"Invalid timestamp format: {e}, will reload data")
+        return False
+
+    if age_seconds < ttl_seconds:
+        logger.info(f"Data is fresh (age: {age_seconds:.0f}s / {ttl_seconds}s TTL)")
+        return True
+
+    logger.info(f"Data is stale (age: {age_seconds:.0f}s), will refresh from Google Sheets")
+    return False
+
+
+def _load_from_google_sheets(loader: DataLoaderCore, storage: dict) -> bool:
+    """Obtain credentials, create service, and load missing sheets."""
+    from app.services.utils import get_current_timestamp
+
+    credentials = loader.get_credentials()
+    if not credentials:
+        raise ConfigurationError(
+            "Google Sheets credentials not configured",
+            user_message="Please complete the setup in Settings to connect your Google Sheet.",
+        )
+
+    creds_dict, url = credentials
+    service = loader.create_google_sheet_service(creds_dict, url)
+    success = loader.load_missing_sheets(service)
+
+    if success and "last_data_refresh" not in storage:
+        storage["last_data_refresh"] = get_current_timestamp()
+        logger.info("First data load timestamp saved")
+
+    return success
+
+
 async def ensure_data_loaded():
     """Lazy load data sheets from Google Sheets if not already in storage.
 
@@ -27,76 +74,33 @@ async def ensure_data_loaded():
 
     def load_data_sync():
         """Synchronous data loading function that runs in background thread."""
-        from datetime import datetime
-
         from app.core.config import config as app_config
         from app.core.constants import DATA_REFRESH_TTL_SECONDS
         from app.services.utils import get_current_timestamp
 
         try:
-            # Create core loader with general storage (shared across devices)
             loader = DataLoaderCore(app.storage.general, app_config)
+            storage = app.storage.general
 
-            # Check if data already loaded
             if loader.all_data_loaded():
-                # Check if data is still fresh (within TTL)
-                last_refresh = app.storage.general.get("last_data_refresh")
-                if last_refresh:
-                    try:
-                        last_refresh_dt = datetime.fromisoformat(last_refresh)
-                        now = datetime.now(UTC)
-                        age_seconds = (now - last_refresh_dt).total_seconds()
-
-                        if age_seconds < DATA_REFRESH_TTL_SECONDS:
-                            logger.info(
-                                f"Data is fresh (age: {age_seconds:.0f}s / {DATA_REFRESH_TTL_SECONDS}s TTL)"
-                            )
-                            return True
-                        else:
-                            logger.info(
-                                f"Data is stale (age: {age_seconds:.0f}s), will refresh from Google Sheets"
-                            )
-                    except (ValueError, TypeError) as e:
-                        logger.warning(f"Invalid timestamp format: {e}, will reload data")
-
-                # Data exists but no timestamp or stale - save timestamp for backward compatibility
-                if not last_refresh:
-                    app.storage.general["last_data_refresh"] = get_current_timestamp()
+                freshness = _is_data_fresh(storage, DATA_REFRESH_TTL_SECONDS)
+                if freshness is True:
+                    return True
+                if freshness is None:
+                    # No timestamp exists — save it for backward compatibility
+                    storage["last_data_refresh"] = get_current_timestamp()
                     logger.info("First data load timestamp saved (data already present)")
                     return True
+                # freshness is False — data is stale, fall through to reload
 
-            # Get credentials
-            credentials = loader.get_credentials()
-            if not credentials:
-                raise ConfigurationError(
-                    "Google Sheets credentials not configured",
-                    user_message="Please complete the setup in Settings to connect your Google Sheet.",
-                )
+            return _load_from_google_sheets(loader, storage)
 
-            creds_dict, url = credentials
-
-            # Create service and load sheets
-            service = loader.create_google_sheet_service(creds_dict, url)
-            success = loader.load_missing_sheets(service)
-
-            # Save timestamp of first data load
-            if success and "last_data_refresh" not in app.storage.general:
-                app.storage.general["last_data_refresh"] = get_current_timestamp()
-                logger.info("First data load timestamp saved")
-
-            return success
-
-        except ConfigurationError:
-            # Re-raise configuration errors to be handled by caller
-            raise
-        except ExternalServiceError:
-            # Re-raise external service errors to be handled by caller
+        except (ConfigurationError, ExternalServiceError):
             raise
         except (ValueError, TypeError, KeyError) as e:
             logger.error(f"Data processing error: {e}", exc_info=True)
             return False
 
-    # Run the blocking I/O operation in a separate thread using asyncio.to_thread
     return await asyncio.to_thread(load_data_sync)
 
 
