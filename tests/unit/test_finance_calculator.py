@@ -11,6 +11,7 @@ from app.core.constants import (
     COL_AMOUNT,
     COL_CATEGORY,
     COL_DATE,
+    COL_DATE_DT,
     COL_MERCHANT,
     COL_TYPE,
 )
@@ -455,3 +456,137 @@ class TestFinanceCalculator:
         # Should return 0.0 when not enough data (< 13 months)
         assert calc.get_year_over_year_net_worth_variation_percentage() == pytest.approx(0.0)
         assert calc.get_year_over_year_net_worth_variation_absolute() == pytest.approx(0.0)
+
+
+class TestExtractSourceName:
+    """Tests for _extract_source_name static method."""
+
+    def test_string_column(self):
+        assert FinanceCalculator._extract_source_name("Salary") == "Salary"
+
+    def test_tuple_column(self):
+        assert FinanceCalculator._extract_source_name(("Income", "Salary")) == "Salary"
+
+    def test_tuple_with_monetary_value(self):
+        """Monetary values in tuple should be skipped."""
+        assert FinanceCalculator._extract_source_name(("Salary", "€ 3.000")) == "Salary"
+
+    def test_tuple_all_numeric_fallback(self):
+        """All-numeric tuple should fall back to 'Income'."""
+        assert FinanceCalculator._extract_source_name(("123", "456")) == "Income"
+
+    def test_tuple_with_empty_parts(self):
+        assert FinanceCalculator._extract_source_name(("", "Freelance")) == "Freelance"
+
+
+class TestExtractValuesFromRow:
+    """Tests for _extract_values_from_row static method."""
+
+    def test_single_index(self):
+        df = pd.DataFrame({COL_DATE: ["2024-01"], "Cash": ["€ 1.000"]})
+        df[COL_DATE_DT] = pd.to_datetime(df[COL_DATE], format="%Y-%m")
+        row = df.iloc[0]
+        result = FinanceCalculator._extract_values_from_row(df, row)
+        assert "Cash" in result
+        assert result["Cash"] == pytest.approx(1000.0)
+        assert COL_DATE not in result
+        assert COL_DATE_DT not in result
+
+    def test_multi_index(self):
+        df = pd.DataFrame(
+            {
+                (COL_DATE, ""): ["2024-01"],
+                ("Cash", "Checking"): ["€ 500"],
+                ("Cash", "Savings"): ["€ 1.000"],
+            }
+        )
+        df[COL_DATE_DT] = pd.to_datetime("2024-01-01")
+        row = df.iloc[0]
+        result = FinanceCalculator._extract_values_from_row(df, row)
+        assert "Cash" in result
+        assert result["Cash"]["Checking"] == pytest.approx(500.0)
+        assert result["Cash"]["Savings"] == pytest.approx(1000.0)
+
+    def test_skip_category(self):
+        df = pd.DataFrame(
+            {COL_DATE: ["2024-01"], COL_CATEGORY: ["Loans"], "Mortgage": ["€ 100.000"]}
+        )
+        df[COL_DATE_DT] = pd.to_datetime(df[COL_DATE], format="%Y-%m")
+        row = df.iloc[0]
+        result = FinanceCalculator._extract_values_from_row(df, row, skip_category=True)
+        assert COL_CATEGORY not in result
+        assert "Mortgage" in result
+
+
+class TestSumMonetaryByDate:
+    """Tests for _sum_monetary_by_date static method."""
+
+    def test_basic_sum(self):
+        df = pd.DataFrame({COL_DATE: ["2024-01", "2024-02"], "Cash": ["€ 1.000", "€ 2.000"]})
+        df[COL_DATE_DT] = pd.to_datetime(df[COL_DATE], format="%Y-%m")
+        result = FinanceCalculator._sum_monetary_by_date(df, [COL_DATE, COL_DATE_DT, "date_dt"])
+        assert len(result) == 2
+        values = list(result.values())
+        assert values[0] == pytest.approx(1000.0)
+        assert values[1] == pytest.approx(2000.0)
+
+
+class TestBuildCumulativeByMonth:
+    """Tests for _build_cumulative_by_month static method."""
+
+    def test_full_year(self):
+        dates = pd.date_range("2024-01-01", periods=12, freq="MS")
+        data = pd.DataFrame({COL_DATE_DT: dates, "total_expenses": [100.0] * 12})
+        result = FinanceCalculator._build_cumulative_by_month(data)
+        assert len(result) == 12
+        assert result[0] == pytest.approx(100.0)
+        assert result[11] == pytest.approx(1200.0)
+
+    def test_partial_year_with_none(self):
+        dates = pd.date_range("2024-01-01", periods=6, freq="MS")
+        data = pd.DataFrame({COL_DATE_DT: dates, "total_expenses": [100.0] * 6})
+        result = FinanceCalculator._build_cumulative_by_month(data, last_valid_month=6)
+        assert result[5] == pytest.approx(600.0)
+        assert result[6] is None
+        assert result[11] is None
+
+    def test_empty_data(self):
+        data = pd.DataFrame(
+            {
+                COL_DATE_DT: pd.Series(dtype="datetime64[ns]"),
+                "total_expenses": pd.Series(dtype="float64"),
+            }
+        )
+        result = FinanceCalculator._build_cumulative_by_month(data)
+        assert all(v == pytest.approx(0.0) for v in result)
+
+
+class TestBuildProjection:
+    """Tests for _build_projection static method."""
+
+    def test_projection_after_valid_months(self):
+        dates = pd.date_range("2024-01-01", periods=6, freq="MS")
+        monthly = pd.DataFrame({COL_DATE_DT: dates, "total_expenses": [100.0] * 6})
+        cumulative = [100.0, 200.0, 300.0, 400.0, 500.0, 600.0, None, None, None, None, None, None]
+        result = FinanceCalculator._build_projection(monthly, cumulative, 6)
+        assert result[0] is None  # Jan already has data
+        assert result[5] is None  # Jun already has data
+        assert result[6] == pytest.approx(700.0)  # Jul projected
+        assert result[11] == pytest.approx(1200.0)  # Dec projected
+
+    def test_full_year_no_projection(self):
+        dates = pd.date_range("2024-01-01", periods=12, freq="MS")
+        monthly = pd.DataFrame({COL_DATE_DT: dates, "total_expenses": [100.0] * 12})
+        cumulative = [float(i * 100) for i in range(1, 13)]
+        result = FinanceCalculator._build_projection(monthly, cumulative, 12)
+        assert all(v is None for v in result)
+
+    def test_zero_months_no_projection(self):
+        monthly = pd.DataFrame(
+            {
+                COL_DATE_DT: pd.Series(dtype="datetime64[ns]"),
+                "total_expenses": pd.Series(dtype="float64"),
+            }
+        )
+        result = FinanceCalculator._build_projection(monthly, [None] * 12, 0)
+        assert all(v is None for v in result)

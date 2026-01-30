@@ -3,6 +3,7 @@
 from datetime import UTC, datetime, timedelta
 
 from app.services.utils import (
+    _seconds_to_relative,
     format_currency,
     format_percentage,
     format_timestamp_relative,
@@ -273,6 +274,36 @@ class TestFormatTimestampRelative:
         formatted, relative = format_timestamp_relative("not-a-timestamp")
         assert formatted == "Invalid timestamp"
         assert relative == ""
+
+
+class TestSecondsToRelative:
+    """Tests for _seconds_to_relative helper."""
+
+    def test_just_now(self):
+        assert _seconds_to_relative(0) == "just now"
+        assert _seconds_to_relative(59) == "just now"
+
+    def test_minutes(self):
+        assert _seconds_to_relative(60) == "1 minute ago"
+        assert _seconds_to_relative(120) == "2 minutes ago"
+        assert _seconds_to_relative(3599) == "59 minutes ago"
+
+    def test_hours(self):
+        assert _seconds_to_relative(3600) == "1 hour ago"
+        assert _seconds_to_relative(7200) == "2 hours ago"
+        assert _seconds_to_relative(86399) == "23 hours ago"
+
+    def test_days(self):
+        assert _seconds_to_relative(86400) == "1 day ago"
+        assert _seconds_to_relative(172800) == "2 days ago"
+
+    def test_weeks(self):
+        assert _seconds_to_relative(604800) == "1 week ago"
+        assert _seconds_to_relative(1209600) == "2 weeks ago"
+
+    def test_months(self):
+        assert _seconds_to_relative(2592000) == "1 month ago"
+        assert _seconds_to_relative(5184000) == "2 months ago"
 
 
 class TestInferCurrencyFromLocale:
