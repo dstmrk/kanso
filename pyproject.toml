@@ -8,7 +8,7 @@ dependencies = [
     "gspread==6.2.1",
     "nicegui==3.9.0",
     "pandas==3.0.2",
-    "pydantic==2.12.5",
+    "pydantic==2.13.0",
     "pytest==9.0.2",
     "pytest-asyncio==1.3.0",
     "pytest-cov==7.1.0",
